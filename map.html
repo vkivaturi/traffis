@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OpenStreetMap Example</title>
+    <title>Traffis</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
         body {
@@ -15,17 +15,83 @@
             text-align: center;
             color: #333;
         }
+        p {
+            text-align: center;
+        }
         #map {
             width: 100%;
             height: 500px;
             border: 2px solid #ccc;
             border-radius: 8px;
         }
+        .time-slider-container {
+            background: white;
+            padding: 15px;
+            margin-top: 10px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .slider-group {
+            margin: 15px 0;
+        }
+        .slider-label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #333;
+        }
+        .time-slider {
+            width: 100%;
+            margin: 5px 0;
+            height: 6px;
+            border-radius: 3px;
+            background: #ddd;
+            outline: none;
+            -webkit-appearance: none;
+        }
+        .time-slider::-webkit-slider-thumb {
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #4CAF50;
+            cursor: pointer;
+        }
+        .time-slider::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #4CAF50;
+            cursor: pointer;
+            border: none;
+        }
+        .time-display {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 10px;
+            font-size: 14px;
+            color: #666;
+        }
     </style>
 </head>
 <body>
-    <h1>OpenStreetMap Interactive Map</h1>
+    <h1>Traffis - Hyderabad Traffic Alerts Map (unofficial)</h1>
+    <p>This map displays real-time traffic alerts and events in Hyderabad, India. The data is sourced from the Cyberabad Traffic Pulse WhatsApp account</p>
     <div id="map"></div>
+    
+    <div class="time-slider-container">
+        <h3>Select time range for traffic alerts</h3>
+        <div class="slider-group">
+            <label class="slider-label">Start Time</label>
+            <input type="range" id="startSlider" class="time-slider" min="0" max="480" value="238" step="1">
+            <span id="startTimeDisplay"></span>
+        </div>
+        <div class="slider-group">
+            <label class="slider-label">End Time</label>
+            <input type="range" id="endSlider" class="time-slider" min="0" max="480" value="242" step="1">
+            <span id="endTimeDisplay"></span>
+        </div>
+    </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
@@ -40,6 +106,86 @@
 
         // Store markers for easy access
         var markers = {};
+        var allEvents = [];
+        var loadEventsTimeout = null;
+        
+        // Time range variables (in hours from current time)
+        var currentTime = new Date();
+        var minRange = new Date(currentTime.getTime() - 2 * 24 * 60 * 60 * 1000); // 2 days ago
+        var maxRange = new Date(currentTime.getTime() + 2 * 24 * 60 * 60 * 1000); // 2 days from now
+        var currentStartTime = new Date(currentTime.getTime() - 2 * 60 * 60 * 1000); // 2 hours ago
+        var currentEndTime = new Date(currentTime.getTime() + 2 * 60 * 60 * 1000); // 2 hours from now
+
+        // Initialize time sliders
+        function initializeTimeSlider() {
+            const startSlider = document.getElementById('startSlider');
+            const endSlider = document.getElementById('endSlider');
+            const startTimeDisplay = document.getElementById('startTimeDisplay');
+            const endTimeDisplay = document.getElementById('endTimeDisplay');
+            
+            // Set initial values (238 = -2 hours, 242 = +2 hours from center 240)
+            startSlider.value = 238;
+            endSlider.value = 242;
+            
+            // Update time display
+            updateTimeDisplay();
+            
+            // Add event listeners
+            startSlider.addEventListener('input', function() {
+                const startValue = parseInt(this.value);
+                const endValue = parseInt(endSlider.value);
+                
+                // Ensure start is before end
+                if (startValue >= endValue) {
+                    this.value = endValue - 1;
+                }
+                
+                updateTimesFromSliders();
+                updateTimeDisplay();
+                throttledLoadEvents();
+            });
+            
+            endSlider.addEventListener('input', function() {
+                const startValue = parseInt(startSlider.value);
+                const endValue = parseInt(this.value);
+                
+                // Ensure end is after start
+                if (endValue <= startValue) {
+                    this.value = startValue + 1;
+                }
+                
+                updateTimesFromSliders();
+                updateTimeDisplay();
+                throttledLoadEvents();
+            });
+        }
+        
+        function updateTimesFromSliders() {
+            const startSlider = document.getElementById('startSlider');
+            const endSlider = document.getElementById('endSlider');
+            
+            const startHour = parseInt(startSlider.value) - 240; // Convert to hours from current time
+            const endHour = parseInt(endSlider.value) - 240;
+            
+            currentStartTime = new Date(currentTime.getTime() + startHour * 60 * 60 * 1000);
+            currentEndTime = new Date(currentTime.getTime() + endHour * 60 * 60 * 1000);
+        }
+        
+        function updateTimeDisplay() {
+            document.getElementById('startTimeDisplay').textContent = currentStartTime.toLocaleString();
+            document.getElementById('endTimeDisplay').textContent = currentEndTime.toLocaleString();
+        }
+        
+        // Throttled function to load events (max once every 3 seconds)
+        function throttledLoadEvents() {
+            if (loadEventsTimeout) {
+                clearTimeout(loadEventsTimeout);
+            }
+            
+            loadEventsTimeout = setTimeout(() => {
+                loadEvents();
+            }, 300); // 300ms debounce while dragging, then load
+        }
 
         // Define marker colors for different event types
         function getMarkerIcon(type) {
@@ -72,41 +218,53 @@
         // Function to load events from API
         async function loadEvents() {
             try {
-                const response = await fetch('/api/events');
+                // Convert dates to ISO string format for the API
+                const startTimeParam = currentStartTime.toISOString();
+                const endTimeParam = currentEndTime.toISOString();
+                
+                const url = `/api/events?start_time=${encodeURIComponent(startTimeParam)}&end_time=${encodeURIComponent(endTimeParam)}`;
+                const response = await fetch(url);
                 const events = await response.json();
                 
-                // Clear existing markers
-                Object.values(markers).forEach(marker => {
-                    map.removeLayer(marker);
-                });
-                markers = {};
-                
-                // Add new markers
-                events.forEach(event => {
-                    const marker = L.marker([event.lat, event.long], {
-                        icon: getMarkerIcon(event.type)
-                    }).addTo(map);
-                    
-                    const popupContent = `
-                        <div>
-                            <strong>Type:</strong> ${event.type}<br>
-                            <strong>Note:</strong> ${event.note || 'No notes'}<br>
-                            <strong>Start:</strong> ${event.start_time ? new Date(event.start_time).toLocaleString() : 'Not specified'}<br>
-                            <strong>End:</strong> ${event.end_time ? new Date(event.end_time).toLocaleString() : 'Ongoing'}
-                        </div>
-                    `;
-                    
-                    marker.bindPopup(popupContent);
-                    markers[event.id] = marker;
-                });
-                
-                console.log(`Loaded ${events.length} events`);
+                displayEvents(events);
+                console.log(`Loaded ${events.length} events for time range ${startTimeParam} to ${endTimeParam}`);
             } catch (error) {
                 console.error('Error loading events:', error);
             }
         }
+        
+        // Display events on the map
+        function displayEvents(events) {
+            // Clear existing markers
+            Object.values(markers).forEach(marker => {
+                map.removeLayer(marker);
+            });
+            markers = {};
+            
+            // Add markers for all events
+            events.forEach(event => {
+                const marker = L.marker([event.lat, event.long], {
+                    icon: getMarkerIcon(event.type)
+                }).addTo(map);
+                
+                const popupContent = `
+                    <div>
+                        <strong>Type:</strong> ${event.type}<br>
+                        <strong>Note:</strong> ${event.note || 'No notes'}<br>
+                        <strong>Start:</strong> ${event.start_time ? new Date(event.start_time).toLocaleString() : 'Not specified'}<br>
+                        <strong>End:</strong> ${event.end_time ? new Date(event.end_time).toLocaleString() : 'Ongoing'}
+                    </div>
+                `;
+                
+                marker.bindPopup(popupContent);
+                markers[event.id] = marker;
+            });
+            
+            console.log(`Displaying ${events.length} events on map`);
+        }
 
-        // Load events when page loads
+        // Initialize everything when page loads
+        initializeTimeSlider();
         loadEvents();
 
         // Refresh events every 30 seconds
