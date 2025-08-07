@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OpenStreetMap Example</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        #map {
+            width: 100%;
+            height: 500px;
+            border: 2px solid #ccc;
+            border-radius: 8px;
+        }
+    </style>
+</head>
+<body>
+    <h1>OpenStreetMap Interactive Map</h1>
+    <div id="map"></div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        // Initialize the map
+        var map = L.map('map').setView([17.415275150958514, 78.48165413403578], 11);
+
+        // Add OpenStreetMap tiles
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+            maxZoom: 19
+        }).addTo(map);
+
+        // Store markers for easy access
+        var markers = {};
+
+        // Define marker colors for different event types
+        function getMarkerIcon(type) {
+            var color;
+            switch(type) {
+                case 'warning':
+                    color = 'orange';
+                    break;
+                case 'slow traffic':
+                    color = 'yellow';
+                    break;
+                case 'very slow traffic':
+                    color = 'red';
+                    break;
+                case 'normal':
+                    color = 'green';
+                    break;
+                default:
+                    color = 'blue';
+            }
+            
+            return L.divIcon({
+                className: 'custom-div-icon',
+                html: `<div style="background-color: ${color}; width: 20px; height: 20px; border-radius: 50%; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>`,
+                iconSize: [20, 20],
+                iconAnchor: [10, 10]
+            });
+        }
+
+        // Function to load events from API
+        async function loadEvents() {
+            try {
+                const response = await fetch('/api/events');
+                const events = await response.json();
+                
+                // Clear existing markers
+                Object.values(markers).forEach(marker => {
+                    map.removeLayer(marker);
+                });
+                markers = {};
+                
+                // Add new markers
+                events.forEach(event => {
+                    const marker = L.marker([event.lat, event.long], {
+                        icon: getMarkerIcon(event.type)
+                    }).addTo(map);
+                    
+                    const popupContent = `
+                        <div>
+                            <strong>Type:</strong> ${event.type}<br>
+                            <strong>Note:</strong> ${event.note || 'No notes'}<br>
+                            <strong>Start:</strong> ${event.start_time ? new Date(event.start_time).toLocaleString() : 'Not specified'}<br>
+                            <strong>End:</strong> ${event.end_time ? new Date(event.end_time).toLocaleString() : 'Ongoing'}
+                        </div>
+                    `;
+                    
+                    marker.bindPopup(popupContent);
+                    markers[event.id] = marker;
+                });
+                
+                console.log(`Loaded ${events.length} events`);
+            } catch (error) {
+                console.error('Error loading events:', error);
+            }
+        }
+
+        // Load events when page loads
+        loadEvents();
+
+        // Refresh events every 30 seconds
+        setInterval(loadEvents, 30000);
+    </script>
+</body>
+</html>
