@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Traffic Admin Panel</title>
+    <link rel="stylesheet" href="styles.css" />
+</head>
+<body class="admin-page">
+    <div class="header">
+        <h1>Traffic Alerts Admin Panel</h1>
+        <div class="api-key-status">
+            <span class="api-key-indicator" id="apiKeyIndicator"></span>
+            <span id="apiKeyStatus">API Key Not Set</span>
+            <button class="btn btn-primary" onclick="openApiKeyModal()">Configure API Key</button>
+        </div>
+    </div>
+
+    <!-- API Key Modal -->
+    <div id="apiKeyModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Configure API Key</h3>
+                <span class="close" onclick="closeApiKeyModal()">&times;</span>
+            </div>
+            <div class="form-group">
+                <label for="apiKeyInput">API Key:</label>
+                <input type="password" id="apiKeyInput" placeholder="Enter your API key">
+            </div>
+            <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                <button class="btn btn-primary" onclick="saveApiKey()">Save</button>
+                <button class="btn" onclick="closeApiKeyModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Event Section -->
+    <div class="section">
+        <h2>Add New Event</h2>
+        <div id="addEventAlert"></div>
+        <form id="addEventForm">
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="lat">Latitude:</label>
+                    <input type="number" id="lat" step="any" required>
+                </div>
+                <div class="form-group">
+                    <label for="long">Longitude:</label>
+                    <input type="number" id="long" step="any" required>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="type">Type:</label>
+                    <select id="type" required>
+                        <option value="">Select type...</option>
+                        <option value="warning">Warning</option>
+                        <option value="slow traffic">Slow Traffic</option>
+                        <option value="very slow traffic">Very Slow Traffic</option>
+                        <option value="normal">Normal</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="startTime">Start Time:</label>
+                    <input type="datetime-local" id="startTime">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="endTime">End Time:</label>
+                    <input type="datetime-local" id="endTime">
+                </div>
+                <div class="form-group">
+                    <label for="note">Note:</label>
+                    <textarea id="note" placeholder="Optional note..."></textarea>
+                </div>
+            </div>
+            <button type="submit" class="btn btn-success">Add Event</button>
+        </form>
+    </div>
+
+    <!-- List Events Section -->
+    <div class="section">
+        <h2>List Events</h2>
+        <div id="listEventAlert"></div>
+        <div class="form-row">
+            <div class="form-group">
+                <label for="listStartTime">Start Time (required):</label>
+                <input type="datetime-local" id="listStartTime" required>
+            </div>
+            <div class="form-group">
+                <label for="listEndTime">End Time (optional):</label>
+                <input type="datetime-local" id="listEndTime">
+            </div>
+            <div class="form-group" style="display: flex; align-items: end;">
+                <button class="btn btn-primary" onclick="listEvents()">Load Events</button>
+            </div>
+        </div>
+        <div id="eventsContainer">
+            <p>Enter a start time and click "Load Events" to view events.</p>
+        </div>
+    </div>
+
+    <!-- Delete Event Section -->
+    <div class="section">
+        <h2>Delete Event</h2>
+        <div id="deleteEventAlert"></div>
+        <div class="delete-form">
+            <div class="form-group">
+                <label for="deleteEventId">Event ID:</label>
+                <input type="number" id="deleteEventId" required>
+            </div>
+            <div class="form-group">
+                <label for="deleteStartTime">Start Time:</label>
+                <input type="text" id="deleteStartTime" placeholder="e.g., 2025-08-09T10:00:00" required>
+            </div>
+            <div class="form-group">
+                <button class="btn btn-danger" onclick="deleteEvent()">Delete Event</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let apiKey = localStorage.getItem('traffis_api_key');
+        updateApiKeyStatus();
+
+        function updateApiKeyStatus() {
+            const indicator = document.getElementById('apiKeyIndicator');
+            const status = document.getElementById('apiKeyStatus');
+            
+            if (apiKey) {
+                indicator.classList.add('active');
+                status.textContent = 'API Key Set';
+            } else {
+                indicator.classList.remove('active');
+                status.textContent = 'API Key Not Set';
+            }
+        }
+
+        function openApiKeyModal() {
+            document.getElementById('apiKeyModal').style.display = 'block';
+            document.getElementById('apiKeyInput').value = '';
+        }
+
+        function closeApiKeyModal() {
+            document.getElementById('apiKeyModal').style.display = 'none';
+        }
+
+        function saveApiKey() {
+            const input = document.getElementById('apiKeyInput');
+            if (input.value.trim()) {
+                apiKey = input.value.trim();
+                localStorage.setItem('traffis_api_key', apiKey);
+                updateApiKeyStatus();
+                closeApiKeyModal();
+                showAlert('addEventAlert', 'API Key saved successfully!', 'success');
+            }
+        }
+
+        function showAlert(containerId, message, type) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = `<div class="alert alert-${type === 'success' ? 'success' : 'error'}">${message}</div>`;
+            setTimeout(() => {
+                container.innerHTML = '';
+            }, 5000);
+        }
+
+        function formatDateForAPI(dateString) {
+            if (!dateString) return null;
+            // Convert local datetime input to India timezone string
+            const date = new Date(dateString);
+            return date.toLocaleString('sv-SE', { timeZone: 'Asia/Kolkata' }).replace(' ', 'T');
+        }
+
+        function formatDateForInput(indiaTimeString) {
+            if (!indiaTimeString) return '';
+            // Convert India timezone string to local datetime input format
+            const date = new Date(indiaTimeString + '+05:30');
+            return date.toLocaleString('sv-SE').replace(' ', 'T');
+        }
+
+        function formatDateForDisplay(indiaTimeString) {
+            if (!indiaTimeString) return 'N/A';
+            // Display India time as-is
+            return indiaTimeString;
+        }
+
+        // Add Event
+        document.getElementById('addEventForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            if (!apiKey) {
+                showAlert('addEventAlert', 'Please configure your API key first.', 'error');
+                return;
+            }
+
+            const formData = {
+                lat: parseFloat(document.getElementById('lat').value),
+                long: parseFloat(document.getElementById('long').value),
+                type: document.getElementById('type').value,
+                start_time: formatDateForAPI(document.getElementById('startTime').value),
+                end_time: formatDateForAPI(document.getElementById('endTime').value),
+                note: document.getElementById('note').value
+            };
+
+            try {
+                const response = await fetch('/api/events', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-API-Key': apiKey
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    showAlert('addEventAlert', 'Event added successfully!', 'success');
+                    document.getElementById('addEventForm').reset();
+                } else {
+                    showAlert('addEventAlert', result.error || 'Failed to add event', 'error');
+                }
+            } catch (error) {
+                showAlert('addEventAlert', 'Network error: ' + error.message, 'error');
+            }
+        });
+
+        // List Events
+        async function listEvents() {
+            if (!apiKey) {
+                showAlert('listEventAlert', 'Please configure your API key first.', 'error');
+                return;
+            }
+
+            const startTime = document.getElementById('listStartTime').value;
+            if (!startTime) {
+                showAlert('listEventAlert', 'Start time is required.', 'error');
+                return;
+            }
+
+            const endTime = document.getElementById('listEndTime').value;
+            let url = `/api/events?start_time=${encodeURIComponent(formatDateForAPI(startTime))}`;
+            
+            if (endTime) {
+                url += `&end_time=${encodeURIComponent(formatDateForAPI(endTime))}`;
+            }
+
+            try {
+                const response = await fetch(url, {
+                    headers: {
+                        'X-API-Key': apiKey
+                    }
+                });
+
+                const events = await response.json();
+
+                if (response.ok) {
+                    displayEvents(events);
+                } else {
+                    showAlert('listEventAlert', events.error || 'Failed to load events', 'error');
+                }
+            } catch (error) {
+                showAlert('listEventAlert', 'Network error: ' + error.message, 'error');
+            }
+        }
+
+        function displayEvents(events) {
+            const container = document.getElementById('eventsContainer');
+            
+            if (events.length === 0) {
+                container.innerHTML = '<p>No events found for the specified time range.</p>';
+                return;
+            }
+
+            let html = '<table class="events-table"><thead><tr>';
+            html += '<th>ID</th><th>Lat</th><th>Long</th><th>Type</th>';
+            html += '<th>Start Time</th><th>End Time</th><th>Note</th></tr></thead><tbody>';
+
+            events.forEach(event => {
+                html += '<tr>';
+                html += `<td>${event.id}</td>`;
+                html += `<td>${event.lat}</td>`;
+                html += `<td>${event.long}</td>`;
+                html += `<td>${event.type}</td>`;
+                html += `<td>${formatDateForDisplay(event.start_time)}</td>`;
+                html += `<td>${formatDateForDisplay(event.end_time)}</td>`;
+                html += `<td>${event.note || ''}</td>`;
+                html += '</tr>';
+            });
+
+            html += '</tbody></table>';
+            container.innerHTML = html;
+        }
+
+        // Delete Event
+        async function deleteEvent() {
+            if (!apiKey) {
+                showAlert('deleteEventAlert', 'Please configure your API key first.', 'error');
+                return;
+            }
+
+            const eventId = document.getElementById('deleteEventId').value;
+            const startTime = document.getElementById('deleteStartTime').value;
+
+            if (!eventId || !startTime) {
+                showAlert('deleteEventAlert', 'Both Event ID and Start Time are required.', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/events/${eventId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-API-Key': apiKey
+                    },
+                    body: JSON.stringify({
+                        start_time: startTime
+                    })
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    showAlert('deleteEventAlert', 'Event deleted successfully!', 'success');
+                    document.getElementById('deleteEventId').value = '';
+                    document.getElementById('deleteStartTime').value = '';
+                } else {
+                    showAlert('deleteEventAlert', result.error || 'Failed to delete event', 'error');
+                }
+            } catch (error) {
+                showAlert('deleteEventAlert', 'Network error: ' + error.message, 'error');
+            }
+        }
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('apiKeyModal');
+            if (event.target === modal) {
+                closeApiKeyModal();
+            }
+        }
+    </script>
+</body>
+</html>

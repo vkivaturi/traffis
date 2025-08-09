@@ -8,6 +8,7 @@ const DATABASE = process.env.DB_PATH || 'traffic.db';
 
 app.use(cors());
 app.use(express.json());
+app.use(express.static(__dirname));
 
 function requireApiKey(req, res, next) {
     const apiKey = req.headers['x-api-key'] || req.query.api_key;
@@ -41,30 +42,38 @@ app.get('/', (req, res) => {
     res.sendFile(__dirname + '/map.html');
 });
 
-app.get('/api/events', (req, res) => {
+// Serve the admin page
+app.get('/cyberabad_admin', (req, res) => {
+    res.sendFile(__dirname + '/admin.html');
+});
+
+app.get('/api/events', requireApiKey, (req, res) => {
     const db = getDbConnection();
     const { start_time, end_time } = req.query;
+    
+    if (!start_time) {
+        return res.status(400).json({ error: 'start_time is required' });
+    }
     
     let query;
     let params = [];
     
-    if (start_time && end_time) {
-        // Filter by time range when provided
+    if (end_time) {
         query = `
             SELECT id, lat, long, created_time, start_time, end_time, note, type
             FROM events
-            WHERE start_time >= ? AND start_time <= ?
+            WHERE datetime(start_time) >= datetime(?) AND datetime(start_time) <= datetime(?)
             ORDER BY start_time DESC
         `;
         params = [start_time, end_time];
     } else {
-        // Default behavior: show active events
         query = `
             SELECT id, lat, long, created_time, start_time, end_time, note, type
             FROM events
-            WHERE end_time IS NULL OR end_time > datetime('now')
-            ORDER BY created_time DESC
+            WHERE datetime(start_time) >= datetime(?)
+            ORDER BY start_time DESC
         `;
+        params = [start_time];
     }
     
     db.all(query, params, (err, rows) => {
@@ -120,11 +129,17 @@ app.post('/api/events', requireApiKey, (req, res) => {
     db.close();
 });
 
-app.delete('/api/events/:id', (req, res) => {
+app.delete('/api/events/:id', requireApiKey, (req, res) => {
     const eventId = req.params.id;
+    const { start_time } = req.body;
+    
+    if (!start_time) {
+        return res.status(400).json({ error: 'start_time is required in request body' });
+    }
+    
     const db = getDbConnection();
     
-    db.run('DELETE FROM events WHERE id = ?', [eventId], function(err) {
+    db.run('DELETE FROM events WHERE id = ? AND datetime(start_time) = datetime(?)', [eventId, start_time], function(err) {
         if (err) {
             console.error('Error deleting event:', err.message);
             res.status(500).json({ error: err.message });
@@ -132,7 +147,7 @@ app.delete('/api/events/:id', (req, res) => {
         }
         
         if (this.changes === 0) {
-            res.status(404).json({ error: 'Event not found' });
+            res.status(404).json({ error: 'Event not found or start_time does not match' });
             return;
         }
         
