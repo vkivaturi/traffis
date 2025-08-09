@@ -148,31 +148,92 @@ The application is fully self-contained:
 - Database file created automatically
 
 ### Docker Deployment
-1. Build the Docker image:
-   ```bash
-   docker build -t traffis .
-   ```
 
-2. Run with persistent storage:
-   ```bash
-   docker run -d -p 4000:4000 -v $(pwd)/data:/app/data traffis
-   ```
+#### 1. Build the Docker Image
+```bash
+docker build -t traffis .
+```
+
+#### 2. Run with Environment Variables
+The application requires three environment variables:
+- `API_KEY`: Authentication key for API endpoints
+- `LLM_KEY`: Authentication key for LLM service
+- `DB_PATH`: Database file path (optional, defaults to `/app/data/traffic.db`)
+
+**Basic run command:**
+```bash
+docker run -d \
+  -p 4000:4000 \
+  -v $(pwd)/data:/app/data \
+  -e API_KEY="your-api-key-here" \
+  -e LLM_KEY="your-llm-key-here" \
+  --name traffis \
+  traffis
+```
+
+**Alternative with .env file:**
+```bash
+# Create .env file
+cat > .env << EOF
+API_KEY=your-api-key-here
+LLM_KEY=your-llm-key-here
+DB_PATH=/app/data/traffic.db
+EOF
+
+# Run container
+docker run -d \
+  -p 4000:4000 \
+  -v $(pwd)/data:/app/data \
+  --env-file .env \
+  --name traffis \
+  traffis
+```
 
 ### EC2 Deployment
-1. Create a directory for database persistence:
-   ```bash
-   mkdir -p /opt/traffis/data
-   ```
 
-2. Run the container with mounted volume:
-   ```bash
-   docker run -d -p 4000:4000 -v /opt/traffis/data:/app/data --name traffis traffis
-   ```
+#### 1. Prepare Environment
+```bash
+# Create directory for database persistence
+mkdir -p /opt/traffis/data
 
-3. Set up environment variables if needed:
-   ```bash
-   docker run -d -p 4000:4000 -v /opt/traffis/data:/app/data -e API_KEY=your_api_key --name traffis traffis
-   ```
+# Create environment file with your keys
+sudo tee /opt/traffis/.env << EOF
+API_KEY=your-api-key-here
+LLM_KEY=your-llm-key-here
+DB_PATH=/app/data/traffic.db
+EOF
+```
+
+#### 2. Build and Run Container
+```bash
+# Clone repository
+git clone <repository-url>
+cd traffis
+
+# Build image
+docker build -t traffis .
+
+# Run container with persistent storage and environment variables
+docker run -d \
+  -p 4000:4000 \
+  -v /opt/traffis/data:/app/data \
+  --env-file /opt/traffis/.env \
+  --name traffis \
+  --restart unless-stopped \
+  traffis
+```
+
+#### 3. Verify Deployment
+```bash
+# Check container status
+docker ps
+
+# View logs
+docker logs traffis
+
+# Test application
+curl http://localhost:4000
+```
 
 ## API Integration
 
