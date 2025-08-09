@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const sqlite3 = require('sqlite3').verbose();
+const { callLLM } = require('./utils');
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -155,6 +156,22 @@ app.delete('/api/events/:id', requireApiKey, (req, res) => {
     });
     
     db.close();
+});
+
+app.post('/api/llm', requireApiKey, async (req, res) => {
+    const { prompt } = req.body;
+    
+    if (!prompt) {
+        return res.status(400).json({ error: 'prompt is required' });
+    }
+    
+    try {
+        const result = await callLLM(prompt);
+        res.json(result);
+    } catch (error) {
+        console.error('Error calling LLM:', error.message);
+        res.status(500).json({ error: 'Failed to call LLM service' });
+    }
 });
 
 app.listen(PORT, () => {

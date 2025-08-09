@@ -34,6 +34,26 @@
         </div>
     </div>
 
+    <!-- LLM Assistant Section -->
+    <div class="section">
+        <h2>LLM Assistant</h2>
+        <div class="form-row">
+            <div class="form-group">
+                <label for="llmPrompt">Ask LLM:</label>
+                <div style="display: flex; gap: 10px;">
+                    <input type="text" id="llmPrompt" placeholder="Enter your prompt here..." style="flex: 1;" onkeypress="if(event.key==='Enter') callLLM()">
+                    <button class="btn btn-primary" onclick="callLLM()">Submit</button>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>LLM Response:</label>
+                <div id="llmResponse" style="background-color: #f8f9fa; padding: 10px; border-radius: 4px; height: 200px; max-height: 200px; border: 1px solid #ddd; white-space: pre-wrap; overflow-y: auto;">
+                    Response will appear here...
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Add Event Section -->
     <div class="section">
         <h2>Add New Event</h2>
@@ -331,6 +351,48 @@
                 }
             } catch (error) {
                 showAlert('deleteEventAlert', 'Network error: ' + error.message, 'error');
+            }
+        }
+
+        // LLM Assistant
+        async function callLLM() {
+            if (!apiKey) {
+                document.getElementById('llmResponse').textContent = 'Please configure your API key first.';
+                return;
+            }
+
+            const prompt = document.getElementById('llmPrompt').value.trim();
+            if (!prompt) {
+                document.getElementById('llmResponse').textContent = 'Please enter a prompt.';
+                return;
+            }
+
+            document.getElementById('llmResponse').textContent = 'Loading...';
+
+            try {
+                const response = await fetch('/api/llm', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-API-Key': apiKey
+                    },
+                    body: JSON.stringify({ prompt })
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    // Extract the message content from LLM response
+                    if (result.choices && result.choices[0] && result.choices[0].message) {
+                        document.getElementById('llmResponse').textContent = result.choices[0].message.content;
+                    } else {
+                        document.getElementById('llmResponse').textContent = JSON.stringify(result, null, 2);
+                    }
+                } else {
+                    document.getElementById('llmResponse').textContent = 'Error: ' + (result.error || 'Failed to call LLM');
+                }
+            } catch (error) {
+                document.getElementById('llmResponse').textContent = 'Network error: ' + error.message;
             }
         }
 
