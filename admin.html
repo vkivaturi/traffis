@@ -56,12 +56,12 @@
         <form id="addEventForm">
             <div class="form-row">
                 <div class="form-group">
-                    <label for="lat">Latitude:</label>
-                    <input type="number" id="lat" step="any" required>
+                    <label for="latitude">Latitude:</label>
+                    <input type="number" id="latitude" step="any" required>
                 </div>
                 <div class="form-group">
-                    <label for="long">Longitude:</label>
-                    <input type="number" id="long" step="any" required>
+                    <label for="longitude">Longitude:</label>
+                    <input type="number" id="longitude" step="any" required>
                 </div>
             </div>
             <div class="form-row">
@@ -216,8 +216,8 @@
             }
 
             const formData = {
-                lat: parseFloat(document.getElementById('lat').value),
-                long: parseFloat(document.getElementById('long').value),
+                latitude: parseFloat(document.getElementById('latitude').value),
+                longitude: parseFloat(document.getElementById('longitude').value),
                 type: document.getElementById('type').value,
                 start_time: formatDateForAPI(document.getElementById('startTime').value),
                 end_time: formatDateForAPI(document.getElementById('endTime').value),
@@ -295,14 +295,14 @@
             }
 
             let html = '<table class="events-table"><thead><tr>';
-            html += '<th>ID</th><th>Lat</th><th>Long</th><th>Type</th>';
+            html += '<th>ID</th><th>Latitude</th><th>Longitude</th><th>Type</th>';
             html += '<th>Start Time</th><th>End Time</th><th>Note</th></tr></thead><tbody>';
 
             events.forEach(event => {
                 html += '<tr>';
                 html += `<td>${event.id}</td>`;
-                html += `<td>${event.lat}</td>`;
-                html += `<td>${event.long}</td>`;
+                html += `<td>${event.latitude}</td>`;
+                html += `<td>${event.longitude}</td>`;
                 html += `<td>${event.type}</td>`;
                 html += `<td>${formatDateForDisplay(event.start_time)}</td>`;
                 html += `<td>${formatDateForDisplay(event.end_time)}</td>`;
@@ -379,9 +379,9 @@
 
                 if (response.ok) {
                     // Populate the Add Event form with LLM response
-                    document.getElementById('lat').value = result.lat || '';
-                    document.getElementById('long').value = result.long || '';
-                    
+                    document.getElementById('latitude').value = result.latitude || '';
+                    document.getElementById('longitude').value = result.longitude || '';
+
                     // Set the status dropdown value
                     const statusSelect = document.getElementById('type');
                     statusSelect.value = result.status || '';

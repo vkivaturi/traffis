@@ -34,7 +34,7 @@ A real-time traffic monitoring system that displays traffic events on an interac
 
 1. Start rqlite server:
    ```bash
-   rqlited ~/node.1
+   docker run -d --name rqlite -p 4001:4001 -p 4002:4002 -v $(pwd)/rqdata:/rqlite/file/data rqlite/rqlite
    ```
    rqlite will run on http://localhost:4001
 

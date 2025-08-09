@@ -178,7 +178,7 @@
             
             // Add markers for all events
             events.forEach(event => {
-                const marker = L.marker([event.lat, event.long], {
+                const marker = L.marker([event.latitude, event.longitude], {
                     icon: getMarkerIcon(event.type)
                 }).addTo(map);
                 

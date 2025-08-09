@@ -15,9 +15,9 @@ async function callLLM(userPrompt) {
     "Use Hyderabad coordinates (17.385044, 78.486671 as center) and estimate appropriate coordinates based on the location details mentioned.\n" +
     "Based on the user's description of traffic incidents, generate a response which MUST follow this structure. DO NOT RESPOND WITH ANYTHING OTHER THAN THE JSON:\n " +
     "{\n" +
-    "  \"lat\": <latitude of the location being referred>,\n" +
-    "  \"long\": <longitude of the location being referred>,\n" +
-    "  \"status\": <value can be active or inactive. If user prompt indicates and ongoing issue, mark this as active. If a traffic issue has been resolved, mark it as inactive>,\n" +
+    "  \"latitude\": <latitude of the location being referred by the user prompt>,\n" +
+    "  \"longitude\": <longitude of the location being referred by the user prompt>,\n" +
+    "  \"status\": <value can be active or inactive. If user prompt indicates and ongoing issue, set status as active. If a traffic issue has been resolved, set status as inactive>,\n" +
     "}\n"
     ;
     if (!llmKey) {
@@ -70,7 +70,7 @@ async function callLLM(userPrompt) {
         }
         
         // Validate required fields
-        const requiredFields = ['lat', 'long', 'status'];
+        const requiredFields = ['latitude', 'longitude', 'status'];
         for (const field of requiredFields) {
             if (!(field in parsedLLM)) {
                 throw new Error(`Missing required field: ${field}`);
@@ -84,6 +84,8 @@ async function callLLM(userPrompt) {
         
         // Add notes field based on valid_notes
         parsedLLM.notes = userPrompt;
+
+        console.log('LLM response ready for database:', parsedLLM);
 
         return parsedLLM;
     } catch (error) {
