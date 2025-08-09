@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const sqlite3 = require('sqlite3').verbose();
 const { callLLM } = require('./utils');
+const { initializeDatabase } = require('./init_db');
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -38,11 +39,37 @@ function requireApiKey(req, res, next) {
     next();
 }
 
-function getDbConnection() {
-    return new sqlite3.Database(DATABASE, (err) => {
-        if (err) {
-            console.error('Error creating database connection:', err.message);
-        }
+async function getDbConnection() {
+    return new Promise((resolve, reject) => {
+        const db = new sqlite3.Database(DATABASE, async (err) => {
+            if (err) {
+                // Database doesn't exist, initialize it
+                if (err.code === 'SQLITE_CANTOPEN') {
+                    console.log('Database not found. Initializing...');
+                    try {
+                        await initializeDatabase();
+                        console.log('Database initialized successfully');
+                        // Try connecting again after initialization
+                        const newDb = new sqlite3.Database(DATABASE, (err2) => {
+                            if (err2) {
+                                console.error('Error after initialization:', err2.message);
+                                reject(err2);
+                            } else {
+                                resolve(newDb);
+                            }
+                        });
+                    } catch (initErr) {
+                        console.error('Error initializing database:', initErr.message);
+                        reject(initErr);
+                    }
+                } else {
+                    console.error('Error creating database connection:', err.message);
+                    reject(err);
+                }
+            } else {
+                resolve(db);
+            }
+        });
     });
 }
 
@@ -56,9 +83,10 @@ app.get('/cyberabad_admin', (req, res) => {
     res.sendFile(__dirname + '/admin.html');
 });
 
-app.get('/api/events', (req, res) => {
-    const db = getDbConnection();
-    const { start_time, end_time } = req.query;
+app.get('/api/events', async (req, res) => {
+    try {
+        const db = await getDbConnection();
+        const { start_time, end_time } = req.query;
     
     if (!start_time) {
         return res.status(400).json({ error: 'start_time is required' });
@@ -96,6 +124,10 @@ app.get('/api/events', (req, res) => {
     });
     
     db.close();
+    } catch (error) {
+        console.error('Error in /api/events:', error.message);
+        res.status(500).json({ error: 'Database connection failed' });
+    }
 });
 
 app.post('/api/events', requireApiKey, (req, res) => {

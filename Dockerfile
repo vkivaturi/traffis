@@ -19,8 +19,7 @@ RUN mkdir -p /app/data
 # Set database path for initialization
 ENV DB_PATH=/app/data/traffic.db
 
-# Initialize database
-RUN npm run init-db
+# Database will be initialized automatically when first accessed
 
 # Expose port
 EXPOSE 4000
