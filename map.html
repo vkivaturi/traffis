@@ -105,8 +105,16 @@
         }
         
         function updateTimeDisplay() {
-            document.getElementById('startTimeDisplay').textContent = currentStartTime.toLocaleString();
-            document.getElementById('endTimeDisplay').textContent = currentEndTime.toLocaleString();
+            // Format time without seconds
+            const options = {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit'
+            };
+            document.getElementById('startTimeDisplay').textContent = currentStartTime.toLocaleString('en-US', options);
+            document.getElementById('endTimeDisplay').textContent = currentEndTime.toLocaleString('en-US', options);
         }
         
         // Throttled function to load events (max once every 3 seconds)
@@ -124,16 +132,10 @@
         function getMarkerIcon(type) {
             var color;
             switch(type) {
-                case 'warning':
+                case 'active':
                     color = 'orange';
                     break;
-                case 'slow traffic':
-                    color = 'yellow';
-                    break;
-                case 'very slow traffic':
-                    color = 'red';
-                    break;
-                case 'normal':
+                case 'inactive':
                     color = 'green';
                     break;
                 default:
@@ -151,9 +153,9 @@
         // Function to load events from API
         async function loadEvents() {
             try {
-                // Convert dates to ISO string format for the API
-                const startTimeParam = currentStartTime.toISOString();
-                const endTimeParam = currentEndTime.toISOString();
+                // Convert dates to India timezone format (YYYY-MM-DDTHH:mm)
+                const startTimeParam = currentStartTime.toLocaleString('sv-SE', { timeZone: 'Asia/Kolkata' }).replace(' ', 'T').slice(0, 16);
+                const endTimeParam = currentEndTime.toLocaleString('sv-SE', { timeZone: 'Asia/Kolkata' }).replace(' ', 'T').slice(0, 16);
                 
                 const url = `/api/events?start_time=${encodeURIComponent(startTimeParam)}&end_time=${encodeURIComponent(endTimeParam)}`;
                 const response = await fetch(url);

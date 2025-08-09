@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS events (
     start_time DATETIME,
     end_time DATETIME,
     note TEXT,
-    type TEXT CHECK(type IN ('warning', 'slow traffic', 'very slow traffic', 'normal')) NOT NULL
+    type TEXT CHECK(type IN ('active', 'inactive')) NOT NULL
 );
 
 -- Create index for location queries

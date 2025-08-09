@@ -39,17 +39,12 @@
         <h2>LLM Assistant</h2>
         <div class="form-row">
             <div class="form-group">
-                <label for="llmPrompt">Ask LLM:</label>
+                <label for="llmPrompt">Traffic alert note</label>
                 <div style="display: flex; gap: 10px;">
-                    <input type="text" id="llmPrompt" placeholder="Enter your prompt here..." style="flex: 1;" onkeypress="if(event.key==='Enter') callLLM()">
+                    <input type="text" id="llmPrompt" placeholder="Enter traffic alert here..." style="flex: 1;" onkeypress="if(event.key==='Enter') callLLM()">
                     <button class="btn btn-primary" onclick="callLLM()">Submit</button>
                 </div>
-            </div>
-            <div class="form-group">
-                <label>LLM Response:</label>
-                <div id="llmResponse" style="background-color: #f8f9fa; padding: 10px; border-radius: 4px; height: 200px; max-height: 200px; border: 1px solid #ddd; white-space: pre-wrap; overflow-y: auto;">
-                    Response will appear here...
-                </div>
+                <small style="color: #6c757d; font-style: italic;">For example :: Vehicle Accident- Traffic congestion Expected on Shilpa Flyover from ORR towards IKEA.</small>
             </div>
         </div>
     </div>
@@ -71,13 +66,11 @@
             </div>
             <div class="form-row">
                 <div class="form-group">
-                    <label for="type">Type:</label>
+                    <label for="type">Status:</label>
                     <select id="type" required>
-                        <option value="">Select type...</option>
-                        <option value="warning">Warning</option>
-                        <option value="slow traffic">Slow Traffic</option>
-                        <option value="very slow traffic">Very Slow Traffic</option>
-                        <option value="normal">Normal</option>
+                        <option value="">Select status...</option>
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
                     </select>
                 </div>
                 <div class="form-group">
@@ -357,17 +350,17 @@
         // LLM Assistant
         async function callLLM() {
             if (!apiKey) {
-                document.getElementById('llmResponse').textContent = 'Please configure your API key first.';
+                console.log('Please configure your API key first.');
+                showAlert('addEventAlert', 'Please configure your API key first.', 'error');
                 return;
             }
 
             const prompt = document.getElementById('llmPrompt').value.trim();
             if (!prompt) {
-                document.getElementById('llmResponse').textContent = 'Please enter a prompt.';
+                console.log('Please enter a prompt.');
+                showAlert('addEventAlert', 'Please enter a prompt.', 'error');
                 return;
             }
-
-            document.getElementById('llmResponse').textContent = 'Loading...';
 
             try {
                 const response = await fetch('/api/llm', {
@@ -380,19 +373,32 @@
                 });
 
                 const result = await response.json();
+                console.log('LLM Response:', result);
 
                 if (response.ok) {
-                    // Extract the message content from LLM response
-                    if (result.choices && result.choices[0] && result.choices[0].message) {
-                        document.getElementById('llmResponse').textContent = result.choices[0].message.content;
-                    } else {
-                        document.getElementById('llmResponse').textContent = JSON.stringify(result, null, 2);
-                    }
+                    // Populate the Add Event form with LLM response
+                    document.getElementById('lat').value = result.lat || '';
+                    document.getElementById('long').value = result.long || '';
+                    
+                    // Set the status dropdown value
+                    const statusSelect = document.getElementById('type');
+                    statusSelect.value = result.status || '';
+                    
+                    document.getElementById('startTime').value = formatDateForInput(result.start_time) || '';
+                    document.getElementById('endTime').value = formatDateForInput(result.end_time) || '';
+                    document.getElementById('note').value = result.notes || '';
+                    
+                    // Clear the LLM prompt input
+                    document.getElementById('llmPrompt').value = '';
+                    
+                    showAlert('addEventAlert', 'Form populated with LLM response!', 'success');
                 } else {
-                    document.getElementById('llmResponse').textContent = 'Error: ' + (result.error || 'Failed to call LLM');
+                    console.error('LLM API Error:', result.error);
+                    showAlert('addEventAlert', 'Error: ' + (result.error || 'Failed to call LLM'), 'error');
                 }
             } catch (error) {
-                document.getElementById('llmResponse').textContent = 'Network error: ' + error.message;
+                console.error('Network error:', error.message);
+                showAlert('addEventAlert', 'Network error: ' + error.message, 'error');
             }
         }
 

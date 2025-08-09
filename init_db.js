@@ -26,10 +26,10 @@ function initializeDatabase() {
         const thirtyMinutesLater = new Date(Date.now() + 30 * 60 * 1000).toISOString();
         
         const sampleData = [
-            [17.415275, 78.481654, currentTime, oneHourLater, 'Heavy traffic on main road', 'very slow traffic'],
-            [17.420000, 78.485000, currentTime, twoHoursLater, 'Construction work ahead', 'warning'],
-            [17.410000, 78.475000, currentTime, thirtyMinutesLater, 'Minor slowdown', 'slow traffic'],
-            [17.425000, 78.490000, currentTime, null, 'Clear roads', 'normal']
+            [17.415275, 78.481654, currentTime, oneHourLater, 'Heavy traffic on main road', 'active'],
+            [17.420000, 78.485000, currentTime, twoHoursLater, 'Construction work ahead', 'active'],
+            [17.410000, 78.475000, currentTime, thirtyMinutesLater, 'Minor slowdown', 'active'],
+            [17.425000, 78.490000, currentTime, null, 'Clear roads', 'inactive']
         ];
         
         const insertStmt = db.prepare(`

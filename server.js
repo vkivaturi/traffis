@@ -48,14 +48,14 @@ app.get('/cyberabad_admin', (req, res) => {
     res.sendFile(__dirname + '/admin.html');
 });
 
-app.get('/api/events', requireApiKey, (req, res) => {
+app.get('/api/events', (req, res) => {
     const db = getDbConnection();
     const { start_time, end_time } = req.query;
     
     if (!start_time) {
         return res.status(400).json({ error: 'start_time is required' });
     }
-    
+    console.log('Fetching events between:', start_time, end_time);
     let query;
     let params = [];
     
@@ -100,7 +100,7 @@ app.post('/api/events', requireApiKey, (req, res) => {
         }
     }
     
-    const validTypes = ['warning', 'slow traffic', 'very slow traffic', 'normal'];
+    const validTypes = ['active', 'inactive'];
     if (!validTypes.includes(type)) {
         return res.status(400).json({ 
             error: `Invalid type. Must be one of: ${validTypes.join(', ')}` 
