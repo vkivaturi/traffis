@@ -7,18 +7,15 @@ A real-time traffic monitoring system that displays traffic events on an interac
 - **Interactive Map**: OpenStreetMap integration with Leaflet.js
 - **Real-time Updates**: Automatic refresh every 30 seconds
 - **Color-coded Markers**: Visual indication of traffic conditions
-  - 🟢 Green: Normal traffic
-  - 🟡 Yellow: Slow traffic
-  - 🔴 Red: Very slow traffic
-  - 🟠 Orange: Warning/Alert
 - **Event Details**: Click markers to view detailed information
 - **REST API**: Full CRUD operations for traffic events
-- **SQLite Database**: Lightweight, file-based storage
+- **rqlite Database**: Distributed SQLite with HTTP API
 
 ## Prerequisites
 
 - Node.js (v14 or higher)
 - npm (Node Package Manager)
+- rqlite server running on port 4001
 
 ## Installation
 
@@ -35,14 +32,27 @@ A real-time traffic monitoring system that displays traffic events on an interac
 
 ## Setup
 
-1. Initialize the database with sample data:
+1. Start rqlite server:
    ```bash
-   npm run init-db
+   rqlited ~/node.1
+   ```
+   rqlite will run on http://localhost:4001
+
+2. Initialize the database with sample data:
+   ```bash
+   RQLITE_URL=http://localhost:4001 npm run init-db
    ```
 
 ## Running the Application
 
-1. Start the server:
+1. Set environment variables:
+   ```bash
+   export API_KEY="your-api-key-here"
+   export LLM_KEY="your-llm-key-here"
+   export RQLITE_URL="http://localhost:4001"
+   ```
+
+2. Start the server:
    ```bash
    npm start
    ```
@@ -92,25 +102,12 @@ Create a new traffic event
 ### DELETE /api/events/:id
 Delete a specific event by ID
 
-## Project Structure
-
-```
-traffis/
-├── schema.sql          # Database schema
-├── init_db.js         # Database initialization script
-├── server.js          # Express.js API server
-├── map.html           # Frontend map interface
-├── package.json       # Node.js dependencies
-├── .gitignore         # Git ignore rules
-└── README.md          # This file
-```
-
 ## Technologies Used
 
-- **Backend**: Node.js, Express.js, SQLite3
+- **Backend**: Node.js, Express.js, node-fetch
 - **Frontend**: HTML5, JavaScript (ES6+), Leaflet.js
 - **Map**: OpenStreetMap tiles
-- **Database**: SQLite
+- **Database**: rqlite (distributed SQLite)
 
 ## Usage
 
@@ -121,22 +118,18 @@ traffis/
 
 ## Database Configuration
 
-The database location can be configured using the `DB_PATH` environment variable:
+The application connects to rqlite using the `RQLITE_URL` environment variable:
 
 ### Local Development
-- **Default**: Uses `traffic.db` in the current directory
+- **Default**: `http://localhost:4001`
 - **Custom location**: 
   ```bash
-  DB_PATH=/path/to/your/database.db npm start
+  RQLITE_URL=http://your-rqlite-host:4001 npm start
   ```
 
-### Docker/EC2 Deployment
-- Database is stored in `/app/data/traffic.db` inside the container
-- Mount external directory for persistence:
-  ```bash
-  docker run -v /host/path:/app/data -p 4000:4000 traffis
-  ```
-- On EC2, mount an EBS volume or local directory to persist data between container restarts
+### Docker/Network Deployment
+- Use `host.docker.internal:4001` to connect to rqlite running on host
+- For production, use actual IP/hostname of rqlite server
 
 ## Deployment
 
@@ -149,62 +142,114 @@ The application is fully self-contained:
 
 ### Docker Deployment
 
-#### 1. Build the Docker Image
+#### 1. Start rqlite server
+```bash
+# Run rqlite in a container
+docker run -d \
+  -p 4001:4001 \
+  --name rqlite \
+  rqlite/rqlite:latest
+```
+
+#### 2. Build the traffis Docker Image
 ```bash
 docker build -t traffis .
 ```
 
-#### 2. Run with Environment Variables
+#### 3. Run traffis container
 The application requires three environment variables:
 - `API_KEY`: Authentication key for API endpoints
 - `LLM_KEY`: Authentication key for LLM service
-- `DB_PATH`: Database file path (optional, defaults to `/app/data/traffic.db`)
+- `RQLITE_URL`: URL to rqlite server (defaults to `http://host.docker.internal:4001`)
 
 **Basic run command:**
 ```bash
 docker run -d \
   -p 4000:4000 \
-  -v $(pwd)/data:/app/data \
   -e API_KEY="your-api-key-here" \
   -e LLM_KEY="your-llm-key-here" \
   --name traffis \
   traffis
 ```
 
-**Alternative with .env file:**
+**With .env file:**
 ```bash
 # Create .env file
 cat > .env << EOF
 API_KEY=your-api-key-here
 LLM_KEY=your-llm-key-here
-DB_PATH=/app/data/traffic.db
+RQLITE_URL=http://host.docker.internal:4001
 EOF
 
 # Run container
 docker run -d \
   -p 4000:4000 \
-  -v $(pwd)/data:/app/data \
   --env-file .env \
   --name traffis \
   traffis
+```
+
+**Using Docker Compose (recommended):**
+```yaml
+# docker-compose.yml
+version: '3.8'
+services:
+  rqlite:
+    image: rqlite/rqlite:latest
+    ports:
+      - "4001:4001"
+    volumes:
+      - rqlite_data:/rqlite/file
+  
+  traffis:
+    build: .
+    ports:
+      - "4000:4000"
+    environment:
+      - API_KEY=your-api-key-here
+      - LLM_KEY=your-llm-key-here
+      - RQLITE_URL=http://rqlite:4001
+    depends_on:
+      - rqlite
+
+volumes:
+  rqlite_data:
+```
+
+```bash
+# Run with docker-compose
+docker-compose up -d
 ```
 
 ### EC2 Deployment
 
 #### 1. Prepare Environment
 ```bash
-# Create directory for database persistence
-mkdir -p /opt/traffis/data
-
 # Create environment file with your keys
 sudo tee /opt/traffis/.env << EOF
 API_KEY=your-api-key-here
 LLM_KEY=your-llm-key-here
-DB_PATH=/app/data/traffic.db
+RQLITE_URL=http://localhost:4001
 EOF
 ```
 
-#### 2. Build and Run Container
+#### 2. Start rqlite server
+```bash
+# Install and start rqlite
+wget https://github.com/rqlite/rqlite/releases/download/v7.21.4/rqlite-v7.21.4-linux-amd64.tar.gz
+tar xzf rqlite-v7.21.4-linux-amd64.tar.gz
+sudo mv rqlite-v7.21.4-linux-amd64/rqlited /usr/local/bin/
+
+# Create data directory
+sudo mkdir -p /opt/rqlite/data
+
+# Start rqlite as service
+sudo systemd create rqlite.service
+# or run directly:
+nohup rqlited -http-addr 0.0.0.0:4001 /opt/rqlite/data &
+```
+
+#### 3. Build and Run traffis Container
 ```bash
 # Clone repository
 git clone <repository-url>
@@ -213,23 +258,32 @@ cd traffis
 # Build image
 docker build -t traffis .
 
-# Run container with persistent storage and environment variables
+# Run container
 docker run -d \
   -p 4000:4000 \
-  -v /opt/traffis/data:/app/data \
   --env-file /opt/traffis/.env \
   --name traffis \
   --restart unless-stopped \
   traffis
 ```
 
-#### 3. Verify Deployment
+#### 4. Initialize Database
+```bash
+# Initialize the rqlite database with sample data
+docker exec traffis npm run init-db
+```
+
+#### 5. Verify Deployment
 ```bash
 # Check container status
 docker ps
 
 # View logs
 docker logs traffis
+docker logs rqlite  # if using docker rqlite
+
+# Test rqlite connection
+curl http://localhost:4001/status
 
 # Test application
 curl http://localhost:4000

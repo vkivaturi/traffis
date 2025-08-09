@@ -186,8 +186,8 @@
                     <div>
                         <strong>Type:</strong> ${event.type}<br>
                         <strong>Note:</strong> ${event.note || 'No notes'}<br>
-                        <strong>Start:</strong> ${event.start_time ? new Date(event.start_time).toLocaleString() : 'Not specified'}<br>
-                        <strong>End:</strong> ${event.end_time ? new Date(event.end_time).toLocaleString() : 'Ongoing'}
+                        <strong>Start:</strong> ${event.start_time ? event.start_time : 'Not specified'}<br>
+                        <strong>End:</strong> ${event.end_time ? event.end_time : 'Not specified'}
                     </div>
                 `;
                 

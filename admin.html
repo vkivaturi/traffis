@@ -124,10 +124,6 @@
                 <input type="number" id="deleteEventId" required>
             </div>
             <div class="form-group">
-                <label for="deleteStartTime">Start Time:</label>
-                <input type="text" id="deleteStartTime" placeholder="e.g., 2025-08-09T10:00:00" required>
-            </div>
-            <div class="form-group">
                 <button class="btn btn-danger" onclick="deleteEvent()">Delete Event</button>
             </div>
         </div>
@@ -136,6 +132,7 @@
     <script>
         let apiKey = localStorage.getItem('traffis_api_key');
         updateApiKeyStatus();
+        setDefaultListStartTime();
 
         function updateApiKeyStatus() {
             const indicator = document.getElementById('apiKeyIndicator');
@@ -196,6 +193,17 @@
             if (!indiaTimeString) return 'N/A';
             // Display India time as-is
             return indiaTimeString;
+        }
+
+        function setDefaultListStartTime() {
+            // Set default start time to current time - 1 day
+            const now = new Date();
+            const oneDayAgo = new Date(now.getTime() - (24 * 60 * 60 * 1000));
+            
+            // Convert to local datetime-local format
+            const defaultStartTime = oneDayAgo.toLocaleString('sv-SE').replace(' ', 'T');
+            
+            document.getElementById('listStartTime').value = defaultStartTime;
         }
 
         // Add Event
@@ -314,10 +322,9 @@
             }
 
             const eventId = document.getElementById('deleteEventId').value;
-            const startTime = document.getElementById('deleteStartTime').value;
 
-            if (!eventId || !startTime) {
-                showAlert('deleteEventAlert', 'Both Event ID and Start Time are required.', 'error');
+            if (!eventId) {
+                showAlert('deleteEventAlert', 'Event ID is required.', 'error');
                 return;
             }
 
@@ -325,12 +332,8 @@
                 const response = await fetch(`/api/events/${eventId}`, {
                     method: 'DELETE',
                     headers: {
-                        'Content-Type': 'application/json',
                         'X-API-Key': apiKey
-                    },
-                    body: JSON.stringify({
-                        start_time: startTime
-                    })
+                    }
                 });
 
                 const result = await response.json();
@@ -338,7 +341,6 @@
                 if (response.ok) {
                     showAlert('deleteEventAlert', 'Event deleted successfully!', 'success');
                     document.getElementById('deleteEventId').value = '';
-                    document.getElementById('deleteStartTime').value = '';
                 } else {
                     showAlert('deleteEventAlert', result.error || 'Failed to delete event', 'error');
                 }

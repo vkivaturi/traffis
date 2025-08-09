@@ -1,0 +1,24 @@
+version: '3.8'
+
+services:
+  rqlite:
+    image: rqlite/rqlite:latest
+    ports:
+      - "4001:4001"
+    volumes:
+      - rqlite_data:/rqlite/file
+    command: ["-http-addr", "0.0.0.0:4001", "/rqlite/file"]
+  
+  traffis:
+    build: .
+    ports:
+      - "4000:4000"
+    environment:
+      - API_KEY=${API_KEY:-your-api-key-here}
+      - LLM_KEY=${LLM_KEY:-your-llm-key-here}
+      - RQLITE_URL=http://rqlite:4001
+    depends_on:
+      - rqlite
+
+volumes:
+  rqlite_data:
