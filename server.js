@@ -11,6 +11,14 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(__dirname));
 
+// Middleware to log all incoming requests
+app.use((req, res, next) => {
+    const timestamp = new Date().toISOString();
+    const ip = req.ip || req.connection.remoteAddress || req.socket.remoteAddress || (req.connection.socket ? req.connection.socket.remoteAddress : null);
+    console.log(`[${timestamp}] ${req.method} ${req.url} - IP: ${ip}`);
+    next();
+});
+
 function requireApiKey(req, res, next) {
     const apiKey = req.headers['x-api-key'] || req.query.api_key;
     const validApiKey = process.env.API_KEY;
