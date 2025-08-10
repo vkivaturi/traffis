@@ -140,6 +140,25 @@ body.admin-page {
     opacity: 0.8;
 }
 
+.btn-icon {
+    background-color: #6c757d;
+    color: white;
+    min-width: 32px;
+    min-height: 32px;
+    padding: 6px;
+    border-radius: 50%;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    cursor: pointer;
+}
+
+.btn-icon:hover {
+    background-color: #5a6268;
+}
+
 .section {
     background: white;
     padding: 20px;
