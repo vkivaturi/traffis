@@ -34,9 +34,9 @@
         </div>
     </div>
 
-    <!-- LLM Assistant Section -->
+    <!-- AI Assistant Section -->
     <div class="section">
-        <h2>LLM Assistant</h2>
+        <h2>AI Assistant (optional)</h2>
         <div class="form-row">
             <div class="form-group">
                 <label for="llmPrompt">Traffic alert note</label>
@@ -56,12 +56,9 @@
         <form id="addEventForm">
             <div class="form-row">
                 <div class="form-group">
-                    <label for="latitude">Latitude:</label>
-                    <input type="number" id="latitude" step="any" required>
-                </div>
-                <div class="form-group">
-                    <label for="longitude">Longitude:</label>
-                    <input type="number" id="longitude" step="any" required>
+                    <label for="coordinates">Coordinates (latitude, longitude):</label>
+                    <input type="text" id="coordinates" placeholder="17.4065, 78.4772" required>
+                    <small style="color: #6c757d; font-style: italic;">Enter latitude and longitude separated by comma (e.g., 17.4065, 78.4772)</small>
                 </div>
             </div>
             <div class="form-row">
@@ -94,37 +91,45 @@
 
     <!-- List Events Section -->
     <div class="section">
-        <h2>List Events</h2>
-        <div id="listEventAlert"></div>
-        <div class="form-row">
-            <div class="form-group">
-                <label for="listStartTime">Start Time (required):</label>
-                <input type="datetime-local" id="listStartTime" required>
+        <h2 class="collapsible-header" onclick="toggleSection('listEventsContent')">
+            <span class="collapse-icon">▶</span>List Events
+        </h2>
+        <div id="listEventsContent" class="collapsible-content" style="display: none;">
+            <div id="listEventAlert"></div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="listStartTime">Start Time (required):</label>
+                    <input type="datetime-local" id="listStartTime" required>
+                </div>
+                <div class="form-group">
+                    <label for="listEndTime">End Time (optional):</label>
+                    <input type="datetime-local" id="listEndTime">
+                </div>
+                <div class="form-group" style="display: flex; align-items: end;">
+                    <button class="btn btn-primary" onclick="listEvents()">Load Events</button>
+                </div>
             </div>
-            <div class="form-group">
-                <label for="listEndTime">End Time (optional):</label>
-                <input type="datetime-local" id="listEndTime">
+            <div id="eventsContainer">
+                <p>Enter a start time and click "Load Events" to view events.</p>
             </div>
-            <div class="form-group" style="display: flex; align-items: end;">
-                <button class="btn btn-primary" onclick="listEvents()">Load Events</button>
-            </div>
-        </div>
-        <div id="eventsContainer">
-            <p>Enter a start time and click "Load Events" to view events.</p>
         </div>
     </div>
 
     <!-- Delete Event Section -->
     <div class="section">
-        <h2>Delete Event</h2>
-        <div id="deleteEventAlert"></div>
-        <div class="delete-form">
-            <div class="form-group">
-                <label for="deleteEventId">Event ID:</label>
-                <input type="number" id="deleteEventId" required>
-            </div>
-            <div class="form-group">
-                <button class="btn btn-danger" onclick="deleteEvent()">Delete Event</button>
+        <h2 class="collapsible-header" onclick="toggleSection('deleteEventContent')">
+            <span class="collapse-icon">▶</span>Delete Event
+        </h2>
+        <div id="deleteEventContent" class="collapsible-content" style="display: none;">
+            <div id="deleteEventAlert"></div>
+            <div class="delete-form">
+                <div class="form-group">
+                    <label for="deleteEventId">Event ID:</label>
+                    <input type="number" id="deleteEventId" required>
+                </div>
+                <div class="form-group">
+                    <button class="btn btn-danger" onclick="deleteEvent()">Delete Event</button>
+                </div>
             </div>
         </div>
     </div>
@@ -215,9 +220,26 @@
                 return;
             }
 
+            // Parse coordinates
+            const coordinatesValue = document.getElementById('coordinates').value.trim();
+            const coordinates = coordinatesValue.split(',').map(coord => coord.trim());
+            
+            if (coordinates.length !== 2) {
+                showAlert('addEventAlert', 'Please enter coordinates in the format: latitude, longitude', 'error');
+                return;
+            }
+
+            const latitude = parseFloat(coordinates[0]);
+            const longitude = parseFloat(coordinates[1]);
+
+            if (isNaN(latitude) || isNaN(longitude)) {
+                showAlert('addEventAlert', 'Please enter valid numeric coordinates', 'error');
+                return;
+            }
+
             const formData = {
-                latitude: parseFloat(document.getElementById('latitude').value),
-                longitude: parseFloat(document.getElementById('longitude').value),
+                latitude: latitude,
+                longitude: longitude,
                 type: document.getElementById('type').value,
                 start_time: formatDateForAPI(document.getElementById('startTime').value),
                 end_time: formatDateForAPI(document.getElementById('endTime').value),
@@ -379,8 +401,15 @@
 
                 if (response.ok) {
                     // Populate the Add Event form with LLM response
-                    document.getElementById('latitude').value = result.latitude || '';
-                    document.getElementById('longitude').value = result.longitude || '';
+                    const latitude = result.latitude || '';
+                    const longitude = result.longitude || '';
+                    
+                    // Combine latitude and longitude for coordinates field
+                    if (latitude && longitude) {
+                        document.getElementById('coordinates').value = `${latitude}, ${longitude}`;
+                    } else {
+                        document.getElementById('coordinates').value = '';
+                    }
 
                     // Set the status dropdown value
                     const statusSelect = document.getElementById('type');
@@ -401,6 +430,21 @@
             } catch (error) {
                 console.error('Network error:', error.message);
                 showAlert('addEventAlert', 'Network error: ' + error.message, 'error');
+            }
+        }
+
+        // Toggle collapsible sections
+        function toggleSection(contentId) {
+            const content = document.getElementById(contentId);
+            const header = content.previousElementSibling;
+            const icon = header.querySelector('.collapse-icon');
+            
+            if (content.style.display === 'none' || content.style.display === '') {
+                content.style.display = 'block';
+                icon.textContent = '▼';
+            } else {
+                content.style.display = 'none';
+                icon.textContent = '▶';
             }
         }
 

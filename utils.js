@@ -1,5 +1,5 @@
-const MODEL_ID = 'Krutrim-spectre-v2';
-const API_URL = 'https://cloud.olakrutrim.com/v1/chat/completions';
+const MODEL_ID = 'gpt-4o-mini';
+const API_URL = 'https://api.openai.com/v1/chat/completions';
 
 async function callLLM(userPrompt) {
     const llmKey = process.env.LLM_KEY;

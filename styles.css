@@ -267,3 +267,27 @@ textarea {
     color: #721c24;
     border: 1px solid #f5c6cb;
 }
+
+/* Collapsible sections */
+.collapsible-header {
+    cursor: pointer;
+    user-select: none;
+    display: flex;
+    align-items: center;
+    margin: 0;
+}
+
+.collapsible-header:hover {
+    color: #007bff;
+}
+
+.collapse-icon {
+    margin-right: 10px;
+    transition: transform 0.3s ease;
+    font-size: 16px;
+}
+
+.collapsible-content {
+    overflow: hidden;
+    transition: all 0.3s ease;
+}

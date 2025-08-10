@@ -3,6 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const { callLLM } = require('./utils');
 const { executeQuery, queryDatabase } = require('./db');
+const { getRoutesLimiter, postRoutesLimiter, requireApiKey } = require('./middleware');
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -19,37 +20,17 @@ app.use((req, res, next) => {
     next();
 });
 
-function requireApiKey(req, res, next) {
-    const apiKey = req.headers['x-api-key'] || req.query.api_key;
-    const validApiKey = process.env.API_KEY;
-    
-    if (!validApiKey) {
-        return res.status(500).json({ error: 'Server configuration error: API key not set' });
-    }
-    
-    if (!apiKey) {
-        return res.status(401).json({ error: 'API key required' });
-    }
-    
-    if (apiKey !== validApiKey) {
-        return res.status(403).json({ error: 'Invalid API key' });
-    }
-    
-    next();
-}
-
-
 // Serve the main page
-app.get('/', (req, res) => {
+app.get('/', getRoutesLimiter, (req, res) => {
     res.sendFile(__dirname + '/map.html');
 });
 
 // Serve the admin page
-app.get('/cyberabad_admin', (req, res) => {
+app.get('/cyberabad_admin', getRoutesLimiter, (req, res) => {
     res.sendFile(__dirname + '/admin.html');
 });
 
-app.get('/api/events', async (req, res) => {
+app.get('/api/events', getRoutesLimiter, async (req, res) => {
     console.log('Starting /api/events request');
     
     try {
@@ -101,7 +82,7 @@ app.get('/api/events', async (req, res) => {
     }
 });
 
-app.post('/api/events', requireApiKey, async (req, res) => {
+app.post('/api/events', postRoutesLimiter, requireApiKey, async (req, res) => {
     const { latitude, longitude, start_time, end_time, note, type } = req.body;
 
     const requiredFields = ['latitude', 'type'];
@@ -140,7 +121,7 @@ app.post('/api/events', requireApiKey, async (req, res) => {
     }
 });
 
-app.delete('/api/events/:id', requireApiKey, async (req, res) => {
+app.delete('/api/events/:id', postRoutesLimiter, requireApiKey, async (req, res) => {
     const eventId = req.params.id;
     
     try {
@@ -160,7 +141,7 @@ app.delete('/api/events/:id', requireApiKey, async (req, res) => {
     }
 });
 
-app.post('/api/llm', requireApiKey, async (req, res) => {
+app.post('/api/llm', postRoutesLimiter, requireApiKey, async (req, res) => {
     const { prompt } = req.body;
     
     if (!prompt) {
