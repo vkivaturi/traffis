@@ -2,7 +2,7 @@ const rateLimit = require('express-rate-limit');
 
 // Rate limiters
 const getRoutesLimiter = rateLimit({
-    windowMs: 1 * 60 * 1000, // 1 minute
+    windowMs: 5 * 60 * 1000, // 5 minutes
     max: 200, // Limit each IP to 200 GET requests per windowMs
     message: 'Too many search requests, please try again later.',
     standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers

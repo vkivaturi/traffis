@@ -12,11 +12,27 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(__dirname));
 
-// Middleware to log all incoming requests
+// Middleware to log all incoming requests and responses
 app.use((req, res, next) => {
     const timestamp = new Date().toISOString();
     const ip = req.ip || req.connection.remoteAddress || req.socket.remoteAddress || (req.connection.socket ? req.connection.socket.remoteAddress : null);
+    const startTime = Date.now();
+    
+    // Log incoming request
     console.log(`[${timestamp}] ${req.method} ${req.url} - IP: ${ip}`);
+    
+    // Override res.end to capture response details
+    const originalEnd = res.end;
+    res.end = function(chunk, encoding) {
+        const responseTime = Date.now() - startTime;
+        const statusCode = res.statusCode;
+        const responseTimestamp = new Date().toISOString();
+        
+        console.log(`[${responseTimestamp}] ${req.method} ${req.url} - ${statusCode} - ${responseTime}ms - IP: ${ip}`);
+        
+        originalEnd.call(this, chunk, encoding);
+    };
+    
     next();
 });
 
