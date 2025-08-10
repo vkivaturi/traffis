@@ -349,6 +349,56 @@ textarea {
     text-align: center;
 }
 
+/* Search container styles */
+.search-container {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.location-search {
+    flex: 1;
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.location-search:focus {
+    border-color: #007bff;
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+.search-container .btn {
+    padding: 8px 12px;
+    min-width: auto;
+    white-space: nowrap;
+}
+
+/* Map home button */
+.map-home-button {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 1000;
+    background-color: white;
+    border: 2px solid #ccc;
+    border-radius: 6px;
+    padding: 8px 10px;
+    font-size: 16px;
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    transition: all 0.2s ease;
+}
+
+.map-home-button:hover {
+    background-color: #f8f9fa;
+    border-color: #007bff;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
 /* Responsive layout for mobile */
 @media (max-width: 768px) {
     .add-event-container {

@@ -6,7 +6,9 @@
     <title>Traffic Admin Panel</title>
     <link rel="stylesheet" href="styles.css" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder@2.4.0/dist/Control.Geocoder.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet-control-geocoder@2.4.0/dist/Control.Geocoder.js"></script>
 </head>
 <body class="admin-page">
     <div class="header">
@@ -59,8 +61,14 @@
             <!-- Map Column -->
             <div class="map-column">
                 <h3>Select Location</h3>
-                <div id="adminMap"></div>
-                <p class="map-instructions">Click or drag the marker to set coordinates</p>
+                <small style="color: #6c757d; font-style: italic;">You can search based on text or simply drag the marker on map</small>
+                <div class="search-container">
+                    <input type="text" id="locationSearch" placeholder="Search for a place..." class="location-search">
+                    <button type="button" id="searchButton" class="btn btn-primary">🔍</button>
+                </div>
+                <div id="adminMap">
+                    <button type="button" id="homeButton" class="map-home-button" title="Go to default location">🏠</button>
+                </div>
             </div>
             
             <!-- Form Column -->
@@ -254,6 +262,65 @@
                 const position = e.latlng;
                 adminMarker.setLatLng(position);
                 updateCoordinatesForm(position.lat, position.lng);
+            });
+            
+            // Add search functionality
+            const searchInput = document.getElementById('locationSearch');
+            const searchButton = document.getElementById('searchButton');
+            
+            // Search function
+            function performSearch() {
+                const query = searchInput.value.trim();
+                if (!query) return;
+                
+                // Use Nominatim geocoding service (OpenStreetMap's geocoder)
+                const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1&countrycodes=in`;
+                
+                fetch(url)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data && data.length > 0) {
+                            const result = data[0];
+                            const lat = parseFloat(result.lat);
+                            const lng = parseFloat(result.lon);
+                            
+                            // Move marker and map to search result
+                            const newPosition = [lat, lng];
+                            adminMarker.setLatLng(newPosition);
+                            adminMap.setView(newPosition, 15);
+                            
+                            // Update form
+                            updateCoordinatesForm(lat, lng);
+                            
+                            // Clear search
+                            searchInput.value = '';
+                        } else {
+                            alert('Location not found. Please try a different search term.');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Search error:', error);
+                        alert('Search failed. Please try again.');
+                    });
+            }
+            
+            // Add event listeners for search
+            searchButton.addEventListener('click', performSearch);
+            searchInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    performSearch();
+                }
+            });
+            
+            // Add home button functionality
+            const homeButton = document.getElementById('homeButton');
+            homeButton.addEventListener('click', function() {
+                // Reset map to default position
+                adminMap.setView(defaultCoords, 13);
+                adminMarker.setLatLng(defaultCoords);
+                
+                // Update form coordinates
+                updateCoordinatesForm(defaultCoords[0], defaultCoords[1]);
             });
             
             // Set initial coordinates in form
