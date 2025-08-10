@@ -202,8 +202,12 @@
         initializeTimeSlider();
         loadEvents();
 
-        // Refresh events every 30 seconds
-        setInterval(loadEvents, 30000);
+        // Add escape key handler to close popups
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                map.closePopup();
+            }
+        });
     </script>
 </body>
 </html>

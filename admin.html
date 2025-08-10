@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Traffic Admin Panel</title>
     <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 </head>
 <body class="admin-page">
     <div class="header">
@@ -12,7 +14,7 @@
         <div class="api-key-status">
             <span class="api-key-indicator" id="apiKeyIndicator"></span>
             <span id="apiKeyStatus">API Key Not Set</span>
-            <button class="btn btn-primary" onclick="openApiKeyModal()">Configure API Key</button>
+            <button class="btn btn-icon" onclick="openApiKeyModal()" title="Configure API Key">🔑</button>
         </div>
     </div>
 
@@ -53,40 +55,50 @@
     <div class="section">
         <h2>Add New Event</h2>
         <div id="addEventAlert"></div>
-        <form id="addEventForm">
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="coordinates">Coordinates (latitude, longitude):</label>
-                    <input type="text" id="coordinates" placeholder="17.4065, 78.4772" required>
-                    <small style="color: #6c757d; font-style: italic;">Enter latitude and longitude separated by comma (e.g., 17.4065, 78.4772)</small>
-                </div>
+        <div class="add-event-container">
+            <!-- Map Column -->
+            <div class="map-column">
+                <h3>Select Location</h3>
+                <div id="adminMap"></div>
+                <p class="map-instructions">Click or drag the marker to set coordinates</p>
             </div>
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="type">Status:</label>
-                    <select id="type" required>
-                        <option value="">Select status...</option>
-                        <option value="active">Active</option>
-                        <option value="inactive">Inactive</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="startTime">Start Time:</label>
-                    <input type="datetime-local" id="startTime">
-                </div>
+            
+            <!-- Form Column -->
+            <div class="form-column">
+                <form id="addEventForm">
+                    <div class="form-group">
+                        <label for="coordinates">Coordinates (latitude, longitude):</label>
+                        <input type="text" id="coordinates" placeholder="17.4065, 78.4772" required>
+                        <small style="color: #6c757d; font-style: italic;">Enter coordinates or use the map to select location</small>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="type">Status:</label>
+                            <select id="type" required>
+                                <option value="">Select status...</option>
+                                <option value="active">Active</option>
+                                <option value="inactive">Inactive</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="startTime">Start Time:</label>
+                            <input type="datetime-local" id="startTime">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="endTime">End Time:</label>
+                            <input type="datetime-local" id="endTime">
+                        </div>
+                        <div class="form-group">
+                            <label for="note">Note:</label>
+                            <textarea id="note" placeholder="Optional note..."></textarea>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-success">Add Event</button>
+                </form>
             </div>
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="endTime">End Time:</label>
-                    <input type="datetime-local" id="endTime">
-                </div>
-                <div class="form-group">
-                    <label for="note">Note:</label>
-                    <textarea id="note" placeholder="Optional note..."></textarea>
-                </div>
-            </div>
-            <button type="submit" class="btn btn-success">Add Event</button>
-        </form>
+        </div>
     </div>
 
     <!-- List Events Section -->
@@ -136,8 +148,13 @@
 
     <script>
         let apiKey = localStorage.getItem('traffis_api_key');
+        let adminMap;
+        let adminMarker;
+        const defaultCoords = [17.4065, 78.4772]; // Default coordinates (Hyderabad)
+        
         updateApiKeyStatus();
         setDefaultListStartTime();
+        initializeAdminMap();
 
         function updateApiKeyStatus() {
             const indicator = document.getElementById('apiKeyIndicator');
@@ -145,10 +162,10 @@
             
             if (apiKey) {
                 indicator.classList.add('active');
-                status.textContent = 'API Key Set';
+                status.textContent = 'API key is set. You can now add events.';
             } else {
                 indicator.classList.remove('active');
-                status.textContent = 'API Key Not Set';
+                status.textContent = 'API key is not set. Please configure it to use the admin panel.';
             }
         }
 
@@ -209,6 +226,68 @@
             const defaultStartTime = oneDayAgo.toLocaleString('sv-SE').replace(' ', 'T');
             
             document.getElementById('listStartTime').value = defaultStartTime;
+        }
+
+        // Initialize Admin Map
+        function initializeAdminMap() {
+            // Initialize map with default coordinates
+            adminMap = L.map('adminMap').setView(defaultCoords, 13);
+            
+            // Add OpenStreetMap tiles
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(adminMap);
+            
+            // Add draggable marker
+            adminMarker = L.marker(defaultCoords, {
+                draggable: true
+            }).addTo(adminMap);
+            
+            // Update form when marker is dragged
+            adminMarker.on('dragend', function(e) {
+                const position = e.target.getLatLng();
+                updateCoordinatesForm(position.lat, position.lng);
+            });
+            
+            // Add click handler to map for placing marker
+            adminMap.on('click', function(e) {
+                const position = e.latlng;
+                adminMarker.setLatLng(position);
+                updateCoordinatesForm(position.lat, position.lng);
+            });
+            
+            // Set initial coordinates in form
+            document.getElementById('coordinates').value = `${defaultCoords[0]}, ${defaultCoords[1]}`;
+            
+            // Add event listener to coordinates input
+            document.getElementById('coordinates').addEventListener('input', function(e) {
+                updateMarkerFromForm();
+            });
+        }
+
+        // Update coordinates form field
+        function updateCoordinatesForm(lat, lng) {
+            const roundedLat = Math.round(lat * 1000000) / 1000000;
+            const roundedLng = Math.round(lng * 1000000) / 1000000;
+            document.getElementById('coordinates').value = `${roundedLat}, ${roundedLng}`;
+        }
+
+        // Update marker position from form input
+        function updateMarkerFromForm() {
+            const coordinatesValue = document.getElementById('coordinates').value.trim();
+            if (!coordinatesValue) return;
+            
+            const coordinates = coordinatesValue.split(',').map(coord => coord.trim());
+            if (coordinates.length !== 2) return;
+            
+            const lat = parseFloat(coordinates[0]);
+            const lng = parseFloat(coordinates[1]);
+            
+            if (!isNaN(lat) && !isNaN(lng)) {
+                const newPosition = [lat, lng];
+                adminMarker.setLatLng(newPosition);
+                adminMap.setView(newPosition, adminMap.getZoom());
+            }
         }
 
         // Add Event
@@ -407,6 +486,10 @@
                     // Combine latitude and longitude for coordinates field
                     if (latitude && longitude) {
                         document.getElementById('coordinates').value = `${latitude}, ${longitude}`;
+                        // Update map marker as well
+                        const newPosition = [parseFloat(latitude), parseFloat(longitude)];
+                        adminMarker.setLatLng(newPosition);
+                        adminMap.setView(newPosition, adminMap.getZoom());
                     } else {
                         document.getElementById('coordinates').value = '';
                     }
