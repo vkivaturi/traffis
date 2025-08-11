@@ -419,7 +419,6 @@
             });
             
             const marker = L.marker([lat, lng], { icon: userIcon }).addTo(map);
-            marker.bindPopup('My Place of Interest<br><small>Double-click to remove</small>');
             
             userMarkers[markerId] = marker;
             saveUserMarkersToStorage();
@@ -479,15 +478,45 @@
         // Disable default double-click zoom
         map.doubleClickZoom.disable();
         
-        // Add double-click event to map
-        map.on('dblclick', function(e) {
-            e.originalEvent.preventDefault();
-            const { lat, lng } = e.latlng;
-            
+        // Variables for mobile touch handling
+        let lastTap = 0;
+        let isTouch = false;
+        
+        // Detect if device supports touch
+        function isTouchDevice() {
+            return 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+        }
+        
+        // Handle marker creation/deletion
+        function handleMarkerToggle(lat, lng) {
             if (!removeUserMarker(lat, lng)) {
                 addUserMarker(lat, lng);
             }
-        });
+        }
+        
+        // Desktop double-click handler
+        if (!isTouchDevice()) {
+            map.on('dblclick', function(e) {
+                e.originalEvent.preventDefault();
+                const { lat, lng } = e.latlng;
+                handleMarkerToggle(lat, lng);
+            });
+        } else {
+            // Mobile touch handler - detect double tap
+            map.on('click', function(e) {
+                const now = Date.now();
+                const timeSinceLastTap = now - lastTap;
+                
+                if (timeSinceLastTap < 300 && timeSinceLastTap > 0) {
+                    // Double tap detected on mobile
+                    e.originalEvent.preventDefault();
+                    const { lat, lng } = e.latlng;
+                    handleMarkerToggle(lat, lng);
+                }
+                
+                lastTap = now;
+            });
+        }
         
         // Initialize alerts toggle
         function initializeAlertsToggle() {
