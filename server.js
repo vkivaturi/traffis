@@ -47,7 +47,6 @@ app.get('/cyberabad_admin', getRoutesLimiter, (req, res) => {
 });
 
 app.get('/api/events', getRoutesLimiter, async (req, res) => {
-    console.log('Starting /api/events request');
     
     try {
         const { start_time, end_time } = req.query;
@@ -84,9 +83,7 @@ app.get('/api/events', getRoutesLimiter, async (req, res) => {
             `;
             params = [start_time];
         }
-        
-        console.log('Executing query with params:', params);
-        
+                
         const events = await queryDatabase(query, params);
         
         console.log('Found events:', events.length);
