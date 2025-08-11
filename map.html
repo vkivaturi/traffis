@@ -6,11 +6,191 @@
     <title>Traffis</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="styles.css" />
+    <style>
+        .alerts-toggle-container {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1000;
+            background: white;
+            padding: 10px 15px;
+            border-radius: 5px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 14px;
+        }
+        
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 24px;
+        }
+        
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 24px;
+        }
+        
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        
+        input:checked + .toggle-slider {
+            background-color: #2196F3;
+        }
+        
+        input:checked + .toggle-slider:before {
+            transform: translateX(26px);
+        }
+        
+        .toggle-label {
+            white-space: nowrap;
+            font-weight: 500;
+        }
+        
+        .help-icon {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            background-color: #007bff;
+            color: white;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 20px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-left: 10px;
+            transition: all 0.2s ease;
+        }
+        
+        .help-icon:hover {
+            background-color: #0056b3;
+            transform: scale(1.1);
+        }
+        
+        .help-dialog {
+            display: none;
+            position: fixed;
+            z-index: 2000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+        
+        .help-dialog-content {
+            background-color: white;
+            margin: 10% auto;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 600px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        }
+        
+        .help-dialog-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 25px 10px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .help-dialog-header h3 {
+            margin: 0;
+            color: #333;
+        }
+        
+        .help-close {
+            color: #aaa;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            line-height: 1;
+        }
+        
+        .help-close:hover {
+            color: #333;
+        }
+        
+        .help-dialog-body {
+            padding: 20px 25px;
+        }
+        
+        .help-dialog-body ul {
+            margin: 0;
+            padding-left: 20px;
+        }
+        
+        .help-dialog-body li {
+            margin-bottom: 12px;
+            line-height: 1.5;
+        }
+        
+        .help-dialog-body strong {
+            color: #333;
+        }
+    </style>
 </head>
 <body>
-    <h2>Hyderabad Traffic Alerts Map (unofficial)</h2>
+    <h2>Hyderabad Traffic Alerts Map (unofficial) <span class="help-icon" onclick="openHelpDialog()">?</span></h2>
     <p>Traffic alerts in Hyderabad, India. Data source - Cyberabad Traffic Pulse WhatsApp account</p>
+    
+    <div class="alerts-toggle-container">
+        <label class="toggle-switch">
+            <input type="checkbox" id="alertsToggle">
+            <span class="toggle-slider"></span>
+        </label>
+        <span class="toggle-label">Show alerts near my markers only</span>
+    </div>
+    
     <div id="map"></div>
+    
+    <!-- Help Dialog -->
+    <div id="helpDialog" class="help-dialog">
+        <div class="help-dialog-content">
+            <div class="help-dialog-header">
+                <h3>How to Use the Map</h3>
+                <span class="help-close" onclick="closeHelpDialog()">&times;</span>
+            </div>
+            <div class="help-dialog-body">
+                <ul>
+                    <li><strong>View Traffic Alerts:</strong> Orange markers show active alerts, green markers show cleared alerts</li>
+                    <li><strong>Time Range:</strong> Use the sliders below to filter alerts by time period</li>
+                    <li><strong>Add Personal Markers:</strong> Double-click anywhere on the map to add blue markers for your places of interest</li>
+                    <li><strong>Remove Personal Markers:</strong> Double-click on your blue markers to remove them</li>
+                    <li><strong>Filter by Distance:</strong> Toggle "Show alerts near my markers only" to see only alerts within 2km of your markers</li>
+                    <li><strong>Navigate:</strong> Use mouse wheel to zoom, drag to pan, click markers for details</li>
+                    <li><strong>Keyboard:</strong> Press Escape to close any open popup</li>
+                </ul>
+            </div>
+        </div>
+    </div>
     
     <div class="time-slider-container">
         <h3>Select time range for traffic alerts</h3>
@@ -39,8 +219,10 @@
 
         // Store markers for easy access
         var markers = {};
+        var userMarkers = {};
         var allEvents = [];
         var loadEventsTimeout = null;
+        var alertsToggle = false;
         
         // Time range variables (in hours from current time)
         var currentTime = new Date();
@@ -170,14 +352,20 @@
         
         // Display events on the map
         function displayEvents(events) {
-            // Clear existing markers
+            // Clear existing traffic alert markers
             Object.values(markers).forEach(marker => {
                 map.removeLayer(marker);
             });
             markers = {};
             
-            // Add markers for all events
-            events.forEach(event => {
+            // Filter events based on toggle state
+            let filteredEvents = events;
+            if (alertsToggle) {
+                filteredEvents = events.filter(event => isEventNearUserMarkers(event));
+            }
+            
+            // Add markers for filtered events
+            filteredEvents.forEach(event => {
                 const marker = L.marker([event.latitude, event.longitude], {
                     icon: getMarkerIcon(event.type)
                 }).addTo(map);
@@ -195,17 +383,152 @@
                 markers[event.id] = marker;
             });
             
-            console.log(`Displaying ${events.length} events on map`);
+            console.log(`Displaying ${filteredEvents.length} of ${events.length} events on map`);
         }
 
+        // User marker functions
+        function loadUserMarkersFromStorage() {
+            const stored = localStorage.getItem('traffis_user_markers');
+            if (stored) {
+                const storedMarkers = JSON.parse(stored);
+                Object.keys(storedMarkers).forEach(id => {
+                    const data = storedMarkers[id];
+                    addUserMarker(data.lat, data.lng, id);
+                });
+            }
+        }
+        
+        function saveUserMarkersToStorage() {
+            const markersData = {};
+            Object.keys(userMarkers).forEach(id => {
+                const marker = userMarkers[id];
+                const latLng = marker.getLatLng();
+                markersData[id] = { lat: latLng.lat, lng: latLng.lng };
+            });
+            localStorage.setItem('traffis_user_markers', JSON.stringify(markersData));
+        }
+        
+        function addUserMarker(lat, lng, id = null) {
+            const markerId = id || 'user_' + Date.now();
+            
+            const userIcon = L.divIcon({
+                className: 'custom-div-icon',
+                html: '<div style="background-color: blue; width: 24px; height: 24px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.5);"><div style="background-color: white; width: 6px; height: 6px; border-radius: 50%; margin: 6px auto;"></div></div>',
+                iconSize: [24, 24],
+                iconAnchor: [12, 12]
+            });
+            
+            const marker = L.marker([lat, lng], { icon: userIcon }).addTo(map);
+            marker.bindPopup('My Place of Interest<br><small>Double-click to remove</small>');
+            
+            userMarkers[markerId] = marker;
+            saveUserMarkersToStorage();
+            
+            return markerId;
+        }
+        
+        function removeUserMarker(lat, lng) {
+            const tolerance = 0.001;
+            let markerToRemove = null;
+            
+            Object.keys(userMarkers).forEach(id => {
+                const marker = userMarkers[id];
+                const markerLatLng = marker.getLatLng();
+                
+                if (Math.abs(markerLatLng.lat - lat) < tolerance && 
+                    Math.abs(markerLatLng.lng - lng) < tolerance) {
+                    markerToRemove = id;
+                }
+            });
+            
+            if (markerToRemove) {
+                map.removeLayer(userMarkers[markerToRemove]);
+                delete userMarkers[markerToRemove];
+                saveUserMarkersToStorage();
+                return true;
+            }
+            return false;
+        }
+        
+        // Calculate distance between two points in kilometers
+        function calculateDistance(lat1, lng1, lat2, lng2) {
+            const R = 6371;
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLng = (lng2 - lng1) * Math.PI / 180;
+            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                      Math.sin(dLng/2) * Math.sin(dLng/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return R * c;
+        }
+        
+        // Check if an event is within 2km of any user marker
+        function isEventNearUserMarkers(event) {
+            if (Object.keys(userMarkers).length === 0) return false;
+            
+            return Object.values(userMarkers).some(marker => {
+                const markerLatLng = marker.getLatLng();
+                const distance = calculateDistance(
+                    event.latitude, event.longitude,
+                    markerLatLng.lat, markerLatLng.lng
+                );
+                return distance <= 2;
+            });
+        }
+        
+        // Disable default double-click zoom
+        map.doubleClickZoom.disable();
+        
+        // Add double-click event to map
+        map.on('dblclick', function(e) {
+            e.originalEvent.preventDefault();
+            const { lat, lng } = e.latlng;
+            
+            if (!removeUserMarker(lat, lng)) {
+                addUserMarker(lat, lng);
+            }
+        });
+        
+        // Initialize alerts toggle
+        function initializeAlertsToggle() {
+            const toggle = document.getElementById('alertsToggle');
+            toggle.addEventListener('change', function() {
+                alertsToggle = this.checked;
+                throttledLoadEvents();
+            });
+        }
+        
         // Initialize everything when page loads
         initializeTimeSlider();
+        initializeAlertsToggle();
+        loadUserMarkersFromStorage();
         loadEvents();
 
-        // Add escape key handler to close popups
+        // Help dialog functions
+        function openHelpDialog() {
+            document.getElementById('helpDialog').style.display = 'block';
+        }
+        
+        function closeHelpDialog() {
+            document.getElementById('helpDialog').style.display = 'none';
+        }
+        
+        // Close dialog when clicking outside
+        document.getElementById('helpDialog').addEventListener('click', function(event) {
+            if (event.target === this) {
+                closeHelpDialog();
+            }
+        });
+        
+        // Add escape key handler to close popups and dialog
         document.addEventListener('keydown', function(event) {
             if (event.key === 'Escape') {
-                map.closePopup();
+                const helpDialog = document.getElementById('helpDialog');
+                if (helpDialog.style.display === 'block') {
+                    closeHelpDialog();
+                } else {
+                    map.closePopup();
+                }
             }
         });
     </script>
