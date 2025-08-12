@@ -5,13 +5,292 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Traffis</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <link rel="stylesheet" href="styles.css" />
-    <link rel="stylesheet" href="map.css" />
+    <link rel="stylesheet" href="styles.css" />\n    <link rel="stylesheet" href="map.css" />
+    <style>
+        /* Modern Tailwind-inspired CSS Variables */
+        :root {
+            --primary: #3B82F6;
+            --primary-hover: #2563EB;
+            --primary-light: #DBEAFE;
+            --secondary: #6B7280;
+            --success: #10B981;
+            --warning: #F59E0B;
+            --danger: #EF4444;
+            --gray-50: #F9FAFB;
+            --gray-100: #F3F4F6;
+            --gray-200: #E5E7EB;
+            --gray-300: #D1D5DB;
+            --gray-400: #9CA3AF;
+            --gray-500: #6B7280;
+            --gray-600: #4B5563;
+            --gray-700: #374151;
+            --gray-800: #1F2937;
+            --gray-900: #111827;
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            --border-radius: 0.5rem;
+            --border-radius-lg: 0.75rem;
+            --border-radius-xl: 1rem;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, var(--gray-50) 0%, #FFFFFF 100%);
+            color: var(--gray-900);
+            line-height: 1.6;
+        }
+        
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--gray-200);
+            border-radius: var(--border-radius-xl);
+            padding: 1rem;
+            margin: 1.0rem 0;
+            box-shadow: var(--shadow-lg);
+            text-align: center;
+        }
+        
+        .header h2 {
+            margin: 0 0 0.75rem 0;
+            font-size: 2.25rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 1rem;
+        }
+        
+        .header p {
+            margin: 0;
+            font-size: 1.1rem;
+            color: var(--gray-600);
+            font-weight: 400;
+        }
+        
+        .alerts-toggle-container {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            z-index: 1000;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(12px);
+            padding: 1.25rem 1.5rem;
+            border-radius: var(--border-radius-xl);
+            box-shadow: var(--shadow-xl);
+            border: 1px solid var(--gray-200);
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .alerts-toggle-container:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-xl), 0 0 0 1px var(--primary-light);
+        }
+        
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 3.25rem;
+            height: 1.75rem;
+        }
+        
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: var(--gray-300);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border-radius: 1.75rem;
+            box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.06);
+        }
+        
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 1.25rem;
+            width: 1.25rem;
+            left: 0.25rem;
+            bottom: 0.25rem;
+            background: white;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border-radius: 50%;
+            box-shadow: var(--shadow-sm);
+        }
+        
+        input:checked + .toggle-slider {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%);
+        }
+        
+        input:checked + .toggle-slider:before {
+            transform: translateX(1.5rem);
+            box-shadow: var(--shadow);
+        }
+        
+        .toggle-label {
+            white-space: nowrap;
+            font-weight: 500;
+            color: var(--gray-700);
+        }
+        
+        .help-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 2rem;
+            height: 2rem;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%);
+            color: white;
+            border-radius: 50%;
+            font-size: 0.875rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: var(--shadow);
+            border: 0;
+        }
+        
+        .help-icon:hover {
+            transform: scale(1.1) translateY(-1px);
+            box-shadow: var(--shadow-md);
+        }
+        
+        .help-dialog {
+            display: none;
+            position: fixed;
+            z-index: 2000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(17, 24, 39, 0.75);
+            backdrop-filter: blur(4px);
+            animation: fadeIn 0.2s ease-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        .help-dialog-content {
+            background: white;
+            margin: 5% auto;
+            border-radius: var(--border-radius-xl);
+            width: 90%;
+            max-width: 42rem;
+            max-height: 80vh;
+            box-shadow: var(--shadow-xl);
+            border: 1px solid var(--gray-200);
+            animation: slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            flex-direction: column;
+        }
+        
+        @keyframes slideUp {
+            from { transform: translateY(2rem); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        
+        .help-dialog-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 2rem 2rem 1rem;
+            border-bottom: 1px solid var(--gray-200);
+        }
+        
+        .help-dialog-header h3 {
+            margin: 0;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--gray-900);
+        }
+        
+        .help-close {
+            color: var(--gray-400);
+            font-size: 1.5rem;
+            font-weight: 400;
+            cursor: pointer;
+            line-height: 1;
+            padding: 0.5rem;
+            border-radius: var(--border-radius);
+            transition: all 0.2s ease;
+            border: 0;
+            background: none;
+        }
+        
+        .help-close:hover {
+            color: var(--gray-600);
+            background: var(--gray-100);
+        }
+        
+        .help-dialog-body {
+            padding: 2rem;
+            overflow-y: auto;
+            flex: 1;
+        }
+        
+        .help-dialog-body ul {
+            margin: 0;
+            padding-left: 0;
+            list-style: none;
+            space-y: 1rem;
+        }
+        
+        .help-dialog-body li {
+            margin-bottom: 1.5rem;
+            padding: 1rem 1.25rem;
+            background: var(--gray-50);
+            border-radius: var(--border-radius-lg);
+            border-left: 4px solid var(--primary);
+            line-height: 1.6;
+            transition: all 0.2s ease;
+        }
+        
+        .help-dialog-body li:hover {
+            background: var(--primary-light);
+            transform: translateX(0.25rem);
+        }
+        
+        .help-dialog-body strong {
+            color: var(--primary-hover);
+            font-weight: 600;
+        }
+        \n        #map {\n            width: 100%;\n            height: 32rem;\n            border: 1px solid var(--gray-200);\n            border-radius: var(--border-radius-xl);\n            box-shadow: var(--shadow-lg);\n            margin: 1.5rem 0;\n        }\n        \n        .time-slider-container {\n            background: rgba(255, 255, 255, 0.95);\n            backdrop-filter: blur(10px);\n            padding: 2rem;\n            margin: 1.5rem 0;\n            border-radius: var(--border-radius-xl);\n            box-shadow: var(--shadow-md);\n            border: 1px solid var(--gray-200);\n        }\n        \n        .time-slider-container h3 {\n            margin: 0 0 1.5rem 0;\n            font-size: 1.25rem;\n            font-weight: 600;\n            color: var(--gray-800);\n            text-align: center;\n        }\n        \n        .slider-group {\n            margin: 1.5rem 0;\n        }\n        \n        .slider-label {\n            display: block;\n            margin-bottom: 0.75rem;\n            font-weight: 600;\n            color: var(--gray-700);\n            font-size: 0.875rem;\n            text-transform: uppercase;\n            letter-spacing: 0.05em;\n        }\n        \n        .time-slider {\n            width: 100%;\n            margin: 0.75rem 0;\n            height: 0.5rem;\n            border-radius: 0.5rem;\n            background: var(--gray-200);\n            outline: none;\n            -webkit-appearance: none;\n            transition: all 0.2s ease;\n        }\n        \n        .time-slider::-webkit-slider-thumb {\n            appearance: none;\n            width: 1.5rem;\n            height: 1.5rem;\n            border-radius: 50%;\n            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%);\n            cursor: pointer;\n            box-shadow: var(--shadow-md);\n            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);\n            border: 2px solid white;\n        }\n        \n        .time-slider::-webkit-slider-thumb:hover {\n            transform: scale(1.1);\n            box-shadow: var(--shadow-lg);\n        }\n        \n        .time-slider::-moz-range-thumb {\n            width: 1.5rem;\n            height: 1.5rem;\n            border-radius: 50%;\n            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%);\n            cursor: pointer;\n            border: 2px solid white;\n            box-shadow: var(--shadow-md);\n        }\n        \n        .time-display {\n            display: block;\n            margin-top: 0.5rem;\n            font-size: 0.875rem;\n            color: var(--gray-600);\n            font-weight: 500;\n            padding: 0.5rem 1rem;\n            background: var(--gray-50);\n            border-radius: var(--border-radius);\n            text-align: center;\n            border: 1px solid var(--gray-200);\n        }\n        \n        .footer {\n            text-align: center;\n            margin-top: 3rem;\n            padding: 2rem;\n        }\n        \n        .footer-content {\n            max-width: 24rem;\n            margin: 0 auto;\n            padding: 1.5rem;\n            background: rgba(255, 255, 255, 0.8);\n            backdrop-filter: blur(10px);\n            border-radius: var(--border-radius-xl);\n            border: 1px solid var(--gray-200);\n            box-shadow: var(--shadow);\n        }\n        \n        .footer-content p {\n            margin: 0 0 0.75rem 0;\n            font-size: 0.875rem;\n            color: var(--gray-600);\n            font-weight: 500;\n        }\n        \n        .footer-link {\n            color: var(--primary);\n            font-weight: 600;\n            text-decoration: none;\n            padding: 0.5rem 1rem;\n            border-radius: var(--border-radius);\n            transition: all 0.2s ease;\n            display: inline-block;\n        }\n        \n        .footer-link:hover {\n            color: var(--primary-hover);\n            background: var(--primary-light);\n            transform: translateY(-1px);\n        }\n        \n        /* Responsive Design */\n        @media (max-width: 768px) {\n            body {\n                padding: 1rem;\n            }\n            \n            .header {\n                padding: 1.5rem;\n                margin: 1rem 0;\n            }\n            \n            .header h2 {\n                font-size: 1.875rem;\n                flex-direction: column;\n                gap: 0.5rem;\n            }\n            \n            .alerts-toggle-container {\n                bottom: 1rem;\n                right: 1rem;\n                padding: 1rem 1.25rem;\n                flex-direction: column;\n                text-align: center;\n                gap: 0.75rem;\n            }\n            \n            .toggle-label {\n                white-space: normal;\n                text-align: center;\n            }\n            \n            #map {\n                height: 24rem;\n            }\n            \n            .time-slider-container {\n                padding: 1.5rem;\n                margin: 1rem 0;\n            }\n            \n            .help-dialog-content {\n                margin: 5% auto;\n                width: 95%;\n                max-height: 85vh;\n            }\n            \n            .help-dialog-header,\n            .help-dialog-body {\n                padding: 1.5rem;\n            }\n        }\n    </style>
 </head>
 <body>
     <div class="header">
         <h3>Hyderabad Traffic Alerts Map <span class="help-icon" onclick="openHelpDialog()">?</span></h3>
         <h5>Real-time traffic alerts in Hyderabad, India • Data from Cyberabad Traffic Pulse</h5>
+    </div>
+    
+    <div class="alerts-toggle-container">
+        <label class="toggle-switch">
+            <input type="checkbox" id="alertsToggle">
+            <span class="toggle-slider"></span>
+        </label>
+        <span class="toggle-label">Show alerts near my markers only</span>
     </div>
     
     <div id="map"></div>
@@ -38,29 +317,16 @@
     </div>
     
     <div class="time-slider-container">
-        <h3>Filters</h3>
-        
-        <div class="alerts-toggle-group">
-            <span class="toggle-label">Show alerts new my markers only</span>
-            <label class="toggle-switch">
-                <input type="checkbox" id="alertsToggle">
-                <span class="toggle-slider"></span>
-            </label>
-        </div>
-        
+        <h3>Time Range Filter</h3>
         <div class="slider-group">
-            <div class="slider-header">
-                <label class="slider-label">Start Time</label>
-                <span id="startTimeDisplay" class="time-display"></span>
-            </div>
+            <label class="slider-label">Start Time</label>
             <input type="range" id="startSlider" class="time-slider" min="0" max="480" value="238" step="1">
+            <span id="startTimeDisplay" class="time-display"></span>
         </div>
         <div class="slider-group">
-            <div class="slider-header">
-                <label class="slider-label">End Time</label>
-                <span id="endTimeDisplay" class="time-display"></span>
-            </div>
+            <label class="slider-label">End Time</label>
             <input type="range" id="endSlider" class="time-slider" min="0" max="480" value="242" step="1">
+            <span id="endTimeDisplay" class="time-display"></span>
         </div>
     </div>
 

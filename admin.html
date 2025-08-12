@@ -4,17 +4,21 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Traffic Admin Panel</title>
-    <link rel="stylesheet" href="styles.css" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder@2.4.0/dist/Control.Geocoder.css" />
+    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="map.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://unpkg.com/leaflet-control-geocoder@2.4.0/dist/Control.Geocoder.js"></script>
 </head>
-<body class="admin-page">
-    <h2>Traffic Alerts Admin Panel</h2>
+<body>
+    <div class="header">
+        <h3>Traffic Alerts Admin Panel</h3>
+        <p>Manage traffic events and system configuration</p>
+    </div>
     
     <!-- API Key Status Row -->
-    <div class="api-key-row">
+    <div class="time-slider-container">
         <div class="api-key-status">
             <span class="api-key-indicator" id="apiKeyIndicator"></span>
             <span id="apiKeyStatus">API Key Not Set</span>
@@ -41,8 +45,8 @@
     </div>
 
     <!-- AI Assistant Section -->
-    <div class="section">
-        <h2>AI Assistant (optional)</h2>
+    <div class="time-slider-container">
+        <h3>AI Assistant (optional)</h3>
         <div class="form-row">
             <div class="form-group">
                 <label for="llmPrompt">Traffic alert note</label>
@@ -56,8 +60,8 @@
     </div>
 
     <!-- Add Event Section -->
-    <div class="section">
-        <h2>Add New Event</h2>
+    <div class="time-slider-container">
+        <h3>Add New Event</h3>
         <div id="addEventAlert"></div>
         <div class="add-event-container">
             <!-- Map Column -->
@@ -112,10 +116,10 @@
     </div>
 
     <!-- List Events Section -->
-    <div class="section">
-        <h2 class="collapsible-header" onclick="toggleSection('listEventsContent')">
+    <div class="time-slider-container">
+        <h3 class="collapsible-header" onclick="toggleSection('listEventsContent')">
             <span class="collapse-icon">▶</span>List Events
-        </h2>
+        </h3>
         <div id="listEventsContent" class="collapsible-content" style="display: none;">
             <div id="listEventAlert"></div>
             <div class="form-row">
@@ -138,10 +142,10 @@
     </div>
 
     <!-- Delete Event Section -->
-    <div class="section">
-        <h2 class="collapsible-header" onclick="toggleSection('deleteEventContent')">
+    <div class="time-slider-container">
+        <h3 class="collapsible-header" onclick="toggleSection('deleteEventContent')">
             <span class="collapse-icon">▶</span>Delete Event
-        </h2>
+        </h3>
         <div id="deleteEventContent" class="collapsible-content" style="display: none;">
             <div id="deleteEventAlert"></div>
             <div class="delete-form">
