@@ -1,296 +1,146 @@
-# Traffis - Traffic Monitoring System
+# Traffis: Real-Time SUMO & React Traffic Simulator
 
-A real-time traffic monitoring system that displays traffic events on an interactive OpenStreetMap using markers with different colors to indicate traffic conditions.
+A high-performance, full-stack microscopic traffic simulation platform combining **Eclipse SUMO (Simulation of Urban MObility)**, **Python FastAPI with TraCI**, and a modern **React + TypeScript + HTML5 Canvas** frontend.
 
-## Features
+![Traffis Architecture](https://img.shields.io/badge/SUMO-1.27.1-blue?style=flat-square)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.141+-009688?style=flat-square&logo=fastapi)
+![React](https://img.shields.io/badge/React-19-61DAFB?style=flat-square&logo=react)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178C6?style=flat-square&logo=typescript)
+![WebSockets](https://img.shields.io/badge/WebSockets-20Hz-orange?style=flat-square)
 
-- **Interactive Map**: OpenStreetMap integration with Leaflet.js
-- **Real-time Updates**: Automatic refresh every 30 seconds
-- **Color-coded Markers**: Visual indication of traffic conditions
-- **Event Details**: Click markers to view detailed information
-- **REST API**: Full CRUD operations for traffic events
-- **rqlite Database**: Distributed SQLite with HTTP API
+---
 
-## Prerequisites
+## 🚦 System Architecture
 
-- Node.js (v14 or higher)
-- npm (Node Package Manager)
-- rqlite server running on port 4001
+```mermaid
+graph LR
+    subgraph SUMO Engine
+        SC[road.sumocfg] --> SB[Headless SUMO Process]
+        NET[road.net.xml] --> SB
+        ROU[road.rou.xml] --> SB
+    end
 
-## Installation
+    subgraph FastAPI Backend
+        TC[TraCI Controller] <-->|Socket TCP| SB
+        SM[SimulationManager Loop @ 20Hz] --> TC
+        WS[WebSocket /ws Broadcaster] -->|20 updates/sec| FE
+        REST[REST API /api/*] --> SM
+    end
 
-1. Clone or download the project
-2. Navigate to the project directory:
-   ```bash
-   cd traffis
-   ```
+    subgraph React Frontend
+        FE[React + Vite + TypeScript]
+        CV[HTML5 Canvas View - 60 FPS]
+        MM[1000m Radar Mini-Map]
+        CTRL[Interactive Transport & Spawner]
+        HUD[Telemetry & Vehicle Inspector]
+    end
+```
 
-3. Install dependencies:
-   ```bash
-   npm install
-   ```
+---
 
-## Setup
+## 🛣️ Highway Network Configuration
 
-1. Start rqlite server:
-   ```bash
-   docker run -d --name rqlite -p 4001:4001 -p 4002:4002 -v $(pwd)/rqdata:/rqlite/file/data rqlite/rqlite
-   ```
-   rqlite will run on http://localhost:4001
+Located in `backend/sumo_config/`, the network models a **1000-meter straight 3-lane highway**:
 
-2. Initialize the database with sample data:
-   ```bash
-   RQLITE_URL=http://localhost:4001 npm run init-db
-   ```
+- **`road.nod.xml`**: Defines origin node `start` at $(0.0, 0.0)$ and destination node `end` at $(1000.0, 0.0)$.
+- **`road.edg.xml`**: Defines a 3-lane straight edge with maximum speed limit of $33.33 \text{ m/s}$ ($120 \text{ km/h}$).
+- **`road.net.xml`**: Compiled binary SUMO network generated using `netconvert`:
+  - **Lane 0 (Right / Slow)**: Width $3.2\text{m}$, center line $y = -8.0\text{m}$
+  - **Lane 1 (Middle)**: Width $3.2\text{m}$, center line $y = -4.8\text{m}$
+  - **Lane 2 (Left / Fast)**: Width $3.2\text{m}$, center line $y = -1.6\text{m}$
+- **`road.rou.xml`**: Defines vehicle classes (`car`, `sports`, `truck`, `van`) with realistic physics (acceleration, deceleration, minimum gap, length, width).
+- **`road.sumocfg`**: Simulation configuration configured for headless operation with step length $0.05\text{s}$ ($20\text{ steps/sec}$).
 
-## Running the Application
-
-1. Set environment variables:
-   ```bash
-   export API_KEY="your-api-key-here"
-   export LLM_KEY="your-llm-key-here"
-   export RQLITE_URL="http://localhost:4001"
-   ```
-
-2. Start the server:
-   ```bash
-   npm start
-   ```
-   The server will run on http://localhost:4000
-
-2. Open your web browser and navigate to http://localhost:4000 to view the interactive map
-
-**Note**: The entire application is now served through the Node.js server. You don't need to open separate HTML files.
-
-## Development
-
-For development with auto-restart:
+To recompile the network at any time:
 ```bash
+python backend/sumo_config/build_network.py
+```
+
+---
+
+## ⚡ Real-Time Simulation Loop & WebSockets
+
+- Headless SUMO runs via **TraCI** on Python 3.12.
+- The background simulation loop executes every **$50\text{ms}$ ($20\text{ Hz}$)**.
+- At every tick, vehicle coordinates ($x$, $y$, lane index, speed, acceleration, heading angle, color, leader distance) are streamed over the WebSocket endpoint `/ws` to all connected clients.
+- TraCI operations are guarded by an asynchronous lock to ensure thread safety during dynamic vehicle insertion.
+
+---
+
+## 🎮 Frontend Features
+
+1. **HTML5 Canvas Rendering (60+ FPS)**:
+   - High-fidelity rendering of the 3-lane road with dashed lane dividers, distance badges every 50m, start gantry at 0m, and finish gantry at 1000m.
+   - Smooth interpolation between 20Hz server ticks for buttery-smooth car motion.
+   - Dynamic vehicle graphics with headlights, glowing brake taillights, and speed tags.
+   - Pan (drag mouse), Zoom (mouse wheel), and preset camera jumps (Start, Mid, Finish, Fit 1000m).
+2. **Highway Radar (Mini-Map)**:
+   - Full 0m to 1000m overview radar bar showing moving vehicle dots and camera viewport frustum.
+   - Click anywhere on the radar to jump the camera.
+3. **Vehicle Inspector HUD**:
+   - Click any vehicle on the road to inspect its real-time telemetry (speed, acceleration, lane, distance to lead vehicle).
+   - "Track with Camera" mode follows the vehicle down the highway.
+4. **Simulation Controls**:
+   - **Play / Pause**: Toggle simulation (Keyboard shortcut: `Space`).
+   - **Reset**: Instantly resets the simulation back to $t=0.0\text{s}$ (Keyboard shortcut: `R`).
+   - **Step**: Advance 1 tick ($0.05\text{s}$).
+   - **Manual Spawner**: Choose lane (Auto, 0, 1, 2), vehicle type (Sedan, Sports, Truck, Van), color palette, and speed.
+   - **Auto Traffic Flow**: Background Poisson-distributed spawner with configurable vehicle rate ($5$ to $60\text{ veh/min}$).
+
+---
+
+## 🚀 Quick Start
+
+### Option 1: One-Click Startup Script
+
+```bash
+./start.sh
+```
+
+This script verifies the compiled network, launches the FastAPI backend on `http://127.0.0.1:8000`, and starts the Vite React frontend on `http://localhost:5173`.
+
+### Option 2: Manual Startup
+
+#### 1. Backend Setup
+```bash
+cd backend
+# Create virtual environment and install dependencies
+/opt/homebrew/bin/uv venv --python 3.12 .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+
+# Run backend
+python run.py
+```
+
+#### 2. Frontend Setup
+```bash
+cd frontend
+npm install
 npm run dev
 ```
 
-## Database Schema
+Open [http://localhost:5173](http://localhost:5173) in your browser.
 
-The `events` table contains:
-- `id`: Auto-increment primary key
-- `lat`: Latitude coordinate
-- `long`: Longitude coordinate  
-- `created_time`: When the record was inserted (auto-generated)
-- `start_time`: When the event starts
-- `end_time`: When the event ends (null for ongoing events)
-- `note`: Description/notes about the event
-- `type`: Traffic type (`normal`, `slow traffic`, `very slow traffic`, `warning`)
+---
 
-## API Endpoints
+## 📡 API Reference
 
-### GET /api/events
-Retrieve all active events (where end_time is null or in the future)
-
-### POST /api/events
-Create a new traffic event
+### WebSocket Endpoint: `ws://127.0.0.1:8000/ws`
+Accepts commands:
 ```json
-{
-  "lat": 17.415275,
-  "long": 78.481654,
-  "start_time": "2024-01-01T10:00:00Z",
-  "end_time": "2024-01-01T12:00:00Z",
-  "note": "Heavy traffic due to construction",
-  "type": "very slow traffic"
-}
+{ "action": "play" }
+{ "action": "pause" }
+{ "action": "reset" }
+{ "action": "step" }
+{ "action": "spawn", "payload": { "lane": 1, "type": "sports", "color": "#f43f5e", "speed": 30.0 } }
+{ "action": "set_auto_spawn", "payload": { "enabled": true, "rate_per_minute": 25.0 } }
 ```
 
-### DELETE /api/events/:id
-Delete a specific event by ID
-
-## Technologies Used
-
-- **Backend**: Node.js, Express.js, node-fetch
-- **Frontend**: HTML5, JavaScript (ES6+), Leaflet.js
-- **Map**: OpenStreetMap tiles
-- **Database**: rqlite (distributed SQLite)
-
-## Usage
-
-1. **View Traffic Events**: Navigate to http://localhost:4000 to see the interactive map
-2. **Legend**: The map includes a color-coded legend showing traffic status meanings
-3. **Real-time Updates**: Events refresh automatically every 30 seconds
-4. **Event Details**: Click on any marker to view detailed event information
-
-## Database Configuration
-
-The application connects to rqlite using the `RQLITE_URL` environment variable:
-
-### Local Development
-- **Default**: `http://localhost:4001`
-- **Custom location**: 
-  ```bash
-  RQLITE_URL=http://your-rqlite-host:4001 npm start
-  ```
-
-### Docker/Network Deployment
-- Use `host.docker.internal:4001` to connect to rqlite running on host
-- For production, use actual IP/hostname of rqlite server
-
-## Deployment
-
-### Local Deployment
-The application is fully self-contained:
-- All HTML, CSS, and JavaScript are served from the server
-- No separate static files needed
-- Single port deployment (4000)
-- Database file created automatically
-
-### Docker Deployment
-
-#### 1. Start rqlite server
-```bash
-# Run rqlite in a container
-docker run -d \
-  -p 4001:4001 \
-  --name rqlite \
-  rqlite/rqlite:latest
-```
-
-#### 2. Build the traffis Docker Image
-```bash
-docker build -t traffis .
-```
-
-#### 3. Run traffis container
-The application requires three environment variables:
-- `API_KEY`: Authentication key for API endpoints
-- `LLM_KEY`: Authentication key for LLM service
-- `RQLITE_URL`: URL to rqlite server (defaults to `http://host.docker.internal:4001`)
-
-**Basic run command:**
-```bash
-docker run -d \
-  -p 4000:4000 \
-  -e API_KEY="your-api-key-here" \
-  -e LLM_KEY="your-llm-key-here" \
-  --name traffis \
-  traffis
-```
-
-**With .env file:**
-```bash
-# Create .env file
-cat > .env << EOF
-API_KEY=your-api-key-here
-LLM_KEY=your-llm-key-here
-RQLITE_URL=http://host.docker.internal:4001
-EOF
-
-# Run container
-docker run -d \
-  -p 4000:4000 \
-  --env-file .env \
-  --name traffis \
-  traffis
-```
-
-**Using Docker Compose (recommended):**
-```yaml
-# docker-compose.yml
-version: '3.8'
-services:
-  rqlite:
-    image: rqlite/rqlite:latest
-    ports:
-      - "4001:4001"
-    volumes:
-      - rqlite_data:/rqlite/file
-  
-  traffis:
-    build: .
-    ports:
-      - "4000:4000"
-    environment:
-      - API_KEY=your-api-key-here
-      - LLM_KEY=your-llm-key-here
-      - RQLITE_URL=http://rqlite:4001
-    depends_on:
-      - rqlite
-
-volumes:
-  rqlite_data:
-```
-
-```bash
-# Run with docker-compose
-docker-compose up -d
-```
-
-### EC2 Deployment
-
-#### 1. Prepare Environment
-```bash
-# Create environment file with your keys
-sudo tee /opt/traffis/.env << EOF
-API_KEY=your-api-key-here
-LLM_KEY=your-llm-key-here
-RQLITE_URL=http://localhost:4001
-EOF
-```
-
-#### 2. Start rqlite server
-```bash
-# Install and start rqlite
-wget https://github.com/rqlite/rqlite/releases/download/v7.21.4/rqlite-v7.21.4-linux-amd64.tar.gz
-tar xzf rqlite-v7.21.4-linux-amd64.tar.gz
-sudo mv rqlite-v7.21.4-linux-amd64/rqlited /usr/local/bin/
-
-# Create data directory
-sudo mkdir -p /opt/rqlite/data
-
-# Start rqlite as service
-sudo systemd create rqlite.service
-# or run directly:
-nohup rqlited -http-addr 0.0.0.0:4001 /opt/rqlite/data &
-```
-
-#### 3. Build and Run traffis Container
-```bash
-# Clone repository
-git clone <repository-url>
-cd traffis
-
-# Build image
-docker build -t traffis .
-
-# Run container
-docker run -d \
-  -p 4000:4000 \
-  --env-file /opt/traffis/.env \
-  --name traffis \
-  --restart unless-stopped \
-  traffis
-```
-
-#### 4. Initialize Database
-```bash
-# Initialize the rqlite database with sample data
-docker exec traffis npm run init-db
-```
-
-#### 5. Verify Deployment
-```bash
-# Check container status
-docker ps
-
-# View logs
-docker logs traffis
-docker logs rqlite  # if using docker rqlite
-
-# Test rqlite connection
-curl http://localhost:4001/status
-
-# Test application
-curl http://localhost:4000
-```
-
-## API Integration
-
-- Frontend uses relative URLs (`/api/events`) 
-- No CORS issues since everything is served from the same origin
-- Simplified deployment and packaging
+### REST Endpoints
+- `GET /api/health`: Health status and simulation time
+- `GET /api/network-info`: Geometry and lane metadata for the 1000m road
+- `POST /api/play`: Resume simulation
+- `POST /api/pause`: Pause simulation
+- `POST /api/reset`: Reset simulation
+- `POST /api/spawn`: Spawn vehicle dynamically
