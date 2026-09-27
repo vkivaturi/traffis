@@ -5,7 +5,7 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 from .config import settings
-from .schemas import SpawnRequest, AutoSpawnConfig, NetworkInfo
+from .schemas import SpawnRequest, AutoSpawnConfig, NetworkInfo, TrafficLightConfig
 from .simulation import sim_manager
 
 logger = logging.getLogger("traffis_backend")
@@ -83,6 +83,16 @@ async def configure_auto_spawn(config: AutoSpawnConfig):
     sim_manager.set_auto_spawn(config)
     return {"status": "ok", "auto_spawn": config.model_dump()}
 
+@app.post("/api/traffic-light")
+async def configure_traffic_light(config: TrafficLightConfig):
+    await sim_manager.set_traffic_light(config)
+    return {"status": "ok", "traffic_light": sim_manager._get_traffic_light_data().model_dump()}
+
+@app.post("/api/traffic-light/next")
+async def next_traffic_light_phase():
+    await sim_manager.next_traffic_light_phase()
+    return {"status": "ok", "traffic_light": sim_manager._get_traffic_light_data().model_dump()}
+
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     await sim_manager.register_websocket(websocket)
@@ -115,6 +125,19 @@ async def websocket_endpoint(websocket: WebSocket):
                     await websocket.send_text(json.dumps({
                         "type": "auto_spawn_ack",
                         "auto_spawn": auto_cfg.model_dump()
+                    }))
+                elif action == "set_traffic_light":
+                    tl_cfg = TrafficLightConfig(**payload)
+                    await sim_manager.set_traffic_light(tl_cfg)
+                    await websocket.send_text(json.dumps({
+                        "type": "traffic_light_ack",
+                        "traffic_light": sim_manager._get_traffic_light_data().model_dump()
+                    }))
+                elif action == "next_traffic_light_phase":
+                    await sim_manager.next_traffic_light_phase()
+                    await websocket.send_text(json.dumps({
+                        "type": "traffic_light_ack",
+                        "traffic_light": sim_manager._get_traffic_light_data().model_dump()
                     }))
             except json.JSONDecodeError:
                 logger.warning("Invalid JSON received over WebSocket: %s", text)

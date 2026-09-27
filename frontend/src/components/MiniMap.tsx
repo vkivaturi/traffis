@@ -1,11 +1,12 @@
 import React, { useRef, useEffect } from 'react';
-import type { Vehicle, CameraState } from '../types/simulation';
+import type { Vehicle, CameraState, TrafficLightData } from '../types/simulation';
 
 interface MiniMapProps {
   vehicles: Vehicle[];
   camera: CameraState;
   viewportWidthMeters: number;
   onJumpToX: (x: number) => void;
+  trafficLight?: TrafficLightData;
 }
 
 export const MiniMap: React.FC<MiniMapProps> = ({
@@ -13,6 +14,7 @@ export const MiniMap: React.FC<MiniMapProps> = ({
   camera,
   viewportWidthMeters,
   onJumpToX,
+  trafficLight,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
@@ -93,6 +95,27 @@ export const MiniMap: React.FC<MiniMapProps> = ({
       ctx.arc(vx, vy, 3, 0, Math.PI * 2);
       ctx.fill();
     }
+    // Traffic Signal Indicator on MiniMap
+    const tlX = trafficLight?.x ?? 500;
+    const tlPx = padX + (tlX / 1000) * roadW;
+    const tlColor = trafficLight?.state === 'green' ? '#10b981' : trafficLight?.state === 'yellow' ? '#f59e0b' : '#ef4444';
+
+    ctx.strokeStyle = tlColor;
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([2, 2]);
+    ctx.beginPath();
+    ctx.moveTo(tlPx, roadY - 2);
+    ctx.lineTo(tlPx, roadY + roadH + 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Glowing Signal Lamp Marker
+    ctx.shadowColor = tlColor;
+    ctx.shadowBlur = 8;
+    ctx.fillStyle = tlColor;
+    ctx.beginPath();
+    ctx.arc(tlPx, roadY - 5, 4, 0, Math.PI * 2);
+    ctx.fill();
     ctx.shadowBlur = 0;
 
     // Draw viewport camera indicator (visible range)
@@ -116,7 +139,7 @@ export const MiniMap: React.FC<MiniMapProps> = ({
     ctx.lineTo(camPx, roadY + roadH + 4);
     ctx.stroke();
 
-  }, [vehicles, camera, viewportWidthMeters]);
+  }, [vehicles, camera, viewportWidthMeters, trafficLight]);
 
   const handleClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;

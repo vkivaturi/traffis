@@ -15,6 +15,8 @@ from .schemas import (
     SpawnRequest,
     AutoSpawnConfig,
     NetworkInfo,
+    TrafficLightState,
+    TrafficLightConfig,
 )
 
 logger = logging.getLogger("sumo_simulation")
@@ -60,6 +62,15 @@ class SimulationManager:
         self.auto_spawn = AutoSpawnConfig(enabled=True, rate_per_minute=25.0)
         self.last_auto_spawn_time = 0.0
 
+        # Traffic Light settings
+        self.tl_id = "traffic_light"
+        self.tl_state = "green"  # "green" | "yellow" | "red"
+        self.tl_mode = "auto"    # "auto" | "manual"
+        self.tl_green_duration = settings.DEFAULT_GREEN_DURATION
+        self.tl_yellow_duration = settings.DEFAULT_YELLOW_DURATION
+        self.tl_red_duration = settings.DEFAULT_RED_DURATION
+        self.tl_phase_timer = 0.0
+
         # Concurrency & WebSockets
         self.lock = asyncio.Lock()
         self.active_websockets: Set[WebSocket] = set()
@@ -96,6 +107,101 @@ class SimulationManager:
         self.total_arrived = 0
         self.vehicle_counter = 0
         self.vehicle_colors.clear()
+        self.tl_state = "green"
+        self.tl_phase_timer = 0.0
+        self._apply_traffic_light_state(self.tl_state)
+
+    def _get_tl_raw_state(self, state: str) -> str:
+        if state == "red":
+            return "rrr"
+        elif state == "yellow":
+            return "yyy"
+        return "GGG"
+
+    def _apply_traffic_light_state(self, state: str):
+        raw = self._get_tl_raw_state(state)
+        try:
+            traci.trafficlight.setRedYellowGreenState(self.tl_id, raw)
+        except Exception as e:
+            logger.warning("Could not set traffic light state '%s' (%s): %s", state, raw, e)
+
+    def _update_traffic_light(self, dt: float):
+        if self.tl_mode != "auto":
+            return
+
+        self.tl_phase_timer += dt
+        if self.tl_state == "green":
+            if self.tl_phase_timer >= self.tl_green_duration:
+                self.tl_state = "yellow"
+                self.tl_phase_timer = 0.0
+                self._apply_traffic_light_state("yellow")
+        elif self.tl_state == "yellow":
+            if self.tl_phase_timer >= self.tl_yellow_duration:
+                self.tl_state = "red"
+                self.tl_phase_timer = 0.0
+                self._apply_traffic_light_state("red")
+        elif self.tl_state == "red":
+            if self.tl_phase_timer >= self.tl_red_duration:
+                self.tl_state = "green"
+                self.tl_phase_timer = 0.0
+                self._apply_traffic_light_state("green")
+
+    async def set_traffic_light(self, config: TrafficLightConfig):
+        async with self.lock:
+            if config.green_duration is not None:
+                self.tl_green_duration = config.green_duration
+            if config.yellow_duration is not None:
+                self.tl_yellow_duration = config.yellow_duration
+            if config.red_duration is not None:
+                self.tl_red_duration = config.red_duration
+            if config.mode is not None:
+                self.tl_mode = config.mode
+            if config.state is not None:
+                self.tl_state = config.state
+                self.tl_phase_timer = 0.0
+                self._apply_traffic_light_state(self.tl_state)
+            logger.info("Traffic light updated: mode=%s, state=%s, G=%.1fs, Y=%.1fs, R=%.1fs",
+                        self.tl_mode, self.tl_state, self.tl_green_duration, self.tl_yellow_duration, self.tl_red_duration)
+        await self._broadcast_current_state()
+
+    async def next_traffic_light_phase(self):
+        async with self.lock:
+            if self.tl_state == "green":
+                self.tl_state = "yellow"
+            elif self.tl_state == "yellow":
+                self.tl_state = "red"
+            else:
+                self.tl_state = "green"
+            self.tl_phase_timer = 0.0
+            self._apply_traffic_light_state(self.tl_state)
+            logger.info("Traffic light manual step -> %s", self.tl_state)
+        await self._broadcast_current_state()
+
+    def _get_traffic_light_data(self) -> TrafficLightState:
+        if self.tl_state == "green":
+            dur = self.tl_green_duration
+            next_st = "yellow"
+        elif self.tl_state == "yellow":
+            dur = self.tl_yellow_duration
+            next_st = "red"
+        else:
+            dur = self.tl_red_duration
+            next_st = "green"
+
+        rem = max(0.0, round(dur - self.tl_phase_timer, 1))
+        return TrafficLightState(
+            id=self.tl_id,
+            x=settings.TRAFFIC_LIGHT_X,
+            state=self.tl_state,
+            raw_state=self._get_tl_raw_state(self.tl_state),
+            mode=self.tl_mode,
+            green_duration=self.tl_green_duration,
+            yellow_duration=self.tl_yellow_duration,
+            red_duration=self.tl_red_duration,
+            phase_timer=round(self.tl_phase_timer, 2),
+            phase_remaining=rem,
+            next_state=next_st
+        )
 
     async def stop(self):
         """Stop simulation loop and close TraCI."""
@@ -222,11 +328,13 @@ class SimulationManager:
             road_length=settings.ROAD_LENGTH_M,
             num_lanes=settings.NUM_LANES,
             lane_width=settings.LANE_WIDTH_M,
+            traffic_light_x=settings.TRAFFIC_LIGHT_X,
             lanes=lanes
         )
 
     def _do_step(self):
         """Synchronous SUMO step execution (call while holding self.lock)."""
+        self._update_traffic_light(settings.STEP_LENGTH)
         traci.simulationStep()
         self.step_count += 1
         self.sim_time = round(self.step_count * settings.STEP_LENGTH, 2)
@@ -300,12 +408,15 @@ class SimulationManager:
             density_veh_km=density
         )
 
+        tl_data = self._get_traffic_light_data()
+
         return SimulationStateMessage(
             sim_time=self.sim_time,
             step=self.step_count,
             is_running=self.is_running,
             vehicles=vehicle_list,
-            stats=stats
+            stats=stats,
+            traffic_light=tl_data
         )
 
     async def _broadcast_current_state(self):

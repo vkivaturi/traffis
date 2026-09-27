@@ -24,12 +24,38 @@ export interface SimulationStats {
   density_veh_km: number;
 }
 
+export type TrafficSignalColor = 'green' | 'yellow' | 'red';
+export type TrafficSignalMode = 'auto' | 'manual';
+
+export interface TrafficLightData {
+  id: string;
+  x: number;
+  state: TrafficSignalColor;
+  raw_state: string;
+  mode: TrafficSignalMode;
+  green_duration: number;
+  yellow_duration: number;
+  red_duration: number;
+  phase_timer: number;
+  phase_remaining: number;
+  next_state: TrafficSignalColor;
+}
+
+export interface TrafficLightSettings {
+  mode?: TrafficSignalMode;
+  state?: TrafficSignalColor;
+  green_duration?: number;
+  yellow_duration?: number;
+  red_duration?: number;
+}
+
 export interface SimulationState {
   sim_time: number;
   step: number;
   is_running: boolean;
   vehicles: Vehicle[];
   stats: SimulationStats;
+  traffic_light?: TrafficLightData;
 }
 
 export interface LaneInfo {
@@ -45,6 +71,7 @@ export interface NetworkInfo {
   road_length: number;
   num_lanes: number;
   lane_width: number;
+  traffic_light_x?: number;
   lanes: LaneInfo[];
 }
 
@@ -66,3 +93,4 @@ export interface CameraState {
   zoom: number;    // Pixels per meter
   followingId: string | null;
 }
+

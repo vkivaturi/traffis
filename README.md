@@ -99,16 +99,17 @@ The simulation takes place on a **1000-meter straight 3-lane highway** located i
 
 | File | Purpose | Key Parameters |
 | :--- | :--- | :--- |
-| [`road.nod.xml`](file:///Users/vijay/Projects/traffis/backend/sumo_config/road.nod.xml) | Node coordinates | Origin `start` at $(0, 0)$, Destination `end` at $(1000, 0)$ |
-| [`road.edg.xml`](file:///Users/vijay/Projects/traffis/backend/sumo_config/road.edg.xml) | Edge definition | `id="road"`, `numLanes="3"`, speed limit `33.33 m/s` (120 km/h) |
-| [`road.rou.xml`](file:///Users/vijay/Projects/traffis/backend/sumo_config/road.rou.xml) | Routes & vehicle types | Straight route; `car`, `sports`, `truck`, `van` vehicle definitions |
+| [`road.nod.xml`](file:///Users/vijay/Projects/traffis/backend/sumo_config/road.nod.xml) | Node coordinates | `start` at $(0, 0)$, `traffic_light` at $(500, 0)$, `end` at $(1000, 0)$ |
+| [`road.edg.xml`](file:///Users/vijay/Projects/traffis/backend/sumo_config/road.edg.xml) | Edge definition | `road_in` ($0 \to 500\text{m}$), `road_out` ($500 \to 1000\text{m}$), 3 lanes each |
+| [`road.rou.xml`](file:///Users/vijay/Projects/traffis/backend/sumo_config/road.rou.xml) | Routes & vehicle types | Route `route_straight` (`road_in road_out`); `car`, `sports`, `truck`, `van` |
 | [`road.sumocfg`](file:///Users/vijay/Projects/traffis/backend/sumo_config/road.sumocfg) | SUMO configuration | `step-length="0.05"` ($20\text{ steps/second}$), collision action `none` |
-| [`road.net.xml`](file:///Users/vijay/Projects/traffis/backend/sumo_config/road.net.xml) | Compiled SUMO network | Compiled binary road geometry produced by `netconvert` |
+| [`road.net.xml`](file:///Users/vijay/Projects/traffis/backend/sumo_config/road.net.xml) | Compiled SUMO network | Compiled binary road geometry with `traffic_light` logic produced by `netconvert` |
 
 ### Lane Geometry Details
 - **Lane 0 (Right / Slow)**: Width $3.2\text{m}$, Center line $y = -8.0\text{m}$
 - **Lane 1 (Middle)**: Width $3.2\text{m}$, Center line $y = -4.8\text{m}$
 - **Lane 2 (Left / Fast)**: Width $3.2\text{m}$, Center line $y = -1.6\text{m}$
+- **Traffic Signal**: Junction at $x = 500.0\text{m}$ with stop bar at $x = 497.5\text{m}$ and overhead 3-lane gantry
 
 ### Compiling the Road Network
 To generate the XML configuration files and compile `road.net.xml` using `netconvert`:

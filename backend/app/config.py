@@ -49,6 +49,10 @@ class Settings(BaseModel):
     ROAD_LENGTH_M: float = 1000.0
     NUM_LANES: int = 3
     LANE_WIDTH_M: float = 3.2
+    TRAFFIC_LIGHT_X: float = 500.0
+    DEFAULT_GREEN_DURATION: float = 15.0
+    DEFAULT_YELLOW_DURATION: float = 3.0
+    DEFAULT_RED_DURATION: float = 12.0
     
 settings = Settings()
 

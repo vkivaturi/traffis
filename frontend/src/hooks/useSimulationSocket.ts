@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import type { SimulationState, NetworkInfo, SpawnOptions, AutoSpawnSettings } from '../types/simulation';
+import type { SimulationState, NetworkInfo, SpawnOptions, AutoSpawnSettings, TrafficLightSettings } from '../types/simulation';
 
 const INITIAL_STATE: SimulationState = {
   sim_time: 0,
@@ -12,6 +12,19 @@ const INITIAL_STATE: SimulationState = {
     total_arrived: 0,
     avg_speed_kmh: 0,
     density_veh_km: 0,
+  },
+  traffic_light: {
+    id: 'traffic_light',
+    x: 500,
+    state: 'green',
+    raw_state: 'GGG',
+    mode: 'auto',
+    green_duration: 15,
+    yellow_duration: 3,
+    red_duration: 12,
+    phase_timer: 0,
+    phase_remaining: 15,
+    next_state: 'yellow',
   },
 };
 
@@ -127,6 +140,14 @@ export function useSimulationSocket() {
     send('set_auto_spawn', settings as unknown as Record<string, unknown>);
   }, [send]);
 
+  const setTrafficLight = useCallback((settings: TrafficLightSettings) => {
+    send('set_traffic_light', settings as unknown as Record<string, unknown>);
+  }, [send]);
+
+  const nextTrafficLightPhase = useCallback(() => {
+    send('next_traffic_light_phase');
+  }, [send]);
+
   return {
     state,
     networkInfo,
@@ -139,5 +160,7 @@ export function useSimulationSocket() {
     step,
     spawnVehicle,
     setAutoSpawn,
+    setTrafficLight,
+    nextTrafficLightPhase,
   };
 }

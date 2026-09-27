@@ -8,13 +8,15 @@ CONFIG_DIR = Path(__file__).parent.resolve()
 NODES_XML = """<?xml version="1.0" encoding="UTF-8"?>
 <nodes xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/nodes_file.xsd">
     <node id="start" x="0.0" y="0.0" type="priority"/>
+    <node id="traffic_light" x="500.0" y="0.0" type="traffic_light"/>
     <node id="end" x="1000.0" y="0.0" type="priority"/>
 </nodes>
 """
 
 EDGES_XML = """<?xml version="1.0" encoding="UTF-8"?>
 <edges xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/edges_file.xsd">
-    <edge id="road" from="start" to="end" numLanes="3" speed="33.33"/>
+    <edge id="road_in" from="start" to="traffic_light" numLanes="3" speed="33.33"/>
+    <edge id="road_out" from="traffic_light" to="end" numLanes="3" speed="33.33"/>
 </edges>
 """
 
@@ -24,7 +26,7 @@ ROUTES_XML = """<?xml version="1.0" encoding="UTF-8"?>
     <vType id="truck" accel="1.3" decel="3.5" sigma="0.5" length="10.0" width="2.4" minGap="3.5" maxSpeed="25.0" guiShape="truck"/>
     <vType id="sports" accel="4.2" decel="6.0" sigma="0.2" length="4.6" width="1.9" minGap="2.0" maxSpeed="45.0" guiShape="passenger/sedan"/>
     <vType id="van" accel="2.2" decel="4.2" sigma="0.4" length="5.5" width="2.0" minGap="2.8" maxSpeed="30.0" guiShape="passenger/van"/>
-    <route id="route_straight" edges="road"/>
+    <route id="route_straight" edges="road_in road_out"/>
 </routes>
 """
 

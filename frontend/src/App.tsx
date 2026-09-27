@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useSimulationSocket } from './hooks/useSimulationSocket';
 import { Header } from './components/Header';
 import { MiniMap } from './components/MiniMap';
@@ -6,6 +6,7 @@ import { CanvasView } from './components/CanvasView';
 import { Controls } from './components/Controls';
 import { StatsPanel } from './components/StatsPanel';
 import { VehicleInspector } from './components/VehicleInspector';
+import { TrafficSignalPanel } from './components/TrafficSignalPanel';
 import type { CameraState, SpawnOptions, AutoSpawnSettings } from './types/simulation';
 import { soundSystem } from './utils/audio';
 
@@ -21,6 +22,8 @@ export const App: React.FC = () => {
     step,
     spawnVehicle,
     setAutoSpawn,
+    setTrafficLight,
+    nextTrafficLightPhase,
   } = useSimulationSocket();
 
   const [camera, setCamera] = useState<CameraState>({
@@ -33,10 +36,22 @@ export const App: React.FC = () => {
   const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null);
   const [viewportWidthMeters, setViewportWidthMeters] = useState<number>(100);
   const [soundEnabled, setSoundEnabled] = useState<boolean>(false);
+  const [isSignalPanelOpen, setIsSignalPanelOpen] = useState<boolean>(true);
   const [autoSpawnSettings, setAutoSpawnSettings] = useState<AutoSpawnSettings>({
     enabled: true,
     rate_per_minute: 25,
   });
+
+  // Sound effect when traffic signal changes
+  const prevSignalStateRef = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    if (state.traffic_light && soundEnabled) {
+      if (prevSignalStateRef.current && prevSignalStateRef.current !== state.traffic_light.state) {
+        soundSystem.playSignalChangeSound(state.traffic_light.state);
+      }
+      prevSignalStateRef.current = state.traffic_light.state;
+    }
+  }, [state.traffic_light, soundEnabled]);
 
   const handleToggleSound = () => {
     const nextVal = !soundEnabled;
@@ -59,6 +74,16 @@ export const App: React.FC = () => {
   const handleUpdateAutoSpawn = (settings: AutoSpawnSettings) => {
     setAutoSpawnSettings(settings);
     setAutoSpawn(settings);
+  };
+
+  const handleFocusSignal = () => {
+    setCamera((c) => ({
+      ...c,
+      x: 500,
+      y: -4.8,
+      zoom: 14,
+      followingId: null,
+    }));
   };
 
   const selectedVehicle = state.vehicles.find((v) => v.id === selectedVehicleId) || null;
@@ -116,9 +141,10 @@ export const App: React.FC = () => {
         camera={camera}
         viewportWidthMeters={viewportWidthMeters}
         onJumpToX={(x) => setCamera((c) => ({ ...c, x, followingId: null }))}
+        trafficLight={state.traffic_light}
       />
 
-      {/* 3. Main Canvas Viewport with Vehicles and Road */}
+      {/* 3. Main Canvas Viewport with Vehicles, Traffic Signal and Road */}
       <div
         style={{
           position: 'relative',
@@ -135,6 +161,18 @@ export const App: React.FC = () => {
           selectedVehicleId={selectedVehicleId}
           onSelectVehicle={setSelectedVehicleId}
           onViewportMetersChange={setViewportWidthMeters}
+          trafficLight={state.traffic_light}
+          onTrafficLightClick={() => setIsSignalPanelOpen(true)}
+        />
+
+        {/* Interactive Traffic Signal Control HUD */}
+        <TrafficSignalPanel
+          trafficLight={state.traffic_light}
+          onUpdateSettings={setTrafficLight}
+          onNextPhase={nextTrafficLightPhase}
+          onFocusSignal={handleFocusSignal}
+          isOpen={isSignalPanelOpen}
+          onToggleOpen={() => setIsSignalPanelOpen((v) => !v)}
         />
 
         {/* Selected Vehicle Floating HUD */}
@@ -163,6 +201,10 @@ export const App: React.FC = () => {
         onSpawnVehicle={handleSpawn}
         autoSpawnSettings={autoSpawnSettings}
         onUpdateAutoSpawn={handleUpdateAutoSpawn}
+        trafficLight={state.traffic_light}
+        isTrafficSignalPanelOpen={isSignalPanelOpen}
+        onToggleTrafficSignalPanel={() => setIsSignalPanelOpen((v) => !v)}
+        onFocusTrafficSignal={handleFocusSignal}
       />
 
       {/* 5. Telemetry & Analytics Dashboard */}

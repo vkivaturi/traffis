@@ -25,6 +25,26 @@ class SimulationStats(BaseModel):
     avg_speed_kmh: float
     density_veh_km: float
 
+class TrafficLightState(BaseModel):
+    id: str = "traffic_light"
+    x: float = 500.0
+    state: str = "green"  # "green" | "yellow" | "red"
+    raw_state: str = "GGG"
+    mode: str = "auto"    # "auto" | "manual"
+    green_duration: float = 15.0
+    yellow_duration: float = 3.0
+    red_duration: float = 12.0
+    phase_timer: float = 0.0
+    phase_remaining: float = 15.0
+    next_state: str = "yellow"
+
+class TrafficLightConfig(BaseModel):
+    mode: Optional[str] = Field(None, description="'auto' or 'manual'")
+    state: Optional[str] = Field(None, description="'green', 'yellow', or 'red'")
+    green_duration: Optional[float] = Field(None, ge=1.0, le=120.0, description="Green light duration in seconds")
+    yellow_duration: Optional[float] = Field(None, ge=1.0, le=30.0, description="Yellow light duration in seconds")
+    red_duration: Optional[float] = Field(None, ge=1.0, le=120.0, description="Red light duration in seconds")
+
 class SimulationStateMessage(BaseModel):
     type: str = "state"
     sim_time: float
@@ -32,6 +52,7 @@ class SimulationStateMessage(BaseModel):
     is_running: bool
     vehicles: List[VehicleData]
     stats: SimulationStats
+    traffic_light: TrafficLightState
 
 class SpawnRequest(BaseModel):
     lane: Optional[int] = Field(None, ge=0, le=2, description="Lane index: 0 (right), 1 (middle), 2 (left)")
@@ -40,11 +61,13 @@ class SpawnRequest(BaseModel):
     color: Optional[str] = Field(None, description="Hex color e.g. #38bdf8")
 
 class AutoSpawnConfig(BaseModel):
-    enabled: bool = False
-    rate_per_minute: float = Field(24.0, ge=1.0, le=200.0)
+    enabled: bool = True
+    rate_per_minute: float = Field(25.0, ge=0.0, le=240.0)
 
 class NetworkInfo(BaseModel):
     road_length: float = 1000.0
     num_lanes: int = 3
     lane_width: float = 3.2
+    traffic_light_x: float = 500.0
     lanes: List[Dict[str, Any]]
+

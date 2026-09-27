@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Play, Pause, RotateCcw, StepForward, Sparkles, Sliders, Car } from 'lucide-react';
-import type { SpawnOptions, AutoSpawnSettings } from '../types/simulation';
+import { Play, Pause, RotateCcw, StepForward, Sparkles, Sliders, Car, Crosshair } from 'lucide-react';
+import type { SpawnOptions, AutoSpawnSettings, TrafficLightData } from '../types/simulation';
 
 interface ControlsProps {
   isRunning: boolean;
@@ -11,6 +11,10 @@ interface ControlsProps {
   onSpawnVehicle: (options: SpawnOptions) => void;
   autoSpawnSettings: AutoSpawnSettings;
   onUpdateAutoSpawn: (settings: AutoSpawnSettings) => void;
+  trafficLight?: TrafficLightData;
+  isTrafficSignalPanelOpen: boolean;
+  onToggleTrafficSignalPanel: () => void;
+  onFocusTrafficSignal: () => void;
 }
 
 const COLOR_OPTIONS = [
@@ -33,6 +37,10 @@ export const Controls: React.FC<ControlsProps> = ({
   onSpawnVehicle,
   autoSpawnSettings,
   onUpdateAutoSpawn,
+  trafficLight,
+  isTrafficSignalPanelOpen,
+  onToggleTrafficSignalPanel,
+  onFocusTrafficSignal,
 }) => {
   const [selectedLane, setSelectedLane] = useState<number | null>(null); // null = random
   const [vehicleType, setVehicleType] = useState<'car' | 'sports' | 'truck' | 'van'>('car');
@@ -201,18 +209,19 @@ export const Controls: React.FC<ControlsProps> = ({
         </button>
       </div>
 
-      {/* 3. Traffic Flow Generator (Auto-Spawner) */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Sparkles size={16} color={autoSpawnSettings.enabled ? '#38bdf8' : '#64748b'} />
-          <span style={{ fontSize: '0.8rem', fontWeight: 600, color: autoSpawnSettings.enabled ? '#f8fafc' : '#64748b' }}>
-            Auto Flow:
+      {/* 3. Vehicle Inflow Rate Controller */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <Sparkles size={15} color={autoSpawnSettings.enabled ? '#38bdf8' : '#64748b'} />
+          <span style={{ fontSize: '0.78rem', fontWeight: 700, color: autoSpawnSettings.enabled ? '#f8fafc' : '#64748b' }}>
+            INFLOW:
           </span>
           <button
             className="btn-secondary"
             style={{
-              padding: '4px 10px',
-              fontSize: '0.75rem',
+              padding: '3px 8px',
+              fontSize: '0.72rem',
+              fontWeight: 700,
               backgroundColor: autoSpawnSettings.enabled ? 'rgba(56, 189, 248, 0.2)' : 'rgba(30, 41, 59, 0.4)',
               borderColor: autoSpawnSettings.enabled ? '#38bdf8' : 'rgba(255,255,255,0.1)',
               color: autoSpawnSettings.enabled ? '#38bdf8' : '#94a3b8',
@@ -223,8 +232,9 @@ export const Controls: React.FC<ControlsProps> = ({
                 enabled: !autoSpawnSettings.enabled,
               })
             }
+            title="Toggle Vehicle Auto-Inflow"
           >
-            {autoSpawnSettings.enabled ? 'ACTIVE' : 'OFF'}
+            {autoSpawnSettings.enabled ? 'ON' : 'OFF'}
           </button>
         </div>
 
@@ -233,7 +243,7 @@ export const Controls: React.FC<ControlsProps> = ({
             <input
               type="range"
               min="5"
-              max="60"
+              max="120"
               step="5"
               value={autoSpawnSettings.rate_per_minute}
               onChange={(e) =>
@@ -242,14 +252,114 @@ export const Controls: React.FC<ControlsProps> = ({
                   rate_per_minute: Number(e.target.value),
                 })
               }
-              style={{ width: '80px', accentColor: '#38bdf8', cursor: 'pointer' }}
+              style={{ width: '90px', accentColor: '#38bdf8', cursor: 'pointer' }}
+              title={`Inflow Rate: ${autoSpawnSettings.rate_per_minute} vehicles per minute`}
             />
-            <span style={{ fontSize: '0.75rem', fontFamily: 'var(--font-mono)', color: '#38bdf8' }}>
-              {autoSpawnSettings.rate_per_minute}/min
+
+            <span style={{ fontSize: '0.78rem', fontFamily: 'var(--font-mono)', color: '#38bdf8', fontWeight: 800, minWidth: '55px' }}>
+              {autoSpawnSettings.rate_per_minute}/m
+            </span>
+
+            {/* Quick Inflow Presets */}
+            <div style={{ display: 'flex', gap: '3px' }}>
+              {[15, 30, 60, 90].map((preset) => (
+                <button
+                  key={preset}
+                  className="btn-secondary"
+                  style={{
+                    padding: '2px 5px',
+                    fontSize: '0.68rem',
+                    fontFamily: 'var(--font-mono)',
+                    backgroundColor: autoSpawnSettings.rate_per_minute === preset ? '#0284c7' : 'transparent',
+                    borderColor: autoSpawnSettings.rate_per_minute === preset ? '#38bdf8' : 'rgba(255,255,255,0.1)',
+                    color: autoSpawnSettings.rate_per_minute === preset ? '#ffffff' : '#94a3b8',
+                  }}
+                  onClick={() =>
+                    onUpdateAutoSpawn({
+                      ...autoSpawnSettings,
+                      rate_per_minute: preset,
+                    })
+                  }
+                  title={`Set to ${preset} vehicles/min (1 every ${(60 / preset).toFixed(1)}s)`}
+                >
+                  {preset}
+                </button>
+              ))}
+            </div>
+
+            <span style={{ fontSize: '0.68rem', color: '#64748b' }}>
+              (1/{(60 / autoSpawnSettings.rate_per_minute).toFixed(1)}s)
             </span>
           </div>
         )}
       </div>
+
+      {/* 4. Traffic Signal Quick Status & Timings Drawer Trigger */}
+      {trafficLight && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <button
+            className={`btn-secondary ${isTrafficSignalPanelOpen ? 'active' : ''}`}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '6px 12px',
+              fontSize: '0.78rem',
+              fontWeight: 800,
+              fontFamily: 'var(--font-mono)',
+              borderColor:
+                trafficLight.state === 'green'
+                  ? 'rgba(16, 185, 129, 0.5)'
+                  : trafficLight.state === 'yellow'
+                  ? 'rgba(245, 158, 11, 0.5)'
+                  : 'rgba(239, 68, 68, 0.5)',
+              backgroundColor:
+                trafficLight.state === 'green'
+                  ? 'rgba(16, 185, 129, 0.15)'
+                  : trafficLight.state === 'yellow'
+                  ? 'rgba(245, 158, 11, 0.15)'
+                  : 'rgba(239, 68, 68, 0.15)',
+              color:
+                trafficLight.state === 'green'
+                  ? '#10b981'
+                  : trafficLight.state === 'yellow'
+                  ? '#f59e0b'
+                  : '#ef4444',
+              boxShadow: isTrafficSignalPanelOpen
+                ? `0 0 12px ${trafficLight.state === 'green' ? '#10b981' : trafficLight.state === 'yellow' ? '#f59e0b' : '#ef4444'}44`
+                : 'none',
+            }}
+            onClick={onToggleTrafficSignalPanel}
+            title="Configure Traffic Signal Timings & Controls"
+          >
+            <span
+              style={{
+                width: '8px',
+                height: '8px',
+                borderRadius: '50%',
+                backgroundColor:
+                  trafficLight.state === 'green'
+                    ? '#10b981'
+                    : trafficLight.state === 'yellow'
+                    ? '#f59e0b'
+                    : '#ef4444',
+                boxShadow: `0 0 8px ${trafficLight.state === 'green' ? '#10b981' : trafficLight.state === 'yellow' ? '#f59e0b' : '#ef4444'}`,
+              }}
+            />
+            <span>
+              SIGNAL: {trafficLight.state.toUpperCase()} [{trafficLight.phase_remaining.toFixed(1)}s]
+            </span>
+          </button>
+          <button
+            className="btn-icon"
+            style={{ width: '32px', height: '32px' }}
+            onClick={onFocusTrafficSignal}
+            title="Focus camera on Traffic Signal (500m)"
+          >
+            <Crosshair size={15} color="#38bdf8" />
+          </button>
+        </div>
+      )}
 
       {/* Expanded Customizer Drawer (when open) */}
       {isSpawnMenuOpen && (

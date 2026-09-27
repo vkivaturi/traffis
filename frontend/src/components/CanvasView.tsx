@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
-import type { Vehicle, CameraState } from '../types/simulation';
+import type { Vehicle, CameraState, TrafficLightData, TrafficSignalColor } from '../types/simulation';
 import { ZoomIn, ZoomOut, Maximize2, Crosshair, Navigation, LocateFixed } from 'lucide-react';
 
 interface CanvasViewProps {
@@ -9,6 +9,8 @@ interface CanvasViewProps {
   selectedVehicleId: string | null;
   onSelectVehicle: (id: string | null) => void;
   onViewportMetersChange: (meters: number) => void;
+  trafficLight?: TrafficLightData;
+  onTrafficLightClick?: () => void;
 }
 
 interface InterpolatedVehicle {
@@ -36,6 +38,8 @@ export const CanvasView: React.FC<CanvasViewProps> = ({
   selectedVehicleId,
   onSelectVehicle,
   onViewportMetersChange,
+  trafficLight,
+  onTrafficLightClick,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -325,6 +329,172 @@ export const CanvasView: React.FC<CanvasViewProps> = ({
         ctx.fillText('FINISH (1000m)', roadScreenX2, roadScreenYTop - 20);
       }
 
+      // 5.5. Traffic Signal Intersection (500m)
+      const tlX = trafficLight?.x ?? 500.0;
+      const tlScreenX = worldToScreenX(tlX);
+      const tlState = trafficLight?.state ?? 'green';
+      const tlColorHex = tlState === 'green' ? '#10b981' : tlState === 'yellow' ? '#f59e0b' : '#ef4444';
+
+      if (tlScreenX > -250 && tlScreenX < width + 250) {
+        // (A) Stop Line Markings on the road (at x = 497.5m, right before the 500m junction)
+        const stopLineScreenX = worldToScreenX(tlX - 2.5);
+
+        // Ground illumination glow on asphalt
+        if (zoom > 2) {
+          const glowGrad = ctx.createRadialGradient(
+            stopLineScreenX,
+            (roadScreenYTop + roadScreenYBottom) / 2,
+            5,
+            stopLineScreenX,
+            (roadScreenYTop + roadScreenYBottom) / 2,
+            Math.max(25, 18 * zoom)
+          );
+          glowGrad.addColorStop(
+            0,
+            tlState === 'green'
+              ? 'rgba(16, 185, 129, 0.28)'
+              : tlState === 'yellow'
+              ? 'rgba(245, 158, 11, 0.35)'
+              : 'rgba(239, 68, 68, 0.42)'
+          );
+          glowGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+          ctx.fillStyle = glowGrad;
+          ctx.fillRect(stopLineScreenX - 25 * zoom, roadScreenYTop - 4, 50 * zoom, roadScreenHeight + 8);
+        }
+
+        // Rumble strips / warning bars on road before stop line
+        if (zoom > 3) {
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.25)';
+          for (let rx = 1; rx <= 3; rx++) {
+            const rbx = worldToScreenX(tlX - 2.5 - rx * 3.5);
+            ctx.fillRect(rbx, roadScreenYTop + 2, Math.max(1.5, 0.3 * zoom), roadScreenHeight - 4);
+          }
+        }
+
+        // Thick Solid White Stop Bar
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(
+          stopLineScreenX - Math.max(2, 0.3 * zoom),
+          roadScreenYTop,
+          Math.max(3.5, 0.6 * zoom),
+          roadScreenHeight
+        );
+
+        // Painted STOP labels in each lane
+        if (zoom > 5) {
+          ctx.save();
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+          ctx.font = `800 ${Math.max(9, Math.min(15, 1.1 * zoom))}px Inter, sans-serif`;
+          ctx.textAlign = 'right';
+          const lHeight = roadScreenHeight / 3;
+          const stopLabelX = stopLineScreenX - 4 * zoom;
+          ctx.fillText('STOP', stopLabelX, roadScreenYTop + lHeight * 0.65);
+          ctx.fillText('STOP', stopLabelX, roadScreenYTop + lHeight * 1.65);
+          ctx.fillText('STOP', stopLabelX, roadScreenYTop + lHeight * 2.65);
+          ctx.restore();
+        }
+
+        // (B) Overhead Gantry Structure
+        const colW = Math.max(5, 0.7 * zoom);
+        const gantryTop = roadScreenYTop - 32 * Math.min(2.0, Math.max(0.6, zoom / 8));
+
+        // Top Column Support
+        ctx.fillStyle = '#334155';
+        ctx.fillRect(tlScreenX - colW / 2, gantryTop, colW, roadScreenYTop - gantryTop);
+        // Bottom Column Base
+        ctx.fillRect(tlScreenX - colW / 2, roadScreenYBottom, colW, 18);
+
+        // Steel truss beam spanning across road
+        ctx.fillStyle = '#1e293b';
+        ctx.fillRect(tlScreenX - colW, gantryTop, colW * 2, roadScreenHeight + (roadScreenYTop - gantryTop) + 18);
+        ctx.strokeStyle = '#475569';
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(tlScreenX - colW, gantryTop, colW * 2, roadScreenHeight + (roadScreenYTop - gantryTop) + 18);
+
+        // (C) Suspended Traffic Signal Heads (one over each lane: Lane 2, 1, 0)
+        const laneYs = [-1.6, -4.8, -8.0];
+        laneYs.forEach((ly) => {
+          const sy = worldToScreenY(ly);
+          const headW = Math.max(16, 2.8 * zoom);
+          const headH = Math.max(36, 6.2 * zoom);
+          const hx = tlScreenX - headW / 2;
+          const hy = sy - headH / 2;
+
+          // Housing Box
+          ctx.fillStyle = '#0b0f19';
+          ctx.strokeStyle = '#334155';
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.roundRect(hx, hy, headW, headH, 4);
+          ctx.fill();
+          ctx.stroke();
+
+          // Yellow visor backplate outline
+          ctx.strokeStyle = '#eab308';
+          ctx.lineWidth = 1;
+          ctx.strokeRect(hx - 2, hy - 2, headW + 4, headH + 4);
+
+          // 3 Lamps: Red (top), Yellow (mid), Green (bot)
+          const lampRadius = Math.max(2.5, headW * 0.22);
+          const lampSpacing = headH / 4;
+
+          const lampConfigs: { color: TrafficSignalColor; activeHex: string; offHex: string; cy: number }[] = [
+            { color: 'red', activeHex: '#ef4444', offHex: '#250f11', cy: hy + lampSpacing },
+            { color: 'yellow', activeHex: '#f59e0b', offHex: '#20180a', cy: hy + lampSpacing * 2 },
+            { color: 'green', activeHex: '#10b981', offHex: '#081a13', cy: hy + lampSpacing * 3 },
+          ];
+
+          lampConfigs.forEach((lc) => {
+            const isActive = tlState === lc.color;
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(tlScreenX, lc.cy, lampRadius, 0, Math.PI * 2);
+
+            if (isActive) {
+              ctx.shadowColor = lc.activeHex;
+              ctx.shadowBlur = Math.max(8, 16 * Math.min(2.5, zoom / 5));
+              ctx.fillStyle = lc.activeHex;
+              ctx.fill();
+
+              // Bright core reflection
+              ctx.beginPath();
+              ctx.arc(tlScreenX, lc.cy, lampRadius * 0.45, 0, Math.PI * 2);
+              ctx.fillStyle = '#ffffff';
+              ctx.fill();
+            } else {
+              ctx.fillStyle = lc.offHex;
+              ctx.fill();
+              ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+              ctx.lineWidth = 0.5;
+              ctx.stroke();
+            }
+            ctx.restore();
+          });
+        });
+
+        // (D) Floating Signal Status Tag above the Gantry
+        const tagY = gantryTop - 18;
+        const tagText = `SIGNAL: ${tlState.toUpperCase()} [${trafficLight?.phase_remaining.toFixed(1) ?? '0'}s]`;
+        ctx.font = '800 11px JetBrains Mono, monospace';
+        const tagMetrics = ctx.measureText(tagText);
+        const tagW = tagMetrics.width + 16;
+        const tagH = 22;
+
+        ctx.fillStyle = 'rgba(11, 15, 25, 0.85)';
+        ctx.strokeStyle = tlColorHex;
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.roundRect(tlScreenX - tagW / 2, tagY - tagH / 2, tagW, tagH, 6);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = tlColorHex;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(tagText, tlScreenX, tagY);
+        ctx.textBaseline = 'alphabetic'; // Reset
+      }
+
       // 6. Render Vehicles with interpolation & rich aesthetics
       const interpMap = interpVehiclesRef.current;
       interpMap.forEach((v, vid) => {
@@ -512,7 +682,7 @@ export const CanvasView: React.FC<CanvasViewProps> = ({
 
     animId = requestAnimationFrame(render);
     return () => cancelAnimationFrame(animId);
-  }, [camera, selectedVehicleId]);
+  }, [camera, selectedVehicleId, trafficLight]);
 
   // Pan interaction
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -598,6 +768,15 @@ export const CanvasView: React.FC<CanvasViewProps> = ({
     const cy = rect.height / 2;
     const worldX = camera.x + (mouseX - cx) / camera.zoom;
     const worldY = camera.y - (mouseY - cy) / camera.zoom;
+
+    // Check if clicked on traffic signal at 500m
+    const tlWorldX = trafficLight?.x ?? 500.0;
+    if (Math.abs(worldX - tlWorldX) < 12 && worldY >= -14 && worldY <= 6) {
+      if (onTrafficLightClick) {
+        onTrafficLightClick();
+        return;
+      }
+    }
 
     let clickedId: string | null = null;
     interpVehiclesRef.current.forEach((v, vid) => {
@@ -712,12 +891,12 @@ export const CanvasView: React.FC<CanvasViewProps> = ({
         </button>
       </div>
 
-      {/* Camera Presets Toolbar */}
+      {/* Camera Presets Toolbar (Bottom Left) */}
       <div
         className="glass-panel"
         style={{
           position: 'absolute',
-          top: '20px',
+          bottom: '20px',
           left: '20px',
           padding: '6px 10px',
           display: 'flex',
@@ -739,10 +918,16 @@ export const CanvasView: React.FC<CanvasViewProps> = ({
         </button>
         <button
           className="btn-secondary"
-          style={{ padding: '4px 8px', fontSize: '0.75rem' }}
+          style={{
+            padding: '4px 8px',
+            fontSize: '0.75rem',
+            borderColor: 'rgba(56, 189, 248, 0.4)',
+            color: '#38bdf8',
+          }}
           onClick={() => jumpTo(500, -4.8, 14)}
+          title="Jump to Traffic Signal (500m)"
         >
-          Mid (500m)
+          🚦 Signal (500m)
         </button>
         <button
           className="btn-secondary"
