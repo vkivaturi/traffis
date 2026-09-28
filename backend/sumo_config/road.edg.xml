@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <edges xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/edges_file.xsd">
-    <edge id="road_in" from="start" to="traffic_light" numLanes="3" speed="33.33"/>
-    <edge id="road_out" from="traffic_light" to="end" numLanes="3" speed="33.33"/>
+    <edge id="road_east_in" from="start" to="traffic_light" numLanes="2" speed="33.33"/>
+    <edge id="road_east_out" from="traffic_light" to="end" numLanes="2" speed="33.33"/>
+    <edge id="road_west_in" from="end" to="traffic_light" numLanes="2" speed="33.33"/>
+    <edge id="road_west_out" from="traffic_light" to="start" numLanes="2" speed="33.33"/>
 </edges>

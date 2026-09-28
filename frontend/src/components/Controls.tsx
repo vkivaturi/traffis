@@ -42,7 +42,8 @@ export const Controls: React.FC<ControlsProps> = ({
   onToggleTrafficSignalPanel,
   onFocusTrafficSignal,
 }) => {
-  const [selectedLane, setSelectedLane] = useState<number | null>(null); // null = random
+  const [selectedDirection, setSelectedDirection] = useState<'east' | 'west' | 'random'>('east');
+  const [selectedLane, setSelectedLane] = useState<number | null>(null); // null = random, 0 = L0 (Slow), 1 = L1 (Fast)
   const [vehicleType, setVehicleType] = useState<'car' | 'sports' | 'truck' | 'van'>('car');
   const [vehicleColor, setVehicleColor] = useState<string>('#38bdf8');
   const [initialSpeed, setInitialSpeed] = useState<number>(25); // m/s (~90 km/h)
@@ -50,6 +51,7 @@ export const Controls: React.FC<ControlsProps> = ({
 
   const handleSpawn = () => {
     onSpawnVehicle({
+      direction: selectedDirection,
       lane: selectedLane,
       type: vehicleType,
       color: vehicleColor,
@@ -141,6 +143,52 @@ export const Controls: React.FC<ControlsProps> = ({
           <span>SPAWN VEHICLE</span>
         </button>
 
+        {/* Direction Selector Pills */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', backgroundColor: 'rgba(0,0,0,0.3)', padding: '3px', borderRadius: '8px' }}>
+          <span style={{ fontSize: '0.72rem', color: '#64748b', padding: '0 6px', fontWeight: 600 }}>
+            DIR:
+          </span>
+          <button
+            className={`btn-secondary ${selectedDirection === 'east' ? 'active' : ''}`}
+            style={{
+              padding: '4px 8px',
+              fontSize: '0.75rem',
+              backgroundColor: selectedDirection === 'east' ? '#0284c7' : 'transparent',
+              borderColor: selectedDirection === 'east' ? '#38bdf8' : 'transparent',
+            }}
+            onClick={() => setSelectedDirection('east')}
+            title="Eastbound: Travels from 0m to 1000m (Right →)"
+          >
+            East →
+          </button>
+          <button
+            className={`btn-secondary ${selectedDirection === 'west' ? 'active' : ''}`}
+            style={{
+              padding: '4px 8px',
+              fontSize: '0.75rem',
+              backgroundColor: selectedDirection === 'west' ? '#0284c7' : 'transparent',
+              borderColor: selectedDirection === 'west' ? '#38bdf8' : 'transparent',
+            }}
+            onClick={() => setSelectedDirection('west')}
+            title="Westbound: Travels from 1000m to 0m (Left ←)"
+          >
+            ← West
+          </button>
+          <button
+            className={`btn-secondary ${selectedDirection === 'random' ? 'active' : ''}`}
+            style={{
+              padding: '4px 8px',
+              fontSize: '0.75rem',
+              backgroundColor: selectedDirection === 'random' ? '#0284c7' : 'transparent',
+              borderColor: selectedDirection === 'random' ? '#38bdf8' : 'transparent',
+            }}
+            onClick={() => setSelectedDirection('random')}
+            title="Random / Alternating Direction"
+          >
+            ⇄ Auto
+          </button>
+        </div>
+
         {/* Lane Selector Pills */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '4px', backgroundColor: 'rgba(0,0,0,0.3)', padding: '3px', borderRadius: '8px' }}>
           <span style={{ fontSize: '0.72rem', color: '#64748b', padding: '0 6px', fontWeight: 600 }}>
@@ -169,7 +217,7 @@ export const Controls: React.FC<ControlsProps> = ({
             onClick={() => setSelectedLane(0)}
             title="Lane 0 (Right / Slow Lane)"
           >
-            L0 (Right)
+            L0 (Slow)
           </button>
           <button
             className={`btn-secondary ${selectedLane === 1 ? 'active' : ''}`}
@@ -180,22 +228,9 @@ export const Controls: React.FC<ControlsProps> = ({
               borderColor: selectedLane === 1 ? '#38bdf8' : 'transparent',
             }}
             onClick={() => setSelectedLane(1)}
-            title="Lane 1 (Middle Lane)"
+            title="Lane 1 (Left / Fast Lane)"
           >
-            L1 (Mid)
-          </button>
-          <button
-            className={`btn-secondary ${selectedLane === 2 ? 'active' : ''}`}
-            style={{
-              padding: '4px 8px',
-              fontSize: '0.75rem',
-              backgroundColor: selectedLane === 2 ? '#0284c7' : 'transparent',
-              borderColor: selectedLane === 2 ? '#38bdf8' : 'transparent',
-            }}
-            onClick={() => setSelectedLane(2)}
-            title="Lane 2 (Left / Fast Lane)"
-          >
-            L2 (Left)
+            L1 (Fast)
           </button>
         </div>
 

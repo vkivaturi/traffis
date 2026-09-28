@@ -28,7 +28,7 @@ export const App: React.FC = () => {
 
   const [camera, setCamera] = useState<CameraState>({
     x: 100, // Start focused near road entry
-    y: -4.8,
+    y: 0,
     zoom: 12,
     followingId: null,
   });
@@ -68,7 +68,7 @@ export const App: React.FC = () => {
     reset();
     soundSystem.playResetSound();
     setSelectedVehicleId(null);
-    setCamera((prev) => ({ ...prev, followingId: null, x: 100 }));
+    setCamera((prev) => ({ ...prev, followingId: null, x: 100, y: 0 }));
   };
 
   const handleUpdateAutoSpawn = (settings: AutoSpawnSettings) => {
@@ -80,7 +80,7 @@ export const App: React.FC = () => {
     setCamera((c) => ({
       ...c,
       x: 500,
-      y: -4.8,
+      y: 0,
       zoom: 14,
       followingId: null,
     }));

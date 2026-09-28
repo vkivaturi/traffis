@@ -29,21 +29,30 @@ async def test_full_flow():
             tl_st = state.get("traffic_light", {}).get("state")
             print(f"State tick {i}: time={st}s active_vehs={n_veh} avg_speed={avg_spd} km/h tl={tl_st}")
         
-        # 3. Test Spawn command over WebSocket
-        print("Sending spawn command...")
+        # 3. Test Spawn command over WebSocket (Eastbound and Westbound)
+        print("Sending spawn command (Eastbound)...")
         await ws.send(json.dumps({
             "action": "spawn",
-            "payload": {"lane": 2, "type": "sports", "color": "#f43f5e", "speed": 35.0}
+            "payload": {"direction": "east", "lane": 1, "type": "sports", "color": "#f43f5e", "speed": 35.0}
         }))
-        
         spawn_ack = await recv_type("spawn_ack")
-        print("Spawn Ack:", spawn_ack)
+        print("EB Spawn Ack:", spawn_ack)
+
+        print("Sending spawn command (Westbound)...")
+        await ws.send(json.dumps({
+            "action": "spawn",
+            "payload": {"direction": "west", "lane": 0, "type": "van", "color": "#10b981", "speed": 28.0}
+        }))
+        spawn_ack_wb = await recv_type("spawn_ack")
+        print("WB Spawn Ack:", spawn_ack_wb)
         
-        # 4. Receive next state and check spawned vehicle & traffic light
+        # 4. Receive next state and check spawned vehicles & traffic light
         state = await recv_type("state")
         vehs = state.get("vehicles", [])
         tl = state.get("traffic_light", {})
         print("After spawn - vehicle count:", len(vehs))
+        directions = [v.get("direction") for v in vehs]
+        print("Vehicle directions in state:", directions)
         print("Traffic light data in state:", tl)
         assert tl.get("state") in ["green", "yellow", "red"], f"Invalid TL state: {tl}"
 

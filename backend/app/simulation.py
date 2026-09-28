@@ -112,11 +112,13 @@ class SimulationManager:
         self._apply_traffic_light_state(self.tl_state)
 
     def _get_tl_raw_state(self, state: str) -> str:
-        if state == "red":
-            return "rrr"
-        elif state == "yellow":
-            return "yyy"
-        return "GGG"
+        char = "r" if state == "red" else "y" if state == "yellow" else "G"
+        try:
+            controlled = traci.trafficlight.getControlledLinks(self.tl_id)
+            num_links = len(controlled) if controlled else 4
+            return char * num_links
+        except Exception:
+            return char * 4
 
     def _apply_traffic_light_state(self, state: str):
         raw = self._get_tl_raw_state(state)
@@ -268,9 +270,19 @@ class SimulationManager:
         veh_id = f"veh_{self.vehicle_counter}"
         v_type = req.type if req.type in ["car", "truck", "sports", "van"] else "car"
         
-        # Lane selection
+        # Direction selection ('east' or 'west')
+        direction = req.direction or "east"
+        if direction == "random":
+            direction = random.choice(["east", "west"])
+        elif direction not in ["east", "west"]:
+            direction = "east"
+            
+        route_id = "route_west" if direction == "west" else "route_east"
+
+        # Lane selection (2 lanes per direction: 0 = right / slow, 1 = left / fast)
         if req.lane is not None and 0 <= req.lane <= 2:
-            depart_lane = str(req.lane)
+            target_lane = min(req.lane, 1)
+            depart_lane = str(target_lane)
         else:
             depart_lane = "random"
 
@@ -288,7 +300,7 @@ class SimulationManager:
         try:
             traci.vehicle.add(
                 vehID=veh_id,
-                routeID="route_straight",
+                routeID=route_id,
                 typeID=v_type,
                 departLane=depart_lane,
                 departSpeed=depart_speed
@@ -297,12 +309,12 @@ class SimulationManager:
             self.total_spawned += 1
             return veh_id
         except traci.TraCIException as e:
-            logger.warning("Failed to insert vehicle %s: %s", veh_id, e)
+            logger.warning("Failed to insert vehicle %s on %s: %s", veh_id, route_id, e)
             # Try with safe defaults if lane was blocked
             try:
                 traci.vehicle.add(
                     vehID=veh_id,
-                    routeID="route_straight",
+                    routeID=route_id,
                     typeID=v_type,
                     departLane="free",
                     departSpeed="desired"
@@ -311,7 +323,7 @@ class SimulationManager:
                 self.total_spawned += 1
                 return veh_id
             except Exception as e2:
-                logger.error("Could not spawn vehicle even with free lane: %s", e2)
+                logger.error("Could not spawn vehicle even with free lane on %s: %s", route_id, e2)
                 raise e2
 
     def set_auto_spawn(self, config: AutoSpawnConfig):
@@ -320,13 +332,15 @@ class SimulationManager:
 
     def get_network_info(self) -> NetworkInfo:
         lanes = [
-            {"id": "road_0", "index": 0, "name": "Right Lane (Slow)", "width": 3.2, "y_center": -8.0, "speed_limit_kmh": 120.0},
-            {"id": "road_1", "index": 1, "name": "Middle Lane", "width": 3.2, "y_center": -4.8, "speed_limit_kmh": 120.0},
-            {"id": "road_2", "index": 2, "name": "Left Lane (Fast / Overtake)", "width": 3.2, "y_center": -1.6, "speed_limit_kmh": 120.0},
+            {"id": "road_west_0", "index": 0, "direction": "west", "name": "Westbound Right Lane (Slow)", "width": 3.2, "y_center": 4.8, "speed_limit_kmh": 120.0},
+            {"id": "road_west_1", "index": 1, "direction": "west", "name": "Westbound Left Lane (Fast / Overtake)", "width": 3.2, "y_center": 1.6, "speed_limit_kmh": 120.0},
+            {"id": "road_east_1", "index": 1, "direction": "east", "name": "Eastbound Left Lane (Fast / Overtake)", "width": 3.2, "y_center": -1.6, "speed_limit_kmh": 120.0},
+            {"id": "road_east_0", "index": 0, "direction": "east", "name": "Eastbound Right Lane (Slow)", "width": 3.2, "y_center": -4.8, "speed_limit_kmh": 120.0},
         ]
         return NetworkInfo(
             road_length=settings.ROAD_LENGTH_M,
             num_lanes=settings.NUM_LANES,
+            num_lanes_per_dir=settings.NUM_LANES_PER_DIR,
             lane_width=settings.LANE_WIDTH_M,
             traffic_light_x=settings.TRAFFIC_LIGHT_X,
             lanes=lanes
@@ -375,10 +389,14 @@ class SimulationManager:
                 leader_id = leader_info[0] if leader_info else None
                 leader_dist = round(leader_info[1], 1) if leader_info else None
 
+                # Direction detection
+                v_dir = "west" if ("west" in lane_id or angle > 180) else "east"
+
                 vehicle_list.append(VehicleData(
                     id=vid,
                     x=round(x, 2),
                     y=round(y, 2),
+                    direction=v_dir,
                     lane_index=lane_idx,
                     lane_id=lane_id,
                     speed=round(speed, 2),
@@ -459,8 +477,10 @@ class SimulationManager:
                             if (self.sim_time - self.last_auto_spawn_time) >= spawn_interval:
                                 self.last_auto_spawn_time = self.sim_time
                                 v_type = random.choices(["car", "sports", "van", "truck"], weights=[0.6, 0.15, 0.15, 0.1])[0]
+                                v_dir = random.choice(["east", "west"])
                                 self._insert_vehicle(SpawnRequest(
-                                    lane=random.randint(0, 2),
+                                    direction=v_dir,
+                                    lane=random.randint(0, 1),
                                     type=v_type
                                 ))
 

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<!-- generated on 2026-09-27T18:12:19.812287+05:30 by Eclipse SUMO netconvert 1.27.1
+<!-- generated on 2026-09-28T19:30:16.523141+05:30 by Eclipse SUMO netconvert 1.27.1
 <netconvertConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/netconvertConfiguration.xsd">
 
     <input>
@@ -11,6 +11,10 @@
     <output>
         <output-file value="/Users/vijay/Projects/traffis/backend/sumo_config/road.net.xml"/>
     </output>
+
+    <junctions>
+        <no-turnarounds value="true"/>
+    </junctions>
 
     <report>
         <no-warnings value="true"/>
@@ -24,42 +28,54 @@
     <location netOffset="0.00,0.00" convBoundary="0.00,0.00,1000.00,0.00" origBoundary="0.00,0.00,1000.00,0.00" projParameter="!"/>
 
     <edge id=":traffic_light_0" function="internal">
-        <lane id=":traffic_light_0_0" index="0" speed="33.33" length="0.10" shape="500.00,-8.00 500.00,-8.00"/>
-        <lane id=":traffic_light_0_1" index="1" speed="33.33" length="0.10" shape="500.00,-4.80 500.00,-4.80"/>
-        <lane id=":traffic_light_0_2" index="2" speed="33.33" length="0.10" shape="500.00,-1.60 500.00,-1.60"/>
+        <lane id=":traffic_light_0_0" index="0" speed="33.33" length="0.10" shape="500.00,4.80 500.00,4.80"/>
+        <lane id=":traffic_light_0_1" index="1" speed="33.33" length="0.10" shape="500.00,1.60 500.00,1.60"/>
+    </edge>
+    <edge id=":traffic_light_2" function="internal">
+        <lane id=":traffic_light_2_0" index="0" speed="33.33" length="0.10" shape="500.00,-4.80 500.00,-4.80"/>
+        <lane id=":traffic_light_2_1" index="1" speed="33.33" length="0.10" shape="500.00,-1.60 500.00,-1.60"/>
     </edge>
 
-    <edge id="road_in" from="start" to="traffic_light" priority="-1">
-        <lane id="road_in_0" index="0" speed="33.33" length="500.00" shape="-0.00,-8.00 500.00,-8.00"/>
-        <lane id="road_in_1" index="1" speed="33.33" length="500.00" shape="-0.00,-4.80 500.00,-4.80"/>
-        <lane id="road_in_2" index="2" speed="33.33" length="500.00" shape="-0.00,-1.60 500.00,-1.60"/>
+    <edge id="road_east_in" from="start" to="traffic_light" priority="-1">
+        <lane id="road_east_in_0" index="0" speed="33.33" length="500.00" shape="-0.00,-4.80 500.00,-4.80"/>
+        <lane id="road_east_in_1" index="1" speed="33.33" length="500.00" shape="-0.00,-1.60 500.00,-1.60"/>
     </edge>
-    <edge id="road_out" from="traffic_light" to="end" priority="-1">
-        <lane id="road_out_0" index="0" speed="33.33" length="500.00" shape="500.00,-8.00 1000.00,-8.00"/>
-        <lane id="road_out_1" index="1" speed="33.33" length="500.00" shape="500.00,-4.80 1000.00,-4.80"/>
-        <lane id="road_out_2" index="2" speed="33.33" length="500.00" shape="500.00,-1.60 1000.00,-1.60"/>
+    <edge id="road_east_out" from="traffic_light" to="end" priority="-1">
+        <lane id="road_east_out_0" index="0" speed="33.33" length="500.00" shape="500.00,-4.80 1000.00,-4.80"/>
+        <lane id="road_east_out_1" index="1" speed="33.33" length="500.00" shape="500.00,-1.60 1000.00,-1.60"/>
+    </edge>
+    <edge id="road_west_in" from="end" to="traffic_light" priority="-1">
+        <lane id="road_west_in_0" index="0" speed="33.33" length="500.00" shape="1000.00,4.80 500.00,4.80"/>
+        <lane id="road_west_in_1" index="1" speed="33.33" length="500.00" shape="1000.00,1.60 500.00,1.60"/>
+    </edge>
+    <edge id="road_west_out" from="traffic_light" to="start" priority="-1">
+        <lane id="road_west_out_0" index="0" speed="33.33" length="500.00" shape="500.00,4.80 -0.00,4.80"/>
+        <lane id="road_west_out_1" index="1" speed="33.33" length="500.00" shape="500.00,1.60 -0.00,1.60"/>
     </edge>
 
     <tlLogic id="traffic_light" type="static" programID="0" offset="0">
-        <phase duration="78" state="GGG"/>
-        <phase duration="7"  state="yyy"/>
-        <phase duration="5"  state="rrr"/>
+        <phase duration="78" state="GGGG"/>
+        <phase duration="7"  state="yyyy"/>
+        <phase duration="5"  state="rrrr"/>
     </tlLogic>
 
-    <junction id="end" type="dead_end" x="1000.00" y="0.00" incLanes="road_out_0 road_out_1 road_out_2" intLanes="" shape="1000.00,-9.60 1000.00,0.00"/>
-    <junction id="start" type="dead_end" x="0.00" y="0.00" incLanes="" intLanes="" shape="-0.00,0.00 -0.00,-9.60"/>
-    <junction id="traffic_light" type="traffic_light" x="500.00" y="0.00" incLanes="road_in_0 road_in_1 road_in_2" intLanes=":traffic_light_0_0 :traffic_light_0_1 :traffic_light_0_2" shape="500.00,0.00 500.00,-9.60 500.00,0.00">
-        <request index="0" response="000" foes="000" cont="0"/>
-        <request index="1" response="000" foes="000" cont="0"/>
-        <request index="2" response="000" foes="000" cont="0"/>
+    <junction id="end" type="dead_end" x="1000.00" y="0.00" incLanes="road_east_out_0 road_east_out_1" intLanes="" shape="1000.00,0.00 1000.00,-6.40 1000.00,0.00"/>
+    <junction id="start" type="dead_end" x="0.00" y="0.00" incLanes="road_west_out_0 road_west_out_1" intLanes="" shape="-0.00,0.00 -0.00,6.40 -0.00,0.00"/>
+    <junction id="traffic_light" type="traffic_light" x="500.00" y="0.00" incLanes="road_west_in_0 road_west_in_1 road_east_in_0 road_east_in_1" intLanes=":traffic_light_0_0 :traffic_light_0_1 :traffic_light_2_0 :traffic_light_2_1" shape="500.00,6.40 500.00,-6.40 500.00,6.40">
+        <request index="0" response="0000" foes="0000" cont="0"/>
+        <request index="1" response="0000" foes="0000" cont="0"/>
+        <request index="2" response="0000" foes="0000" cont="0"/>
+        <request index="3" response="0000" foes="0000" cont="0"/>
     </junction>
 
-    <connection from="road_in" to="road_out" fromLane="0" toLane="0" via=":traffic_light_0_0" tl="traffic_light" linkIndex="0" dir="s" state="O"/>
-    <connection from="road_in" to="road_out" fromLane="1" toLane="1" via=":traffic_light_0_1" tl="traffic_light" linkIndex="1" dir="s" state="O"/>
-    <connection from="road_in" to="road_out" fromLane="2" toLane="2" via=":traffic_light_0_2" tl="traffic_light" linkIndex="2" dir="s" state="O"/>
+    <connection from="road_east_in" to="road_east_out" fromLane="0" toLane="0" via=":traffic_light_2_0" tl="traffic_light" linkIndex="2" dir="s" state="O"/>
+    <connection from="road_east_in" to="road_east_out" fromLane="1" toLane="1" via=":traffic_light_2_1" tl="traffic_light" linkIndex="3" dir="s" state="O"/>
+    <connection from="road_west_in" to="road_west_out" fromLane="0" toLane="0" via=":traffic_light_0_0" tl="traffic_light" linkIndex="0" dir="s" state="O"/>
+    <connection from="road_west_in" to="road_west_out" fromLane="1" toLane="1" via=":traffic_light_0_1" tl="traffic_light" linkIndex="1" dir="s" state="O"/>
 
-    <connection from=":traffic_light_0" to="road_out" fromLane="0" toLane="0" dir="s" state="M"/>
-    <connection from=":traffic_light_0" to="road_out" fromLane="1" toLane="1" dir="s" state="M"/>
-    <connection from=":traffic_light_0" to="road_out" fromLane="2" toLane="2" dir="s" state="M"/>
+    <connection from=":traffic_light_0" to="road_west_out" fromLane="0" toLane="0" dir="s" state="M"/>
+    <connection from=":traffic_light_0" to="road_west_out" fromLane="1" toLane="1" dir="s" state="M"/>
+    <connection from=":traffic_light_2" to="road_east_out" fromLane="0" toLane="0" dir="s" state="M"/>
+    <connection from=":traffic_light_2" to="road_east_out" fromLane="1" toLane="1" dir="s" state="M"/>
 
 </net>

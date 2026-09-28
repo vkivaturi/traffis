@@ -1,13 +1,14 @@
 export interface Vehicle {
   id: string;
   x: number;            // longitudinal position in meters (0 to 1000)
-  y: number;            // lateral position in meters (-9.6 to 0)
-  lane_index: number;   // 0: Right, 1: Middle, 2: Left
+  y: number;            // lateral position in meters (-6.4 to +6.4)
+  direction?: 'east' | 'west'; // Travel direction
+  lane_index: number;   // 0: Right (Slow), 1: Left (Fast)
   lane_id: string;
   speed: number;        // m/s
   speed_kmh: number;    // km/h
   acceleration: number; // m/s^2
-  angle: number;        // heading angle in degrees (90 = East)
+  angle: number;        // heading angle in degrees (90 = East, 270 = West)
   type: string;         // 'car' | 'sports' | 'truck' | 'van'
   color: string;        // Hex color
   length: number;       // meters
@@ -61,6 +62,7 @@ export interface SimulationState {
 export interface LaneInfo {
   id: string;
   index: number;
+  direction?: 'east' | 'west';
   name: string;
   width: number;
   y_center: number;
@@ -70,12 +72,14 @@ export interface LaneInfo {
 export interface NetworkInfo {
   road_length: number;
   num_lanes: number;
+  num_lanes_per_dir?: number;
   lane_width: number;
   traffic_light_x?: number;
   lanes: LaneInfo[];
 }
 
 export interface SpawnOptions {
+  direction?: 'east' | 'west' | 'random';
   lane?: number | null;
   speed?: number | null;
   type?: 'car' | 'sports' | 'truck' | 'van';
@@ -89,8 +93,9 @@ export interface AutoSpawnSettings {
 
 export interface CameraState {
   x: number;       // Center X in road meters (0 to 1000)
-  y: number;       // Center Y in road meters (-9.6 to 0)
+  y: number;       // Center Y in road meters (-6.4 to +6.4, highway median is 0)
   zoom: number;    // Pixels per meter
   followingId: string | null;
 }
+
 

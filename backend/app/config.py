@@ -47,7 +47,8 @@ class Settings(BaseModel):
     STEP_LENGTH: float = 0.05  # 50ms per simulation step
     UPDATE_RATE_HZ: float = 20.0  # 20 updates per second
     ROAD_LENGTH_M: float = 1000.0
-    NUM_LANES: int = 3
+    NUM_LANES_PER_DIR: int = 2
+    NUM_LANES: int = 4  # 2 lanes per direction (Westbound + Eastbound)
     LANE_WIDTH_M: float = 3.2
     TRAFFIC_LIGHT_X: float = 500.0
     DEFAULT_GREEN_DURATION: float = 15.0

@@ -19,8 +19,10 @@ export const VehicleInspector: React.FC<VehicleInspectorProps> = ({
 
   const isBraking = vehicle.acceleration < -0.5;
   const isAccelerating = vehicle.acceleration > 0.5;
+  const isWest = vehicle.angle > 180 || vehicle.direction === 'west' || vehicle.y > 0;
 
-  const laneNames = ['Lane 0 (Right / Slow)', 'Lane 1 (Middle)', 'Lane 2 (Left / Fast)'];
+  const dirName = isWest ? 'Westbound (1000m → 0m)' : 'Eastbound (0m → 1000m)';
+  const laneLabel = `${isWest ? 'WB' : 'EB'} ${vehicle.lane_index === 0 ? 'Lane 0 (Right / Slow)' : 'Lane 1 (Left / Fast)'}`;
 
   return (
     <div
@@ -64,6 +66,18 @@ export const VehicleInspector: React.FC<VehicleInspectorProps> = ({
             }}
           >
             {vehicle.type}
+          </span>
+          <span
+            style={{
+              fontSize: '0.68rem',
+              fontWeight: 700,
+              padding: '2px 6px',
+              borderRadius: '4px',
+              backgroundColor: isWest ? 'rgba(56, 189, 248, 0.15)' : 'rgba(16, 185, 129, 0.15)',
+              color: isWest ? '#38bdf8' : '#10b981',
+            }}
+          >
+            {isWest ? '← WB' : 'EB →'}
           </span>
         </div>
         <button className="btn-icon" style={{ width: '28px', height: '28px' }} onClick={onClose}>
@@ -119,6 +133,13 @@ export const VehicleInspector: React.FC<VehicleInspectorProps> = ({
       {/* Position & Lane Details */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '0.78rem', marginBottom: '14px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '4px' }}>
+          <span style={{ color: '#94a3b8' }}>Direction:</span>
+          <span style={{ fontWeight: 600, color: isWest ? '#38bdf8' : '#10b981' }}>
+            {dirName}
+          </span>
+        </div>
+
+        <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '4px' }}>
           <span style={{ color: '#94a3b8' }}>Position:</span>
           <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 600 }}>
             {vehicle.x.toFixed(1)}m / 1000m
@@ -128,13 +149,13 @@ export const VehicleInspector: React.FC<VehicleInspectorProps> = ({
         <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '4px' }}>
           <span style={{ color: '#94a3b8' }}>Lane:</span>
           <span style={{ fontWeight: 600, color: '#38bdf8' }}>
-            {laneNames[vehicle.lane_index] || `Lane ${vehicle.lane_index}`}
+            {laneLabel}
           </span>
         </div>
 
         <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '4px' }}>
           <span style={{ color: '#94a3b8' }}>Heading Angle:</span>
-          <span style={{ fontFamily: 'var(--font-mono)' }}>{vehicle.angle}° (East)</span>
+          <span style={{ fontFamily: 'var(--font-mono)' }}>{vehicle.angle}° ({isWest ? 'West' : 'East'})</span>
         </div>
 
         {vehicle.leader_id && (

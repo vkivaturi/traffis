@@ -8,11 +8,20 @@ interface StatsPanelProps {
 }
 
 export const StatsPanel: React.FC<StatsPanelProps> = ({ stats, vehicles }) => {
-  // Compute lane counts
-  const laneCounts = [0, 0, 0];
+  // Compute bidirectional lane counts
+  let wbL0 = 0, wbL1 = 0, ebL1 = 0, ebL0 = 0;
+  let wbCount = 0, ebCount = 0;
+
   vehicles.forEach((v) => {
-    if (v.lane_index >= 0 && v.lane_index <= 2) {
-      laneCounts[v.lane_index]++;
+    const isWest = v.angle > 180 || v.direction === 'west' || v.y > 0;
+    if (isWest) {
+      wbCount++;
+      if (v.lane_index === 0) wbL0++;
+      else wbL1++;
+    } else {
+      ebCount++;
+      if (v.lane_index === 1) ebL1++;
+      else ebL0++;
     }
   });
 
@@ -49,8 +58,13 @@ export const StatsPanel: React.FC<StatsPanelProps> = ({ stats, vehicles }) => {
           <div style={{ fontSize: '0.7rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 600 }}>
             Active Cars
           </div>
-          <div style={{ fontSize: '1.2rem', fontWeight: 800, fontFamily: 'var(--font-mono)', color: '#f8fafc' }}>
-            {stats.active_vehicles}
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
+            <span style={{ fontSize: '1.2rem', fontWeight: 800, fontFamily: 'var(--font-mono)', color: '#f8fafc' }}>
+              {stats.active_vehicles}
+            </span>
+            <span style={{ fontSize: '0.7rem', color: '#94a3b8', fontFamily: 'var(--font-mono)' }}>
+              (EB: {ebCount} | WB: {wbCount})
+            </span>
           </div>
         </div>
       </div>
@@ -138,37 +152,45 @@ export const StatsPanel: React.FC<StatsPanelProps> = ({ stats, vehicles }) => {
         </div>
       </div>
 
-      {/* 5. Lane Distribution mini-bars */}
-      <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', minWidth: '160px' }}>
+      {/* 5. Lane Distribution mini-bars (4 lanes: WB0, WB1, EB1, EB0) */}
+      <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', minWidth: '180px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
           <span style={{ fontSize: '0.68rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <Layers size={11} /> Lane Load
+            <Layers size={11} /> 4-Lane Load
           </span>
-          <span style={{ fontSize: '0.68rem', color: '#64748b', fontFamily: 'var(--font-mono)' }}>
-            L2: {laneCounts[2]} | L1: {laneCounts[1]} | L0: {laneCounts[0]}
+          <span style={{ fontSize: '0.65rem', color: '#64748b', fontFamily: 'var(--font-mono)' }}>
+            WB: {wbL0}+{wbL1} | EB: {ebL1}+{ebL0}
           </span>
         </div>
         <div style={{ display: 'flex', height: '6px', borderRadius: '3px', overflow: 'hidden', backgroundColor: 'rgba(255,255,255,0.06)' }}>
           <div
-            title={`Lane 2 (Left): ${laneCounts[2]} cars`}
+            title={`Westbound Lane 0 (Slow): ${wbL0} cars`}
             style={{
-              width: `${stats.active_vehicles > 0 ? (laneCounts[2] / stats.active_vehicles) * 100 : 33.3}%`,
+              width: `${stats.active_vehicles > 0 ? (wbL0 / stats.active_vehicles) * 100 : 25}%`,
+              backgroundColor: '#06b6d4',
+              transition: 'width 0.3s ease',
+            }}
+          />
+          <div
+            title={`Westbound Lane 1 (Fast): ${wbL1} cars`}
+            style={{
+              width: `${stats.active_vehicles > 0 ? (wbL1 / stats.active_vehicles) * 100 : 25}%`,
               backgroundColor: '#38bdf8',
               transition: 'width 0.3s ease',
             }}
           />
           <div
-            title={`Lane 1 (Middle): ${laneCounts[1]} cars`}
+            title={`Eastbound Lane 1 (Fast): ${ebL1} cars`}
             style={{
-              width: `${stats.active_vehicles > 0 ? (laneCounts[1] / stats.active_vehicles) * 100 : 33.3}%`,
+              width: `${stats.active_vehicles > 0 ? (ebL1 / stats.active_vehicles) * 100 : 25}%`,
               backgroundColor: '#10b981',
               transition: 'width 0.3s ease',
             }}
           />
           <div
-            title={`Lane 0 (Right): ${laneCounts[0]} cars`}
+            title={`Eastbound Lane 0 (Slow): ${ebL0} cars`}
             style={{
-              width: `${stats.active_vehicles > 0 ? (laneCounts[0] / stats.active_vehicles) * 100 : 33.3}%`,
+              width: `${stats.active_vehicles > 0 ? (ebL0 / stats.active_vehicles) * 100 : 25}%`,
               backgroundColor: '#f59e0b',
               transition: 'width 0.3s ease',
             }}

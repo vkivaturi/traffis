@@ -36,7 +36,7 @@ export const MiniMap: React.FC<MiniMapProps> = ({
     const roadW = width - padX * 2;
     const roadY = 10;
     const roadH = height - 20;
-    const laneH = roadH / 3;
+    const laneH = roadH / 4;
 
     // Road asphalt background
     ctx.fillStyle = '#1e2430';
@@ -47,24 +47,40 @@ export const MiniMap: React.FC<MiniMapProps> = ({
     ctx.lineWidth = 1;
     ctx.setLineDash([4, 4]);
 
-    // Line between lane 2 and lane 1
+    // Westbound divider (between slot 0 and slot 1)
     ctx.beginPath();
     ctx.moveTo(padX, roadY + laneH);
     ctx.lineTo(padX + roadW, roadY + laneH);
     ctx.stroke();
 
-    // Line between lane 1 and lane 0
+    // Eastbound divider (between slot 2 and slot 3)
+    ctx.beginPath();
+    ctx.moveTo(padX, roadY + laneH * 3);
+    ctx.lineTo(padX + roadW, roadY + laneH * 3);
+    ctx.stroke();
+
+    ctx.setLineDash([]);
+
+    // Highway Center Median Divider (Solid Yellow between WB and EB)
+    ctx.strokeStyle = '#f59e0b';
+    ctx.lineWidth = 1.5;
     ctx.beginPath();
     ctx.moveTo(padX, roadY + laneH * 2);
     ctx.lineTo(padX + roadW, roadY + laneH * 2);
     ctx.stroke();
 
-    ctx.setLineDash([]);
-
-    // Edge lines
-    ctx.strokeStyle = '#fcd34d';
+    // Outer Edge lines (Solid White)
+    ctx.strokeStyle = '#94a3b8';
     ctx.lineWidth = 1;
     ctx.strokeRect(padX, roadY, roadW, roadH);
+
+    // Mini Direction Indicators
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+    ctx.font = '700 8px Inter, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText('← WESTBOUND', padX + 8, roadY + laneH - 2);
+    ctx.textAlign = 'right';
+    ctx.fillText('EASTBOUND →', padX + roadW - 8, roadY + laneH * 3 + 7);
 
     // Distance tick markers
     ctx.fillStyle = '#64748b';
@@ -84,9 +100,16 @@ export const MiniMap: React.FC<MiniMapProps> = ({
     // Draw vehicles as glowing dots
     for (const v of vehicles) {
       const vx = padX + Math.min(1, Math.max(0, v.x / 1000)) * roadW;
-      // Lane index 2 (left) is top, lane index 0 (right) is bottom
-      const laneOffset = 2 - v.lane_index; // 2 -> 0, 1 -> 1, 0 -> 2
-      const vy = roadY + (laneOffset + 0.5) * laneH;
+      const isWest = v.angle > 180 || v.direction === 'west' || v.y > 0;
+      let slot: number;
+      if (isWest) {
+        // Slot 0 (WB Right/Slow), Slot 1 (WB Left/Fast)
+        slot = v.lane_index === 0 ? 0 : 1;
+      } else {
+        // Slot 2 (EB Left/Fast), Slot 3 (EB Right/Slow)
+        slot = v.lane_index === 1 ? 2 : 3;
+      }
+      const vy = roadY + (slot + 0.5) * laneH;
 
       ctx.shadowColor = v.color || '#38bdf8';
       ctx.shadowBlur = 6;
@@ -95,6 +118,7 @@ export const MiniMap: React.FC<MiniMapProps> = ({
       ctx.arc(vx, vy, 3, 0, Math.PI * 2);
       ctx.fill();
     }
+    ctx.shadowBlur = 0;
     // Traffic Signal Indicator on MiniMap
     const tlX = trafficLight?.x ?? 500;
     const tlPx = padX + (tlX / 1000) * roadW;

@@ -22,6 +22,7 @@ interface InterpolatedVehicle {
   speed_kmh: number;
   acceleration: number;
   angle: number;
+  direction?: 'east' | 'west';
   type: string;
   color: string;
   length: number;
@@ -49,7 +50,7 @@ export const CanvasView: React.FC<CanvasViewProps> = ({
     mouseX: 0,
     mouseY: 0,
     camX: 500,
-    camY: -4.8,
+    camY: 0,
   });
 
   const interpVehiclesRef = useRef<Map<string, InterpolatedVehicle>>(new Map());
@@ -63,6 +64,7 @@ export const CanvasView: React.FC<CanvasViewProps> = ({
     for (const v of vehicles) {
       incomingIds.add(v.id);
       const existing = currentMap.get(v.id);
+      const dir = v.direction || (v.angle > 180 ? 'west' : 'east');
       if (existing) {
         existing.targetX = v.x;
         existing.targetY = v.y;
@@ -70,6 +72,7 @@ export const CanvasView: React.FC<CanvasViewProps> = ({
         existing.speed_kmh = v.speed_kmh;
         existing.acceleration = v.acceleration;
         existing.angle = v.angle;
+        existing.direction = dir;
         existing.color = v.color;
         existing.lane_index = v.lane_index;
         existing.leader_id = v.leader_id;
@@ -84,6 +87,7 @@ export const CanvasView: React.FC<CanvasViewProps> = ({
           speed_kmh: v.speed_kmh,
           acceleration: v.acceleration,
           angle: v.angle,
+          direction: dir,
           type: v.type,
           color: v.color,
           length: v.length,
@@ -197,20 +201,20 @@ export const CanvasView: React.FC<CanvasViewProps> = ({
 
       // 2. Draw 1000m Road
       // Road goes from x = 0 to x = 1000.
-      // Upper bound y = 0.0, Lower bound y = -9.6.
+      // Upper bound y = +6.4 (Westbound outer edge), Lower bound y = -6.4 (Eastbound outer edge).
       const roadScreenX1 = worldToScreenX(0);
       const roadScreenX2 = worldToScreenX(1000);
-      const roadScreenYTop = worldToScreenY(0.0);
-      const roadScreenYBottom = worldToScreenY(-9.6);
+      const roadScreenYTop = worldToScreenY(6.4);
+      const roadScreenYBottom = worldToScreenY(-6.4);
       const roadScreenHeight = roadScreenYBottom - roadScreenYTop;
       const roadScreenWidth = roadScreenX2 - roadScreenX1;
 
       // Embankment / Shoulders
       const shoulderH = 4 * zoom;
-      // Top Shoulder
+      // Top Shoulder (North / outside Westbound)
       ctx.fillStyle = '#111827';
       ctx.fillRect(roadScreenX1 - 20 * zoom, roadScreenYTop - shoulderH, roadScreenWidth + 40 * zoom, shoulderH);
-      // Bottom Shoulder
+      // Bottom Shoulder (South / outside Eastbound)
       ctx.fillRect(roadScreenX1 - 20 * zoom, roadScreenYBottom, roadScreenWidth + 40 * zoom, shoulderH);
 
       // Asphalt base
@@ -221,60 +225,83 @@ export const CanvasView: React.FC<CanvasViewProps> = ({
       ctx.fillStyle = roadGrad;
       ctx.fillRect(roadScreenX1, roadScreenYTop, roadScreenWidth, roadScreenHeight);
 
-      // Lane dividers (3 lanes: widths 3.2m each)
-      // Divider 1 (between Lane 2 and 1): y = -3.2
-      // Divider 2 (between Lane 1 and 0): y = -6.4
-      const div1Y = worldToScreenY(-3.2);
-      const div2Y = worldToScreenY(-6.4);
+      // Lane dividers & Highway Median
+      // Westbound divider (between Lane 0 and 1): y = +3.2
+      // Median centerline: y = 0.0
+      // Eastbound divider (between Lane 1 and 0): y = -3.2
+      const wbDivY = worldToScreenY(3.2);
+      const medianY = worldToScreenY(0.0);
+      const ebDivY = worldToScreenY(-3.2);
 
+      // Draw dashed lane dividers
       ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
       ctx.lineWidth = Math.max(1, 0.2 * zoom);
       ctx.setLineDash([0.8 * zoom, 1.2 * zoom]);
 
-      // Draw dashed line 1
+      // Westbound dashed line (y = +3.2)
       ctx.beginPath();
-      ctx.moveTo(roadScreenX1, div1Y);
-      ctx.lineTo(roadScreenX2, div1Y);
+      ctx.moveTo(roadScreenX1, wbDivY);
+      ctx.lineTo(roadScreenX2, wbDivY);
       ctx.stroke();
 
-      // Draw dashed line 2
+      // Eastbound dashed line (y = -3.2)
       ctx.beginPath();
-      ctx.moveTo(roadScreenX1, div2Y);
-      ctx.lineTo(roadScreenX2, div2Y);
+      ctx.moveTo(roadScreenX1, ebDivY);
+      ctx.lineTo(roadScreenX2, ebDivY);
       ctx.stroke();
 
       ctx.setLineDash([]);
 
-      // Road edge lines (Yellow/White solid)
-      ctx.strokeStyle = '#fcd34d';
+      // Center Median: Double Solid Yellow Lines separated by safety buffer
+      const medianOffsetPx = Math.max(1.5, 0.2 * zoom);
+      ctx.strokeStyle = '#f59e0b';
       ctx.lineWidth = Math.max(1.5, 0.25 * zoom);
 
-      // Top edge (y = 0.0)
+      // North Yellow Line (y = +0.2m)
+      ctx.beginPath();
+      ctx.moveTo(roadScreenX1, medianY - medianOffsetPx);
+      ctx.lineTo(roadScreenX2, medianY - medianOffsetPx);
+      ctx.stroke();
+
+      // South Yellow Line (y = -0.2m)
+      ctx.beginPath();
+      ctx.moveTo(roadScreenX1, medianY + medianOffsetPx);
+      ctx.lineTo(roadScreenX2, medianY + medianOffsetPx);
+      ctx.stroke();
+
+      // Road outer edge lines (Solid White)
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = Math.max(1.5, 0.25 * zoom);
+
+      // Top outer edge (y = +6.4)
       ctx.beginPath();
       ctx.moveTo(roadScreenX1, roadScreenYTop);
       ctx.lineTo(roadScreenX2, roadScreenYTop);
       ctx.stroke();
 
-      // Bottom edge (y = -9.6)
+      // Bottom outer edge (y = -6.4)
       ctx.beginPath();
       ctx.moveTo(roadScreenX1, roadScreenYBottom);
       ctx.lineTo(roadScreenX2, roadScreenYBottom);
       ctx.stroke();
 
       // 3. Lane labels & direction arrows painted on road
-      const laneHeightPx = roadScreenHeight / 3;
+      const laneH = roadScreenHeight / 4;
       if (zoom > 4) {
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
-        ctx.font = `600 ${Math.max(10, Math.min(16, 1.2 * zoom))}px Inter, sans-serif`;
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.16)';
+        ctx.font = `700 ${Math.max(10, Math.min(15, 1.1 * zoom))}px Inter, sans-serif`;
         ctx.textAlign = 'left';
 
         // Draw at intervals
-        for (let mx = 50; mx <= 950; mx += 150) {
+        for (let mx = 60; mx <= 940; mx += 160) {
           const sx = worldToScreenX(mx);
           if (sx > -100 && sx < width + 100) {
-            ctx.fillText('L2 (Fast)', sx, div1Y - laneHeightPx * 0.4);
-            ctx.fillText('L1 (Middle)', sx, div2Y - laneHeightPx * 0.4);
-            ctx.fillText('L0 (Slow)', sx, roadScreenYBottom - laneHeightPx * 0.4);
+            // Westbound lanes (top half, travel ← West)
+            ctx.fillText('← WB L0 (Slow)', sx, roadScreenYTop + laneH * 0.65);
+            ctx.fillText('← WB L1 (Fast)', sx, roadScreenYTop + laneH * 1.65);
+            // Eastbound lanes (bottom half, travel → East)
+            ctx.fillText('EB L1 (Fast) →', sx, roadScreenYTop + laneH * 2.65);
+            ctx.fillText('EB L0 (Slow) →', sx, roadScreenYTop + laneH * 3.65);
           }
         }
       }
@@ -300,33 +327,61 @@ export const CanvasView: React.FC<CanvasViewProps> = ({
         ctx.fillText(`${m}m`, mx, roadScreenYBottom + 20);
       }
 
-      // 5. Start Gate (0m) & Finish Gate (1000m)
-      // Start Gate
+      // 5. West (0m) & East (1000m) Terminus Gates
+      // At X = 0:
       if (roadScreenX1 > -200 && roadScreenX1 < width + 200) {
+        const ebHeight = roadScreenYBottom - medianY;
+        const wbHeight = medianY - roadScreenYTop;
+
+        // Bottom half: Eastbound Start (Green)
         ctx.fillStyle = 'rgba(16, 185, 129, 0.2)';
-        ctx.fillRect(roadScreenX1 - 4, roadScreenYTop - 12, 8, roadScreenHeight + 24);
+        ctx.fillRect(roadScreenX1 - 4, medianY, 8, ebHeight);
         ctx.strokeStyle = '#10b981';
         ctx.lineWidth = 3;
-        ctx.strokeRect(roadScreenX1 - 4, roadScreenYTop - 12, 8, roadScreenHeight + 24);
+        ctx.strokeRect(roadScreenX1 - 4, medianY, 8, ebHeight);
 
-        ctx.fillStyle = '#10b981';
-        ctx.font = '800 12px Inter, sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText('START (0m)', roadScreenX1, roadScreenYTop - 20);
-      }
-
-      // Finish Gate
-      if (roadScreenX2 > -200 && roadScreenX2 < width + 200) {
+        // Top half: Westbound Terminus (Rose)
         ctx.fillStyle = 'rgba(244, 63, 94, 0.2)';
-        ctx.fillRect(roadScreenX2 - 4, roadScreenYTop - 12, 8, roadScreenHeight + 24);
+        ctx.fillRect(roadScreenX1 - 4, roadScreenYTop, 8, wbHeight);
         ctx.strokeStyle = '#f43f5e';
         ctx.lineWidth = 3;
-        ctx.strokeRect(roadScreenX2 - 4, roadScreenYTop - 12, 8, roadScreenHeight + 24);
+        ctx.strokeRect(roadScreenX1 - 4, roadScreenYTop, 8, wbHeight);
+
+        ctx.fillStyle = '#10b981';
+        ctx.font = '800 11px Inter, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('EB START [0m] →', roadScreenX1, roadScreenYBottom + 20);
 
         ctx.fillStyle = '#f43f5e';
-        ctx.font = '800 12px Inter, sans-serif';
+        ctx.fillText('← WB ARRIVAL [0m]', roadScreenX1, roadScreenYTop - 14);
+      }
+
+      // At X = 1000:
+      if (roadScreenX2 > -200 && roadScreenX2 < width + 200) {
+        const wbHeight = medianY - roadScreenYTop;
+        const ebHeight = roadScreenYBottom - medianY;
+
+        // Top half: Westbound Start (Green)
+        ctx.fillStyle = 'rgba(16, 185, 129, 0.2)';
+        ctx.fillRect(roadScreenX2 - 4, roadScreenYTop, 8, wbHeight);
+        ctx.strokeStyle = '#10b981';
+        ctx.lineWidth = 3;
+        ctx.strokeRect(roadScreenX2 - 4, roadScreenYTop, 8, wbHeight);
+
+        // Bottom half: Eastbound Terminus (Rose)
+        ctx.fillStyle = 'rgba(244, 63, 94, 0.2)';
+        ctx.fillRect(roadScreenX2 - 4, medianY, 8, ebHeight);
+        ctx.strokeStyle = '#f43f5e';
+        ctx.lineWidth = 3;
+        ctx.strokeRect(roadScreenX2 - 4, medianY, 8, ebHeight);
+
+        ctx.fillStyle = '#10b981';
+        ctx.font = '800 11px Inter, sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText('FINISH (1000m)', roadScreenX2, roadScreenYTop - 20);
+        ctx.fillText('← WB START [1000m]', roadScreenX2, roadScreenYTop - 14);
+
+        ctx.fillStyle = '#f43f5e';
+        ctx.fillText('EB ARRIVAL [1000m] →', roadScreenX2, roadScreenYBottom + 20);
       }
 
       // 5.5. Traffic Signal Intersection (500m)
@@ -336,65 +391,86 @@ export const CanvasView: React.FC<CanvasViewProps> = ({
       const tlColorHex = tlState === 'green' ? '#10b981' : tlState === 'yellow' ? '#f59e0b' : '#ef4444';
 
       if (tlScreenX > -250 && tlScreenX < width + 250) {
-        // (A) Stop Line Markings on the road (at x = 497.5m, right before the 500m junction)
-        const stopLineScreenX = worldToScreenX(tlX - 2.5);
-
-        // Ground illumination glow on asphalt
+        // (A) Ground illumination glow on asphalt
         if (zoom > 2) {
           const glowGrad = ctx.createRadialGradient(
-            stopLineScreenX,
-            (roadScreenYTop + roadScreenYBottom) / 2,
+            tlScreenX,
+            medianY,
             5,
-            stopLineScreenX,
-            (roadScreenYTop + roadScreenYBottom) / 2,
-            Math.max(25, 18 * zoom)
+            tlScreenX,
+            medianY,
+            Math.max(30, 20 * zoom)
           );
           glowGrad.addColorStop(
             0,
             tlState === 'green'
-              ? 'rgba(16, 185, 129, 0.28)'
+              ? 'rgba(16, 185, 129, 0.26)'
               : tlState === 'yellow'
-              ? 'rgba(245, 158, 11, 0.35)'
-              : 'rgba(239, 68, 68, 0.42)'
+              ? 'rgba(245, 158, 11, 0.32)'
+              : 'rgba(239, 68, 68, 0.38)'
           );
           glowGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
           ctx.fillStyle = glowGrad;
-          ctx.fillRect(stopLineScreenX - 25 * zoom, roadScreenYTop - 4, 50 * zoom, roadScreenHeight + 8);
+          ctx.fillRect(tlScreenX - 30 * zoom, roadScreenYTop - 4, 60 * zoom, roadScreenHeight + 8);
         }
 
-        // Rumble strips / warning bars on road before stop line
-        if (zoom > 3) {
-          ctx.fillStyle = 'rgba(255, 255, 255, 0.25)';
-          for (let rx = 1; rx <= 3; rx++) {
-            const rbx = worldToScreenX(tlX - 2.5 - rx * 3.5);
-            ctx.fillRect(rbx, roadScreenYTop + 2, Math.max(1.5, 0.3 * zoom), roadScreenHeight - 4);
-          }
-        }
-
-        // Thick Solid White Stop Bar
+        // (B) Stop Lines & Markings for Both Directions
+        // 1. Eastbound Stop Line (at X = 497.5m, on bottom half y in [-6.4, 0.0])
+        const ebStopLineScreenX = worldToScreenX(tlX - 2.5);
         ctx.fillStyle = '#ffffff';
         ctx.fillRect(
-          stopLineScreenX - Math.max(2, 0.3 * zoom),
+          ebStopLineScreenX - Math.max(2, 0.3 * zoom),
+          medianY,
+          Math.max(3.5, 0.6 * zoom),
+          roadScreenYBottom - medianY
+        );
+
+        // 2. Westbound Stop Line (at X = 502.5m, on top half y in [0.0, 6.4])
+        const wbStopLineScreenX = worldToScreenX(tlX + 2.5);
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(
+          wbStopLineScreenX - Math.max(2, 0.3 * zoom),
           roadScreenYTop,
           Math.max(3.5, 0.6 * zoom),
-          roadScreenHeight
+          medianY - roadScreenYTop
         );
+
+        // Warning strips before stop lines
+        if (zoom > 3) {
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.25)';
+          // EB warning bars (at X < 497.5)
+          for (let rx = 1; rx <= 3; rx++) {
+            const rbx = worldToScreenX(tlX - 2.5 - rx * 3.5);
+            ctx.fillRect(rbx, medianY + 2, Math.max(1.5, 0.3 * zoom), roadScreenYBottom - medianY - 4);
+          }
+          // WB warning bars (at X > 502.5)
+          for (let rx = 1; rx <= 3; rx++) {
+            const rbx = worldToScreenX(tlX + 2.5 + rx * 3.5);
+            ctx.fillRect(rbx, roadScreenYTop + 2, Math.max(1.5, 0.3 * zoom), medianY - roadScreenYTop - 4);
+          }
+        }
 
         // Painted STOP labels in each lane
         if (zoom > 5) {
           ctx.save();
           ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
           ctx.font = `800 ${Math.max(9, Math.min(15, 1.1 * zoom))}px Inter, sans-serif`;
+
+          // Eastbound STOP labels (facing right, to the left of EB stop line)
           ctx.textAlign = 'right';
-          const lHeight = roadScreenHeight / 3;
-          const stopLabelX = stopLineScreenX - 4 * zoom;
-          ctx.fillText('STOP', stopLabelX, roadScreenYTop + lHeight * 0.65);
-          ctx.fillText('STOP', stopLabelX, roadScreenYTop + lHeight * 1.65);
-          ctx.fillText('STOP', stopLabelX, roadScreenYTop + lHeight * 2.65);
+          const ebStopLabelX = ebStopLineScreenX - 4 * zoom;
+          ctx.fillText('STOP', ebStopLabelX, medianY + laneH * 0.65);
+          ctx.fillText('STOP', ebStopLabelX, medianY + laneH * 1.65);
+
+          // Westbound STOP labels (to the right of WB stop line)
+          ctx.textAlign = 'left';
+          const wbStopLabelX = wbStopLineScreenX + 4 * zoom;
+          ctx.fillText('STOP', wbStopLabelX, roadScreenYTop + laneH * 0.65);
+          ctx.fillText('STOP', wbStopLabelX, roadScreenYTop + laneH * 1.65);
           ctx.restore();
         }
 
-        // (B) Overhead Gantry Structure
+        // (C) Overhead Gantry Structure spanning the entire 4 lanes
         const colW = Math.max(5, 0.7 * zoom);
         const gantryTop = roadScreenYTop - 32 * Math.min(2.0, Math.max(0.6, zoom / 8));
 
@@ -404,15 +480,15 @@ export const CanvasView: React.FC<CanvasViewProps> = ({
         // Bottom Column Base
         ctx.fillRect(tlScreenX - colW / 2, roadScreenYBottom, colW, 18);
 
-        // Steel truss beam spanning across road
+        // Steel truss beam spanning across entire road
         ctx.fillStyle = '#1e293b';
         ctx.fillRect(tlScreenX - colW, gantryTop, colW * 2, roadScreenHeight + (roadScreenYTop - gantryTop) + 18);
         ctx.strokeStyle = '#475569';
         ctx.lineWidth = 1.5;
         ctx.strokeRect(tlScreenX - colW, gantryTop, colW * 2, roadScreenHeight + (roadScreenYTop - gantryTop) + 18);
 
-        // (C) Suspended Traffic Signal Heads (one over each lane: Lane 2, 1, 0)
-        const laneYs = [-1.6, -4.8, -8.0];
+        // (D) Suspended Traffic Signal Heads (4 heads: WB Lane 0, WB Lane 1, EB Lane 1, EB Lane 0)
+        const laneYs = [4.8, 1.6, -1.6, -4.8];
         laneYs.forEach((ly) => {
           const sy = worldToScreenY(ly);
           const headW = Math.max(16, 2.8 * zoom);
@@ -472,7 +548,7 @@ export const CanvasView: React.FC<CanvasViewProps> = ({
           });
         });
 
-        // (D) Floating Signal Status Tag above the Gantry
+        // (E) Floating Signal Status Tag above the Gantry
         const tagY = gantryTop - 18;
         const tagText = `SIGNAL: ${tlState.toUpperCase()} [${trafficLight?.phase_remaining.toFixed(1) ?? '0'}s]`;
         ctx.font = '800 11px JetBrains Mono, monospace';
@@ -511,9 +587,15 @@ export const CanvasView: React.FC<CanvasViewProps> = ({
 
         const vLenPx = Math.max(12, v.length * zoom);
         const vWidPx = Math.max(6, v.width * zoom);
+        const isWest = v.angle > 180 || v.direction === 'west';
+        const headingRad = (v.angle - 90) * (Math.PI / 180);
 
         ctx.save();
         ctx.translate(vx, vy);
+
+        // Sub-save for heading rotation so text/badges stay upright
+        ctx.save();
+        ctx.rotate(headingRad);
 
         // Leader beam if selected or has leader
         if (vid === selectedVehicleId && v.leader_dist && v.leader_dist < 100) {
@@ -528,7 +610,7 @@ export const CanvasView: React.FC<CanvasViewProps> = ({
           ctx.setLineDash([]);
         }
 
-        // Headlight glow projected forward (direction is +X in SUMO straight road)
+        // Headlight glow projected forward in vehicle's travel heading
         if (zoom > 3) {
           const lightLen = Math.min(120, 20 * zoom);
           const lightGrad = ctx.createRadialGradient(
@@ -650,16 +732,20 @@ export const CanvasView: React.FC<CanvasViewProps> = ({
           }
         }
 
-        // Floating HUD badge above car
+        ctx.restore(); // Restore heading rotation
+
+        // Floating HUD badge above car (unrotated, always readable)
         if (zoom > 3.5 || isSelected) {
-          ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
-          ctx.strokeStyle = isSelected ? '#38bdf8' : 'rgba(255, 255, 255, 0.15)';
+          ctx.fillStyle = 'rgba(15, 23, 42, 0.88)';
+          ctx.strokeStyle = isSelected ? '#38bdf8' : 'rgba(255, 255, 255, 0.18)';
           ctx.lineWidth = 1;
-          const label = `${v.speed_kmh} km/h`;
+          const dirPrefix = isWest ? '← ' : '';
+          const dirSuffix = !isWest ? ' →' : '';
+          const label = `${dirPrefix}${v.speed_kmh} km/h${dirSuffix}`;
           ctx.font = '700 10px JetBrains Mono, monospace';
           const textW = ctx.measureText(label).width;
-          const badgeW = textW + 10;
-          const badgeH = 16;
+          const badgeW = textW + 12;
+          const badgeH = 17;
           const badgeY = -vWidPx / 2 - badgeH - 6;
 
           ctx.beginPath();
@@ -672,7 +758,7 @@ export const CanvasView: React.FC<CanvasViewProps> = ({
           ctx.fillText(label, 0, badgeY + 12);
         }
 
-        ctx.restore();
+        ctx.restore(); // Restore translation
       });
 
       ctx.restore();
@@ -796,7 +882,7 @@ export const CanvasView: React.FC<CanvasViewProps> = ({
   };
 
   // Quick preset jump actions
-  const jumpTo = (x: number, y: number = -4.8, zoom: number = 10) => {
+  const jumpTo = (x: number, y: number = 0, zoom: number = 10) => {
     setCamera({
       x,
       y,
@@ -813,7 +899,7 @@ export const CanvasView: React.FC<CanvasViewProps> = ({
     const fitZoom = Math.max(0.8, (w - 80) / 1000);
     setCamera({
       x: 500,
-      y: -4.8,
+      y: 0,
       zoom: fitZoom,
       followingId: null,
     });
@@ -884,7 +970,7 @@ export const CanvasView: React.FC<CanvasViewProps> = ({
         </button>
         <button
           className="btn-icon"
-          onClick={() => jumpTo(500, -4.8, 12)}
+          onClick={() => jumpTo(500, 0, 12)}
           title="Center on Highway Midpoint (500m)"
         >
           <Crosshair size={16} />
@@ -912,9 +998,10 @@ export const CanvasView: React.FC<CanvasViewProps> = ({
         <button
           className="btn-secondary"
           style={{ padding: '4px 8px', fontSize: '0.75rem' }}
-          onClick={() => jumpTo(60, -4.8, 14)}
+          onClick={() => jumpTo(60, 0, 14)}
+          title="Jump to West end (0m) - EB Start & WB Arrival"
         >
-          Start (0m)
+          West (0m)
         </button>
         <button
           className="btn-secondary"
@@ -924,7 +1011,7 @@ export const CanvasView: React.FC<CanvasViewProps> = ({
             borderColor: 'rgba(56, 189, 248, 0.4)',
             color: '#38bdf8',
           }}
-          onClick={() => jumpTo(500, -4.8, 14)}
+          onClick={() => jumpTo(500, 0, 14)}
           title="Jump to Traffic Signal (500m)"
         >
           🚦 Signal (500m)
@@ -932,9 +1019,10 @@ export const CanvasView: React.FC<CanvasViewProps> = ({
         <button
           className="btn-secondary"
           style={{ padding: '4px 8px', fontSize: '0.75rem' }}
-          onClick={() => jumpTo(940, -4.8, 14)}
+          onClick={() => jumpTo(940, 0, 14)}
+          title="Jump to East end (1000m) - WB Start & EB Arrival"
         >
-          Finish (1000m)
+          East (1000m)
         </button>
         <button
           className="btn-secondary"
