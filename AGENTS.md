@@ -137,12 +137,16 @@ flowchart TD
 
 ### 5.1 Highway Geometry
 - **Length**: Exactly **1000.0 meters** ($X \in [0.0, 1000.0]$).
-- **Lanes**: 3 straight lanes traveling West to East:
-  - `Lane 0` (Right / Slow Lane): Center $Y \approx -8.0\text{ m}$.
-  - `Lane 1` (Middle Lane): Center $Y \approx -4.8\text{ m}$.
-  - `Lane 2` (Left / Fast Overtaking Lane): Center $Y \approx -1.6\text{ m}$.
-  - Lane width is **3.2 meters** each. Total carriageway width is **9.6 meters** ($Y \in [-9.6, 0.0]$).
-- **Traffic Signal**: Junction at $X = 500.0\text{m}$ (`traffic_light` node) dividing the highway into `road_in` ($[0, 500]$) and `road_out` ($[500, 1000]$).
+- **Lanes**: 4 lanes total (2 lanes in each direction separated by a center median):
+  - **Westbound Carriageway** ($Y \in [0.0, +6.4\text{m}]$, travel East $\to$ West, heading $270^\circ$):
+    - `WB Lane 0` (Right / Slow Lane): Center $Y = +4.8\text{m}$.
+    - `WB Lane 1` (Left / Fast Passing Lane): Center $Y = +1.6\text{m}$.
+  - **Center Median**: Centerline divider at $Y = 0.0\text{m}$ (double solid yellow lines).
+  - **Eastbound Carriageway** ($Y \in [-6.4\text{m}, 0.0]$, travel West $\to$ East, heading $90^\circ$):
+    - `EB Lane 1` (Left / Fast Passing Lane): Center $Y = -1.6\text{m}$.
+    - `EB Lane 0` (Right / Slow Lane): Center $Y = -4.8\text{m}$.
+  - Lane width is **3.2 meters** each. Total carriageway width is **12.8 meters** ($Y \in [-6.4, +6.4]$).
+- **Traffic Signal**: Junction at $X = 500.0\text{m}$ (`traffic_light` node) dividing the highway with dual stop lines ($X = 497.5\text{m}$ for Eastbound, $X = 502.5\text{m}$ for Westbound) and a 4-head overhead gantry.
 - **Speed Limit**: Default $33.33\text{ m/s}$ ($120\text{ km/h}$).
 
 ### 5.2 Vehicle Types & Parameters
