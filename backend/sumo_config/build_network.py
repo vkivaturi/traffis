@@ -160,7 +160,8 @@ def compile_network(nod_path: Path, edg_path: Path, net_path: Path, disable_offs
         f"--edge-files={edg_path}",
         f"--output-file={net_path}",
         "--no-turnarounds=true",
-        "--no-warnings=true"
+        "--no-warnings=true",
+        "--lefthand=true"
     ]
     if disable_offset_normalization:
         cmd.append("--offset.disable-normalization=true")

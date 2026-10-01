@@ -23,6 +23,7 @@ export interface SimulationStats {
   total_arrived: number;
   avg_speed_kmh: number;
   density_veh_km: number;
+  pce_per_hour?: number;
 }
 
 export type TrafficSignalColor = 'green' | 'yellow' | 'red';
@@ -136,6 +137,7 @@ export interface SpawnOptions {
 export interface AutoSpawnSettings {
   enabled: boolean;
   rate_per_minute: number;
+  rate_per_hour?: number;
 }
 
 export interface CameraState {

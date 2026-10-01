@@ -21,7 +21,7 @@ PHASE_DEFS = [
         "index": 0,
         "name": "East-West Green / North Red",
         "state": "green",
-        "raw": "rrrGGGGGg",
+        "raw": "GGgrrrGGG",
         "default_duration": 15.0,
         "active_approaches": ["west", "east"],
     },
@@ -29,7 +29,7 @@ PHASE_DEFS = [
         "index": 1,
         "name": "East-West Yellow",
         "state": "yellow",
-        "raw": "rrrGyyyyy",
+        "raw": "yyyrrrGyy",
         "default_duration": 3.0,
         "active_approaches": ["west", "east"],
     },
@@ -37,7 +37,7 @@ PHASE_DEFS = [
         "index": 2,
         "name": "North Green / East-West Red",
         "state": "green",
-        "raw": "GGGGrrrrr",
+        "raw": "rrrGGGGrr",
         "default_duration": 12.0,
         "active_approaches": ["north"],
     },
@@ -45,7 +45,7 @@ PHASE_DEFS = [
         "index": 3,
         "name": "North Yellow",
         "state": "yellow",
-        "raw": "yyyGrrrrr",
+        "raw": "rrryyyGrr",
         "default_duration": 3.0,
         "active_approaches": ["north"],
     },
@@ -102,20 +102,20 @@ class ThreeWayIntersectionScenario(BaseScenario):
     def get_network_info(self) -> NetworkInfo:
         lanes = [
             # West Arm Lanes
-            {"id": "west_in_0", "arm": "west", "index": 0, "direction": "inbound", "name": "West Inbound Lane 0 (Straight / Turn Right to North)", "width": 3.2, "speed_limit_kmh": 60.0},
-            {"id": "west_in_1", "arm": "west", "index": 1, "direction": "inbound", "name": "West Inbound Lane 1 (Straight / Turn Left to North)", "width": 3.2, "speed_limit_kmh": 60.0},
+            {"id": "west_in_0", "arm": "west", "index": 0, "direction": "inbound", "name": "West Inbound Lane 0 (Straight / Turn Left to North)", "width": 3.2, "speed_limit_kmh": 60.0},
+            {"id": "west_in_1", "arm": "west", "index": 1, "direction": "inbound", "name": "West Inbound Lane 1 (Straight)", "width": 3.2, "speed_limit_kmh": 60.0},
             {"id": "west_out_0", "arm": "west", "index": 0, "direction": "outbound", "name": "West Outbound Lane 0", "width": 3.2, "speed_limit_kmh": 60.0},
             {"id": "west_out_1", "arm": "west", "index": 1, "direction": "outbound", "name": "West Outbound Lane 1", "width": 3.2, "speed_limit_kmh": 60.0},
 
             # East Arm Lanes
-            {"id": "east_in_0", "arm": "east", "index": 0, "direction": "inbound", "name": "East Inbound Lane 0 (Straight / Turn Right to North)", "width": 3.2, "speed_limit_kmh": 60.0},
-            {"id": "east_in_1", "arm": "east", "index": 1, "direction": "inbound", "name": "East Inbound Lane 1 (Straight)", "width": 3.2, "speed_limit_kmh": 60.0},
+            {"id": "east_in_0", "arm": "east", "index": 0, "direction": "inbound", "name": "East Inbound Lane 0 (Straight)", "width": 3.2, "speed_limit_kmh": 60.0},
+            {"id": "east_in_1", "arm": "east", "index": 1, "direction": "inbound", "name": "East Inbound Lane 1 (Straight / Turn Right to North)", "width": 3.2, "speed_limit_kmh": 60.0},
             {"id": "east_out_0", "arm": "east", "index": 0, "direction": "outbound", "name": "East Outbound Lane 0", "width": 3.2, "speed_limit_kmh": 60.0},
             {"id": "east_out_1", "arm": "east", "index": 1, "direction": "outbound", "name": "East Outbound Lane 1", "width": 3.2, "speed_limit_kmh": 60.0},
 
             # North Arm Lanes
-            {"id": "north_in_0", "arm": "north", "index": 0, "direction": "inbound", "name": "North Inbound Lane 0 (Turn Right to West)", "width": 3.2, "speed_limit_kmh": 60.0},
-            {"id": "north_in_1", "arm": "north", "index": 1, "direction": "inbound", "name": "North Inbound Lane 1 (Turn Left to East)", "width": 3.2, "speed_limit_kmh": 60.0},
+            {"id": "north_in_0", "arm": "north", "index": 0, "direction": "inbound", "name": "North Inbound Lane 0 (Turn Left to East)", "width": 3.2, "speed_limit_kmh": 60.0},
+            {"id": "north_in_1", "arm": "north", "index": 1, "direction": "inbound", "name": "North Inbound Lane 1 (Turn Right to West)", "width": 3.2, "speed_limit_kmh": 60.0},
             {"id": "north_out_0", "arm": "north", "index": 0, "direction": "outbound", "name": "North Outbound Lane 0", "width": 3.2, "speed_limit_kmh": 60.0},
             {"id": "north_out_1", "arm": "north", "index": 1, "direction": "outbound", "name": "North Outbound Lane 1", "width": 3.2, "speed_limit_kmh": 60.0},
         ]
@@ -280,14 +280,20 @@ class ThreeWayIntersectionScenario(BaseScenario):
         )
 
     def enrich_vehicle_direction(self, lane_id: str, angle: float, x: float, y: float) -> str:
-        if "west" in lane_id:
-            return "west" if angle > 180 else "east"
-        elif "east" in lane_id:
-            return "west" if angle > 180 else "east"
-        elif "north" in lane_id:
-            return "south" if (135 <= angle <= 225) else "north"
+        if "west_in" in lane_id:
+            return "east"
+        elif "west_out" in lane_id:
+            return "west"
+        elif "east_in" in lane_id:
+            return "west"
+        elif "east_out" in lane_id:
+            return "east"
+        elif "north_in" in lane_id:
+            return "south"
+        elif "north_out" in lane_id:
+            return "north"
         else:
-            # In junction
+            # Inside junction intersection
             if 45 <= angle <= 135:
                 return "east"
             elif 135 < angle <= 225:

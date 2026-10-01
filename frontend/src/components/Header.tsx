@@ -1,5 +1,5 @@
 import React from 'react';
-import { Activity, Radio, Cpu, Clock, Zap, Volume2, VolumeX, GitFork, Milestone, ChevronDown } from 'lucide-react';
+import { Activity, Radio, Cpu, Clock, Zap, Volume2, VolumeX, GitFork, Milestone, ChevronDown, ArrowDownUp } from 'lucide-react';
 import type { SimulationState, ScenarioMetadata } from '../types/simulation';
 
 interface HeaderProps {
@@ -7,6 +7,7 @@ interface HeaderProps {
   connected: boolean;
   latencyMs: number;
   updateRateHz: number;
+  dataExchangedMB?: number;
   soundEnabled: boolean;
   onToggleSound: () => void;
   scenarios: ScenarioMetadata[];
@@ -19,6 +20,7 @@ export const Header: React.FC<HeaderProps> = ({
   connected,
   latencyMs,
   updateRateHz,
+  dataExchangedMB = 0,
   soundEnabled,
   onToggleSound,
   scenarios,
@@ -78,21 +80,21 @@ export const Header: React.FC<HeaderProps> = ({
                   fontSize: '0.65rem',
                   fontWeight: 700,
                   textTransform: 'uppercase',
-                  padding: '2px 6px',
+                  padding: '2px 8px',
                   borderRadius: '4px',
-                  backgroundColor: 'rgba(56, 189, 248, 0.15)',
-                  color: '#38bdf8',
-                  border: '1px solid rgba(56, 189, 248, 0.3)',
+                  backgroundColor: 'rgba(245, 158, 11, 0.15)',
+                  color: '#f59e0b',
+                  border: '1px solid rgba(245, 158, 11, 0.35)',
                   letterSpacing: '0.04em',
                 }}
               >
-                SUMO Microscopic
+                🇮🇳 Indian Roads (LHT)
               </span>
             </div>
             <div style={{ fontSize: '0.72rem', color: '#64748b' }}>
               {isIntersection
-                ? '3-Way T-Intersection • 2 Lanes/Direction • TraCI 20Hz'
-                : '1000m Straight Highway • 2 Lanes/Direction • TraCI 20Hz'}
+                ? '3-Way T-Intersection • Left-Hand Traffic • TraCI 20Hz'
+                : '1000m Highway • Left-Hand Traffic • TraCI 20Hz'}
             </div>
           </div>
         </div>
@@ -241,6 +243,14 @@ export const Header: React.FC<HeaderProps> = ({
           <span style={{ color: '#94a3b8' }}>PING:</span>
           <span style={{ color: '#10b981', fontWeight: 600 }}>
             {latencyMs}ms
+          </span>
+        </div>
+
+        <div className="glass-pill" title="Cumulative data exchanged between browser and service during simulation">
+          <ArrowDownUp size={13} color="#a855f7" />
+          <span style={{ color: '#94a3b8' }}>DATA:</span>
+          <span style={{ color: '#c084fc', fontWeight: 600 }}>
+            {dataExchangedMB.toFixed(2)} MB
           </span>
         </div>
       </div>

@@ -36,6 +36,14 @@ COLOR_PALETTE = [
     "#64748b",  # Slate Dark
 ]
 
+# Indian Roads Congress (IRC) Passenger Car Equivalent (PCE/PCU) factors
+PCE_WEIGHTS = {
+    "car": 1.0,
+    "sports": 1.0,
+    "van": 1.4,
+    "truck": 3.0,
+}
+
 def hex_to_rgba(hex_color: str) -> tuple[int, int, int, int]:
     hex_color = hex_color.lstrip("#")
     if len(hex_color) == 6:
@@ -63,9 +71,10 @@ class SimulationManager:
         # Active scenario (extensible)
         self.scenario: BaseScenario = registry.get_or_default("straight_road")
 
-        # Auto-spawn settings
-        self.auto_spawn = AutoSpawnConfig(enabled=True, rate_per_minute=25.0)
+        # Auto-spawn settings (supports up to 20,000+ veh/hr)
+        self.auto_spawn = AutoSpawnConfig(enabled=True, rate_per_minute=25.0, rate_per_hour=1500.0)
         self.last_auto_spawn_time = 0.0
+        self.auto_spawn_accumulator = 0.0
 
         # Concurrency & WebSockets
         self.lock = asyncio.Lock()
@@ -103,6 +112,7 @@ class SimulationManager:
         self.total_spawned = 0
         self.total_arrived = 0
         self.vehicle_counter = 0
+        self.auto_spawn_accumulator = 0.0
         self.vehicle_colors.clear()
         self.scenario.reset_state()
 
@@ -245,7 +255,7 @@ class SimulationManager:
             self.total_spawned += 1
             return veh_id
         except traci.TraCIException as e:
-            logger.warning("Failed to insert vehicle %s on %s: %s", veh_id, route_id, e)
+            logger.debug("Primary lane blocked for vehicle %s on %s: %s", veh_id, route_id, e)
             # Try with safe free lane if chosen lane was blocked
             try:
                 traci.vehicle.add(
@@ -259,12 +269,18 @@ class SimulationManager:
                 self.total_spawned += 1
                 return veh_id
             except Exception as e2:
-                logger.error("Could not spawn vehicle even with free lane on %s: %s", route_id, e2)
-                raise e2
+                # If entry lanes are temporarily saturated, skip without throwing to keep loop ticking
+                logger.debug("Entry temporarily saturated on %s: %s", route_id, e2)
+                return ""
 
     def set_auto_spawn(self, config: AutoSpawnConfig):
+        if config.rate_per_hour is not None and config.rate_per_hour >= 0:
+            config.rate_per_minute = round(config.rate_per_hour / 60.0, 2)
+        elif config.rate_per_minute is not None:
+            config.rate_per_hour = round(config.rate_per_minute * 60.0, 1)
         self.auto_spawn = config
-        logger.info("Auto-spawn updated: enabled=%s, rate=%.1f/min", config.enabled, config.rate_per_minute)
+        logger.info("Auto-spawn updated: enabled=%s, rate=%.1f/min (%.0f veh/hr)",
+                    config.enabled, config.rate_per_minute, config.rate_per_minute * 60.0)
 
     def get_network_info(self) -> NetworkInfo:
         return self.scenario.get_network_info()
@@ -341,12 +357,25 @@ class SimulationManager:
         road_km = self.scenario.get_network_info().road_length / 1000.0
         density = round(active_count / max(0.2, road_km), 1)
 
+        # Indian Traffic Engineering: Passenger Car Equivalent (PCE/PCU) calculation
+        total_pce = sum(PCE_WEIGHTS.get(v.type, 1.0) for v in vehicle_list)
+        density_pce_km = total_pce / max(0.2, road_km)
+        # Flow rate q = k * v (in PCE / hour)
+        if active_count > 0 and avg_speed > 0:
+            pce_per_hour = round(density_pce_km * avg_speed, 1)
+        elif self.auto_spawn.enabled and self.auto_spawn.rate_per_minute > 0:
+            avg_pce_factor = 1.3
+            pce_per_hour = round(self.auto_spawn.rate_per_minute * 60.0 * avg_pce_factor, 1)
+        else:
+            pce_per_hour = 0.0
+
         stats = SimulationStats(
             active_vehicles=active_count,
             total_spawned=self.total_spawned,
             total_arrived=self.total_arrived,
             avg_speed_kmh=avg_speed,
-            density_veh_km=density
+            density_veh_km=density,
+            pce_per_hour=pce_per_hour
         )
 
         tl_data = self._get_traffic_light_data()
@@ -416,13 +445,16 @@ class SimulationManager:
             try:
                 if self.is_running and self.is_initialized:
                     async with self.lock:
-                        # Auto-spawning logic using scenario generator
+                        # High-capacity auto-spawning logic (supports up to 20,000+ veh/hr)
                         if self.auto_spawn.enabled and self.auto_spawn.rate_per_minute > 0:
-                            spawn_interval = 60.0 / self.auto_spawn.rate_per_minute
-                            if (self.sim_time - self.last_auto_spawn_time) >= spawn_interval:
-                                self.last_auto_spawn_time = self.sim_time
-                                auto_req = self.scenario.get_auto_spawn_request()
-                                self._insert_vehicle(auto_req)
+                            rate_per_sec = self.auto_spawn.rate_per_minute / 60.0
+                            self.auto_spawn_accumulator += rate_per_sec * settings.STEP_LENGTH
+                            spawn_count = int(self.auto_spawn_accumulator)
+                            if spawn_count > 0:
+                                self.auto_spawn_accumulator -= spawn_count
+                                for _ in range(min(spawn_count, 15)):
+                                    auto_req = self.scenario.get_auto_spawn_request()
+                                    self._insert_vehicle(auto_req)
 
                         # Advance SUMO simulation
                         self._do_step()

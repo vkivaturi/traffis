@@ -4,7 +4,6 @@ import { Header } from './components/Header';
 import { MiniMap } from './components/MiniMap';
 import { CanvasView } from './components/CanvasView';
 import { Controls } from './components/Controls';
-import { StatsPanel } from './components/StatsPanel';
 import { VehicleInspector } from './components/VehicleInspector';
 import { TrafficSignalPanel } from './components/TrafficSignalPanel';
 import type { CameraState, SpawnOptions, AutoSpawnSettings } from './types/simulation';
@@ -19,6 +18,7 @@ export const App: React.FC = () => {
     connected,
     latencyMs,
     updateRateHz,
+    dataExchangedMB,
     play,
     pause,
     reset,
@@ -42,10 +42,11 @@ export const App: React.FC = () => {
   const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null);
   const [viewportWidthMeters, setViewportWidthMeters] = useState<number>(100);
   const [soundEnabled, setSoundEnabled] = useState<boolean>(false);
-  const [isSignalPanelOpen, setIsSignalPanelOpen] = useState<boolean>(true);
+  const [isSignalPanelOpen, setIsSignalPanelOpen] = useState<boolean>(false);
   const [autoSpawnSettings, setAutoSpawnSettings] = useState<AutoSpawnSettings>({
     enabled: true,
     rate_per_minute: 25,
+    rate_per_hour: 1500,
   });
 
   // Sound effect when traffic signal changes
@@ -164,6 +165,7 @@ export const App: React.FC = () => {
         connected={connected}
         latencyMs={latencyMs}
         updateRateHz={updateRateHz}
+        dataExchangedMB={dataExchangedMB}
         soundEnabled={soundEnabled}
         onToggleSound={handleToggleSound}
         scenarios={scenarios}
@@ -229,7 +231,7 @@ export const App: React.FC = () => {
         )}
       </div>
 
-      {/* 4. Controls Toolbar */}
+      {/* 4. Controls Dock with Visible Section & Expandable Advanced Tools */}
       <Controls
         isRunning={state.is_running}
         onPlay={play}
@@ -240,14 +242,16 @@ export const App: React.FC = () => {
         autoSpawnSettings={autoSpawnSettings}
         onUpdateAutoSpawn={handleUpdateAutoSpawn}
         trafficLight={state.traffic_light}
-        isTrafficSignalPanelOpen={isSignalPanelOpen}
-        onToggleTrafficSignalPanel={() => setIsSignalPanelOpen((v) => !v)}
+        onUpdateTrafficLight={setTrafficLight}
+        onNextTrafficLightPhase={nextTrafficLightPhase}
         onFocusTrafficSignal={handleFocusSignal}
         activeScenarioId={currentScenarioId}
+        stats={state.stats}
+        vehicles={state.vehicles}
+        latencyMs={latencyMs}
+        updateRateHz={updateRateHz}
+        dataExchangedMB={dataExchangedMB}
       />
-
-      {/* 5. Telemetry & Analytics Dashboard */}
-      <StatsPanel stats={state.stats} vehicles={state.vehicles} />
     </div>
   );
 };

@@ -44,11 +44,13 @@ export function useSimulationSocket() {
   const [connected, setConnected] = useState<boolean>(false);
   const [latencyMs, setLatencyMs] = useState<number>(0);
   const [updateRateHz, setUpdateRateHz] = useState<number>(0);
+  const [dataExchangedMB, setDataExchangedMB] = useState<number>(0);
 
   const socketRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<number | null>(null);
   const lastMsgTimeRef = useRef<number>(0);
   const msgCountRef = useRef<number>(0);
+  const totalBytesRef = useRef<number>(0);
   const rateCalcIntervalRef = useRef<number | null>(null);
   const connectRef = useRef<() => void>(() => {});
 
@@ -68,6 +70,9 @@ export function useSimulationSocket() {
     };
 
     ws.onmessage = (event) => {
+      const rawLen = typeof event.data === 'string' ? event.data.length : (event.data?.byteLength || 0);
+      totalBytesRef.current += rawLen;
+
       const now = performance.now();
       if (lastMsgTimeRef.current > 0) {
         const delta = now - lastMsgTimeRef.current;
@@ -137,6 +142,8 @@ export function useSimulationSocket() {
     rateCalcIntervalRef.current = window.setInterval(() => {
       setUpdateRateHz(msgCountRef.current);
       msgCountRef.current = 0;
+      // Calculate cumulative MB exchanged
+      setDataExchangedMB(Number((totalBytesRef.current / (1024 * 1024)).toFixed(2)));
     }, 1000);
 
     return () => {
@@ -150,23 +157,27 @@ export function useSimulationSocket() {
   }, [connect]);
 
   const send = useCallback((action: string, payload: Record<string, unknown> = {}) => {
+    const raw = JSON.stringify({ action, payload });
+    totalBytesRef.current += raw.length;
     if (socketRef.current?.readyState === WebSocket.OPEN) {
-      socketRef.current.send(JSON.stringify({ action, payload }));
+      socketRef.current.send(raw);
     } else {
       fetch(`/api/${action}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        body: raw,
       }).catch((e) => console.warn('REST fallback failed:', e));
     }
   }, []);
 
   const selectScenario = useCallback((scenarioId: string) => {
+    const raw = JSON.stringify({
+      action: 'select_scenario',
+      payload: { scenario_id: scenarioId },
+    });
+    totalBytesRef.current += raw.length;
     if (socketRef.current?.readyState === WebSocket.OPEN) {
-      socketRef.current.send(JSON.stringify({
-        action: 'select_scenario',
-        payload: { scenario_id: scenarioId },
-      }));
+      socketRef.current.send(raw);
     } else {
       fetch('/api/scenario/select', {
         method: 'POST',
@@ -206,6 +217,7 @@ export function useSimulationSocket() {
     connected,
     latencyMs,
     updateRateHz,
+    dataExchangedMB,
     play,
     pause,
     reset,

@@ -189,13 +189,13 @@ export const MiniMap: React.FC<MiniMapProps> = ({
       ctx.lineWidth = 1;
       ctx.strokeRect(padX, roadY, roadW, roadH);
 
-      // Mini Direction Indicators
+      // Mini Direction Indicators (Left-Hand Traffic: EB Top, WB Bottom)
       ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
       ctx.font = '700 8px Inter, sans-serif';
       ctx.textAlign = 'left';
-      ctx.fillText('← WESTBOUND', padX + 8, roadY + laneH - 2);
+      ctx.fillText('EASTBOUND →', padX + 8, roadY + laneH - 2);
       ctx.textAlign = 'right';
-      ctx.fillText('EASTBOUND →', padX + roadW - 8, roadY + laneH * 3 + 7);
+      ctx.fillText('← WESTBOUND', padX + roadW - 8, roadY + laneH * 3 + 7);
 
       // Distance tick markers
       ctx.fillStyle = '#64748b';
@@ -212,11 +212,11 @@ export const MiniMap: React.FC<MiniMapProps> = ({
         ctx.fillText(`${m}m`, mx, roadY + roadH + 13);
       });
 
-      // Draw vehicles as glowing dots
+      // Draw vehicles as glowing dots (LHT: EB Top [slots 0, 1], WB Bottom [slots 2, 3])
       for (const v of vehicles) {
         const vx = padX + Math.min(1, Math.max(0, v.x / 1000)) * roadW;
-        const isWest = v.angle > 180 || v.direction === 'west' || v.y > 0;
-        const slot = isWest ? (v.lane_index === 0 ? 0 : 1) : v.lane_index === 1 ? 2 : 3;
+        const isEast = v.direction === 'east' || v.y > 0 || (v.angle >= 45 && v.angle <= 135);
+        const slot = isEast ? (v.lane_index === 0 ? 0 : 1) : (v.lane_index === 1 ? 2 : 3);
         const vy = roadY + (slot + 0.5) * laneH;
 
         ctx.shadowColor = v.color || '#38bdf8';

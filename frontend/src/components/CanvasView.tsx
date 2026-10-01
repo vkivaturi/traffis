@@ -126,10 +126,10 @@ const renderStraightHighway = (
     for (let mx = 60; mx <= 940; mx += 160) {
       const sx = worldToScreenX(mx);
       if (sx > -100 && sx < width + 100) {
-        ctx.fillText('← WB L0 (Slow)', sx, roadScreenYTop + laneH * 0.65);
-        ctx.fillText('← WB L1 (Fast)', sx, roadScreenYTop + laneH * 1.65);
-        ctx.fillText('EB L1 (Fast) →', sx, roadScreenYTop + laneH * 2.65);
-        ctx.fillText('EB L0 (Slow) →', sx, roadScreenYTop + laneH * 3.65);
+        ctx.fillText('EB L0 (Slow) →', sx, roadScreenYTop + laneH * 0.65);
+        ctx.fillText('EB L1 (Fast) →', sx, roadScreenYTop + laneH * 1.65);
+        ctx.fillText('← WB L1 (Fast)', sx, roadScreenYTop + laneH * 2.65);
+        ctx.fillText('← WB L0 (Slow)', sx, roadScreenYTop + laneH * 3.65);
       }
     }
   }
@@ -154,55 +154,59 @@ const renderStraightHighway = (
     ctx.fillText(`${m}m`, mx, roadScreenYBottom + 20);
   }
 
-  // 0m & 1000m Terminus Gates
+  // 0m & 1000m Terminus Gates (Left-Hand Traffic: EB Top [+Y], WB Bottom [-Y])
   if (roadScreenX1 > -200 && roadScreenX1 < width + 200) {
-    const ebHeight = roadScreenYBottom - medianY;
-    const wbHeight = medianY - roadScreenYTop;
+    const ebHeight = medianY - roadScreenYTop;
+    const wbHeight = roadScreenYBottom - medianY;
 
+    // EB Start (Top half, Green)
     ctx.fillStyle = 'rgba(16, 185, 129, 0.2)';
-    ctx.fillRect(roadScreenX1 - 4, medianY, 8, ebHeight);
+    ctx.fillRect(roadScreenX1 - 4, roadScreenYTop, 8, ebHeight);
     ctx.strokeStyle = '#10b981';
     ctx.lineWidth = 3;
-    ctx.strokeRect(roadScreenX1 - 4, medianY, 8, ebHeight);
+    ctx.strokeRect(roadScreenX1 - 4, roadScreenYTop, 8, ebHeight);
 
+    // WB Arrival (Bottom half, Rose)
     ctx.fillStyle = 'rgba(244, 63, 94, 0.2)';
-    ctx.fillRect(roadScreenX1 - 4, roadScreenYTop, 8, wbHeight);
+    ctx.fillRect(roadScreenX1 - 4, medianY, 8, wbHeight);
     ctx.strokeStyle = '#f43f5e';
     ctx.lineWidth = 3;
-    ctx.strokeRect(roadScreenX1 - 4, roadScreenYTop, 8, wbHeight);
+    ctx.strokeRect(roadScreenX1 - 4, medianY, 8, wbHeight);
 
     ctx.fillStyle = '#10b981';
     ctx.font = '800 11px Inter, sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('EB START [0m] →', roadScreenX1, roadScreenYBottom + 20);
+    ctx.fillText('EB START [0m] →', roadScreenX1, roadScreenYTop - 14);
 
     ctx.fillStyle = '#f43f5e';
-    ctx.fillText('← WB ARRIVAL [0m]', roadScreenX1, roadScreenYTop - 14);
+    ctx.fillText('← WB ARRIVAL [0m]', roadScreenX1, roadScreenYBottom + 20);
   }
 
   if (roadScreenX2 > -200 && roadScreenX2 < width + 200) {
-    const wbHeight = medianY - roadScreenYTop;
-    const ebHeight = roadScreenYBottom - medianY;
+    const ebHeight = medianY - roadScreenYTop;
+    const wbHeight = roadScreenYBottom - medianY;
 
-    ctx.fillStyle = 'rgba(16, 185, 129, 0.2)';
-    ctx.fillRect(roadScreenX2 - 4, roadScreenYTop, 8, wbHeight);
-    ctx.strokeStyle = '#10b981';
-    ctx.lineWidth = 3;
-    ctx.strokeRect(roadScreenX2 - 4, roadScreenYTop, 8, wbHeight);
-
+    // EB Arrival (Top half, Rose)
     ctx.fillStyle = 'rgba(244, 63, 94, 0.2)';
-    ctx.fillRect(roadScreenX2 - 4, medianY, 8, ebHeight);
+    ctx.fillRect(roadScreenX2 - 4, roadScreenYTop, 8, ebHeight);
     ctx.strokeStyle = '#f43f5e';
     ctx.lineWidth = 3;
-    ctx.strokeRect(roadScreenX2 - 4, medianY, 8, ebHeight);
+    ctx.strokeRect(roadScreenX2 - 4, roadScreenYTop, 8, ebHeight);
 
-    ctx.fillStyle = '#10b981';
-    ctx.font = '800 11px Inter, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText('← WB START [1000m]', roadScreenX2, roadScreenYTop - 14);
+    // WB Start (Bottom half, Green)
+    ctx.fillStyle = 'rgba(16, 185, 129, 0.2)';
+    ctx.fillRect(roadScreenX2 - 4, medianY, 8, wbHeight);
+    ctx.strokeStyle = '#10b981';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(roadScreenX2 - 4, medianY, 8, wbHeight);
 
     ctx.fillStyle = '#f43f5e';
-    ctx.fillText('EB ARRIVAL [1000m] →', roadScreenX2, roadScreenYBottom + 20);
+    ctx.font = '800 11px Inter, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('EB ARRIVAL [1000m] →', roadScreenX2, roadScreenYTop - 14);
+
+    ctx.fillStyle = '#10b981';
+    ctx.fillText('← WB START [1000m]', roadScreenX2, roadScreenYBottom + 20);
   }
 
   // Traffic Signal Gantry at 500m
@@ -221,14 +225,14 @@ const renderStraightHighway = (
       ctx.fillRect(tlScreenX - 30 * zoom, roadScreenYTop - 4, 60 * zoom, roadScreenHeight + 8);
     }
 
-    // Stop lines
+    // Stop lines (EB in top half roadScreenYTop to medianY; WB in bottom half medianY to roadScreenYBottom)
     const ebStopLineScreenX = worldToScreenX(tlX - 2.5);
     ctx.fillStyle = '#ffffff';
-    ctx.fillRect(ebStopLineScreenX - Math.max(2, 0.3 * zoom), medianY, Math.max(3.5, 0.6 * zoom), roadScreenYBottom - medianY);
+    ctx.fillRect(ebStopLineScreenX - Math.max(2, 0.3 * zoom), roadScreenYTop, Math.max(3.5, 0.6 * zoom), medianY - roadScreenYTop);
 
     const wbStopLineScreenX = worldToScreenX(tlX + 2.5);
     ctx.fillStyle = '#ffffff';
-    ctx.fillRect(wbStopLineScreenX - Math.max(2, 0.3 * zoom), roadScreenYTop, Math.max(3.5, 0.6 * zoom), medianY - roadScreenYTop);
+    ctx.fillRect(wbStopLineScreenX - Math.max(2, 0.3 * zoom), medianY, Math.max(3.5, 0.6 * zoom), roadScreenYBottom - medianY);
 
     // Overhead Gantry Structure
     const gantryTop = roadScreenYTop - 28;
@@ -457,27 +461,30 @@ const renderThreeWayIntersection = (
   ctx.quadraticCurveTo(sxNorthRight, syRoadTop, sxNorthRight, syNorthStop);
   ctx.stroke();
 
-  // 6. Stop Lines & Crosswalks
+  // 6. Stop Lines & Crosswalks (Indian Left-Hand Traffic)
   ctx.fillStyle = '#ffffff';
-  ctx.fillRect(sxWestStop - 2, syCenter, 4, syRoadBottom - syCenter);
-  ctx.fillRect(sxEastStop - 2, syRoadTop, 4, syCenter - syRoadTop);
-  ctx.fillRect(sxNorthLeft, syNorthStop - 2, sxCenter - sxNorthLeft, 4);
+  // West Inbound stop line (Top carriageway: syRoadTop to syCenter)
+  ctx.fillRect(sxWestStop - 2, syRoadTop, 4, syCenter - syRoadTop);
+  // East Inbound stop line (Bottom carriageway: syCenter to syRoadBottom)
+  ctx.fillRect(sxEastStop - 2, syCenter, 4, syRoadBottom - syCenter);
+  // North Inbound stop line (Right carriageway: sxCenter to sxNorthRight)
+  ctx.fillRect(sxCenter, syNorthStop - 2, sxNorthRight - sxCenter, 4);
 
   // Zebra crosswalks
   if (zoom > 3) {
     ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
     const barCount = 4;
     for (let i = 0; i < barCount; i++) {
-      const by = syCenter + (i + 0.2) * ((syRoadBottom - syCenter) / barCount);
-      ctx.fillRect(sxWestStop - 8 * (zoom / 4), by, 6 * (zoom / 4), ((syRoadBottom - syCenter) / barCount) * 0.6);
-    }
-    for (let i = 0; i < barCount; i++) {
       const by = syRoadTop + (i + 0.2) * ((syCenter - syRoadTop) / barCount);
-      ctx.fillRect(sxEastStop + 2 * (zoom / 4), by, 6 * (zoom / 4), ((syCenter - syRoadTop) / barCount) * 0.6);
+      ctx.fillRect(sxWestStop - 8 * (zoom / 4), by, 6 * (zoom / 4), ((syCenter - syRoadTop) / barCount) * 0.6);
     }
     for (let i = 0; i < barCount; i++) {
-      const bx = sxNorthLeft + (i + 0.2) * ((sxCenter - sxNorthLeft) / barCount);
-      ctx.fillRect(bx, syNorthStop + 2 * (zoom / 4), ((sxCenter - sxNorthLeft) / barCount) * 0.6, 6 * (zoom / 4));
+      const by = syCenter + (i + 0.2) * ((syRoadBottom - syCenter) / barCount);
+      ctx.fillRect(sxEastStop + 2 * (zoom / 4), by, 6 * (zoom / 4), ((syRoadBottom - syCenter) / barCount) * 0.6);
+    }
+    for (let i = 0; i < barCount; i++) {
+      const bx = sxCenter + (i + 0.2) * ((sxNorthRight - sxCenter) / barCount);
+      ctx.fillRect(bx, syNorthStop + 2 * (zoom / 4), ((sxNorthRight - sxCenter) / barCount) * 0.6, 6 * (zoom / 4));
     }
   }
 
@@ -522,13 +529,13 @@ const renderThreeWayIntersection = (
     drawDistBadge(sxNorthRight + 22, my + 3, `N+${d}m`);
   }
 
-  // Terminus Gates
+  // Terminus Gates (LHT: West Inbound Top, East Inbound Bottom, North Inbound Right)
   ctx.fillStyle = '#10b981';
   ctx.font = '800 10px Inter, sans-serif';
   ctx.textAlign = 'center';
-  ctx.fillText('WEST INBOUND [-250m] →', sxWestEnd, syRoadBottom + 30);
-  ctx.fillText('← EAST INBOUND [+250m]', sxEastEnd, syRoadTop - 12);
-  ctx.fillText('↓ NORTH INBOUND [+250m]', sxCenter, syNorthEnd - 12);
+  ctx.fillText('WEST INBOUND [-250m] →', sxWestEnd + 70, syRoadTop - 12);
+  ctx.fillText('← EAST INBOUND [+250m]', sxEastEnd - 70, syRoadBottom + 26);
+  ctx.fillText('↓ NORTH INBOUND [+250m]', sxNorthRight + 40, syNorthEnd - 12);
 
   // 8. Traffic Signal Lights at Intersection
   const tlState = trafficLight?.state ?? 'green';
@@ -590,7 +597,7 @@ const renderThreeWayIntersection = (
 
   renderSignalHead(
     sxWestStop - 14,
-    syRoadBottom - 8,
+    syRoadTop + 14,
     !isEwGreen && !isEwYellow,
     isEwYellow,
     isEwGreen,
@@ -599,7 +606,7 @@ const renderThreeWayIntersection = (
 
   renderSignalHead(
     sxEastStop + 14,
-    syRoadTop + 8,
+    syRoadBottom - 14,
     !isEwGreen && !isEwYellow,
     isEwYellow,
     isEwGreen,
@@ -607,7 +614,7 @@ const renderThreeWayIntersection = (
   );
 
   renderSignalHead(
-    sxNorthLeft - 14,
+    sxNorthRight + 14,
     syNorthStop + 14,
     !isNorthGreen && !isNorthYellow,
     isNorthYellow,

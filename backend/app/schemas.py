@@ -25,6 +25,7 @@ class SimulationStats(BaseModel):
     total_arrived: int
     avg_speed_kmh: float
     density_veh_km: float
+    pce_per_hour: float = 0.0  # Hourly traffic flow in Passenger Car Equivalent (PCE/h)
 
 class TrafficLightState(BaseModel):
     id: str = "traffic_light"
@@ -70,7 +71,8 @@ class SpawnRequest(BaseModel):
 
 class AutoSpawnConfig(BaseModel):
     enabled: bool = True
-    rate_per_minute: float = Field(25.0, ge=0.0, le=240.0)
+    rate_per_minute: float = Field(25.0, ge=0.0, le=1000.0, description="Vehicles spawned per minute (e.g. 333.33 for 20,000 veh/hr)")
+    rate_per_hour: Optional[float] = Field(None, ge=0.0, le=60000.0, description="Vehicles spawned per hour (up to 20,000+ veh/hr)")
 
 class SpawnOriginInfo(BaseModel):
     id: str

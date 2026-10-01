@@ -63,10 +63,10 @@ class StraightRoadScenario(BaseScenario):
 
     def get_network_info(self) -> NetworkInfo:
         lanes = [
-            {"id": "road_west_0", "index": 0, "direction": "west", "name": "Westbound Right Lane (Slow)", "width": 3.2, "y_center": 4.8, "speed_limit_kmh": 120.0},
-            {"id": "road_west_1", "index": 1, "direction": "west", "name": "Westbound Left Lane (Fast / Overtake)", "width": 3.2, "y_center": 1.6, "speed_limit_kmh": 120.0},
-            {"id": "road_east_1", "index": 1, "direction": "east", "name": "Eastbound Left Lane (Fast / Overtake)", "width": 3.2, "y_center": -1.6, "speed_limit_kmh": 120.0},
-            {"id": "road_east_0", "index": 0, "direction": "east", "name": "Eastbound Right Lane (Slow)", "width": 3.2, "y_center": -4.8, "speed_limit_kmh": 120.0},
+            {"id": "road_east_0", "index": 0, "direction": "east", "name": "Eastbound Left Lane (Slow / Kerb)", "width": 3.2, "y_center": 4.8, "speed_limit_kmh": 120.0},
+            {"id": "road_east_1", "index": 1, "direction": "east", "name": "Eastbound Right Lane (Fast / Overtake)", "width": 3.2, "y_center": 1.6, "speed_limit_kmh": 120.0},
+            {"id": "road_west_1", "index": 1, "direction": "west", "name": "Westbound Right Lane (Fast / Overtake)", "width": 3.2, "y_center": -1.6, "speed_limit_kmh": 120.0},
+            {"id": "road_west_0", "index": 0, "direction": "west", "name": "Westbound Left Lane (Slow / Kerb)", "width": 3.2, "y_center": -4.8, "speed_limit_kmh": 120.0},
         ]
         arms = [
             RoadArmInfo(
