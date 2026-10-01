@@ -6,7 +6,15 @@
     <vType id="sports" accel="4.2" decel="6.0" sigma="0.2" length="4.6" width="1.9" minGap="2.0" maxSpeed="45.0" guiShape="passenger/sedan"/>
     <vType id="van" accel="2.2" decel="4.2" sigma="0.4" length="5.5" width="2.0" minGap="2.8" maxSpeed="30.0" guiShape="passenger/van"/>
 
-    <route id="route_east" edges="road_east_in road_east_out"/>
-    <route id="route_west" edges="road_west_in road_west_out"/>
-    <route id="route_straight" edges="road_east_in road_east_out"/>
+    <!-- Routes from West approach -->
+    <route id="route_west_east" edges="west_in east_out"/>
+    <route id="route_west_north" edges="west_in north_out"/>
+
+    <!-- Routes from East approach -->
+    <route id="route_east_west" edges="east_in west_out"/>
+    <route id="route_east_north" edges="east_in north_out"/>
+
+    <!-- Routes from North approach -->
+    <route id="route_north_west" edges="north_in west_out"/>
+    <route id="route_north_east" edges="north_in east_out"/>
 </routes>

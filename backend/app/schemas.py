@@ -5,7 +5,7 @@ class VehicleData(BaseModel):
     id: str
     x: float
     y: float
-    direction: str = "east"  # "east" | "west"
+    direction: str = "east"  # "east" | "west" | "north" | "south"
     lane_index: int
     lane_id: str
     speed: float
@@ -29,6 +29,7 @@ class SimulationStats(BaseModel):
 class TrafficLightState(BaseModel):
     id: str = "traffic_light"
     x: float = 500.0
+    y: float = 0.0
     state: str = "green"  # "green" | "yellow" | "red"
     raw_state: str = "GGGG"
     mode: str = "auto"    # "auto" | "manual"
@@ -38,6 +39,8 @@ class TrafficLightState(BaseModel):
     phase_timer: float = 0.0
     phase_remaining: float = 15.0
     next_state: str = "yellow"
+    phase_index: int = 0
+    phase_name: Optional[str] = None
 
 class TrafficLightConfig(BaseModel):
     mode: Optional[str] = Field(None, description="'auto' or 'manual'")
@@ -51,12 +54,15 @@ class SimulationStateMessage(BaseModel):
     sim_time: float
     step: int
     is_running: bool
+    scenario_id: str = "straight_road"
     vehicles: List[VehicleData]
     stats: SimulationStats
     traffic_light: TrafficLightState
 
 class SpawnRequest(BaseModel):
-    direction: Optional[str] = Field("east", description="Travel direction: 'east' (0 -> 1000m), 'west' (1000m -> 0), or 'random'")
+    direction: Optional[str] = Field(None, description="Travel direction or spawn origin: 'east', 'west', 'north', 'random'")
+    origin: Optional[str] = Field(None, description="Spawn origin arm: 'west', 'east', 'north', 'random'")
+    turn: Optional[str] = Field(None, description="Turn intention: 'straight', 'left', 'right', 'random'")
     lane: Optional[int] = Field(None, ge=0, le=2, description="Lane index: 0 (right / slow), 1 (left / fast)")
     speed: Optional[float] = Field(None, ge=1.0, le=50.0, description="Initial speed in m/s")
     type: Optional[str] = Field("car", description="Vehicle type: car, sports, truck, van")
@@ -66,12 +72,41 @@ class AutoSpawnConfig(BaseModel):
     enabled: bool = True
     rate_per_minute: float = Field(25.0, ge=0.0, le=240.0)
 
+class SpawnOriginInfo(BaseModel):
+    id: str
+    label: str
+    description: str
+
+class ScenarioMetadata(BaseModel):
+    id: str
+    name: str
+    description: str
+    type: str  # "straight" | "intersection"
+    bounds: Dict[str, float]
+    default_camera: Dict[str, Any]
+    spawn_origins: List[SpawnOriginInfo]
+
+class RoadArmInfo(BaseModel):
+    id: str
+    name: str
+    direction: str
+    x_start: float
+    y_start: float
+    x_end: float
+    y_end: float
+    num_lanes_inbound: int = 2
+    num_lanes_outbound: int = 2
+
 class NetworkInfo(BaseModel):
+    scenario: ScenarioMetadata
     road_length: float = 1000.0
     num_lanes: int = 4
     num_lanes_per_dir: int = 2
     lane_width: float = 3.2
     traffic_light_x: float = 500.0
+    traffic_light_y: float = 0.0
     lanes: List[Dict[str, Any]]
+    arms: Optional[List[RoadArmInfo]] = None
 
-
+class ScenarioSelectRequest(BaseModel):
+    scenario_id: str

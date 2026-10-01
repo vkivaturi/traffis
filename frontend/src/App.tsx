@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useSimulationSocket } from './hooks/useSimulationSocket';
 import { Header } from './components/Header';
 import { MiniMap } from './components/MiniMap';
@@ -13,6 +13,9 @@ import { soundSystem } from './utils/audio';
 export const App: React.FC = () => {
   const {
     state,
+    scenarios,
+    activeScenario,
+    selectScenario,
     connected,
     latencyMs,
     updateRateHz,
@@ -26,8 +29,11 @@ export const App: React.FC = () => {
     nextTrafficLightPhase,
   } = useSimulationSocket();
 
+  const currentScenarioId = activeScenario?.id || state.scenario_id || 'straight_road';
+  const isIntersection = currentScenarioId === 'three_way_intersection';
+
   const [camera, setCamera] = useState<CameraState>({
-    x: 100, // Start focused near road entry
+    x: 100,
     y: 0,
     zoom: 12,
     followingId: null,
@@ -59,17 +65,45 @@ export const App: React.FC = () => {
     soundSystem.setEnabled(nextVal);
   };
 
-  const handleSpawn = (options: SpawnOptions) => {
-    spawnVehicle(options);
-    soundSystem.playSpawnSound();
+  const handleSelectScenario = (scenarioId: string) => {
+    selectScenario(scenarioId);
+    setSelectedVehicleId(null);
+    soundSystem.playResetSound();
+
+    if (scenarioId === 'three_way_intersection') {
+      setCamera({
+        x: 0,
+        y: 70,
+        zoom: 3.8,
+        followingId: null,
+      });
+    } else {
+      setCamera({
+        x: 100,
+        y: 0,
+        zoom: 12,
+        followingId: null,
+      });
+    }
   };
 
-  const handleReset = () => {
+  const handleSpawn = useCallback((options: SpawnOptions) => {
+    spawnVehicle(options);
+    soundSystem.playSpawnSound();
+  }, [spawnVehicle]);
+
+  const handleReset = useCallback(() => {
     reset();
     soundSystem.playResetSound();
     setSelectedVehicleId(null);
-    setCamera((prev) => ({ ...prev, followingId: null, x: 100, y: 0 }));
-  };
+    setCamera((prev) => ({
+      ...prev,
+      followingId: null,
+      x: isIntersection ? 0 : 100,
+      y: isIntersection ? 70 : 0,
+      zoom: isIntersection ? 3.8 : 12,
+    }));
+  }, [reset, isIntersection]);
 
   const handleUpdateAutoSpawn = (settings: AutoSpawnSettings) => {
     setAutoSpawnSettings(settings);
@@ -79,9 +113,9 @@ export const App: React.FC = () => {
   const handleFocusSignal = () => {
     setCamera((c) => ({
       ...c,
-      x: 500,
+      x: isIntersection ? 0 : 500,
       y: 0,
-      zoom: 14,
+      zoom: isIntersection ? 12 : 14,
       followingId: null,
     }));
   };
@@ -91,7 +125,6 @@ export const App: React.FC = () => {
   // Keyboard Shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Ignore if typing in an input
       if (['INPUT', 'SELECT', 'TEXTAREA'].includes((e.target as HTMLElement).tagName)) {
         return;
       }
@@ -111,7 +144,7 @@ export const App: React.FC = () => {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [state.is_running, pause, play]);
+  }, [state.is_running, pause, play, handleReset, handleSpawn]);
 
   return (
     <div
@@ -125,7 +158,7 @@ export const App: React.FC = () => {
         backgroundColor: 'var(--bg-primary)',
       }}
     >
-      {/* 1. Header Navigation */}
+      {/* 1. Header Navigation with Road Selection Dropdown */}
       <Header
         state={state}
         connected={connected}
@@ -133,18 +166,22 @@ export const App: React.FC = () => {
         updateRateHz={updateRateHz}
         soundEnabled={soundEnabled}
         onToggleSound={handleToggleSound}
+        scenarios={scenarios}
+        activeScenarioId={currentScenarioId}
+        onSelectScenario={handleSelectScenario}
       />
 
-      {/* 2. 1000m Highway Radar Bar */}
+      {/* 2. Scenario-aware Radar Bar */}
       <MiniMap
         vehicles={state.vehicles}
         camera={camera}
         viewportWidthMeters={viewportWidthMeters}
-        onJumpToX={(x) => setCamera((c) => ({ ...c, x, followingId: null }))}
+        onJumpToX={(x, y = 0) => setCamera((c) => ({ ...c, x, y, followingId: null }))}
         trafficLight={state.traffic_light}
+        scenario={activeScenario}
       />
 
-      {/* 3. Main Canvas Viewport with Vehicles, Traffic Signal and Road */}
+      {/* 3. Main Canvas Viewport with Scenario-aware Road, Vehicles, Traffic Signals */}
       <div
         style={{
           position: 'relative',
@@ -163,6 +200,7 @@ export const App: React.FC = () => {
           onViewportMetersChange={setViewportWidthMeters}
           trafficLight={state.traffic_light}
           onTrafficLightClick={() => setIsSignalPanelOpen(true)}
+          scenario={activeScenario}
         />
 
         {/* Interactive Traffic Signal Control HUD */}
@@ -205,6 +243,7 @@ export const App: React.FC = () => {
         isTrafficSignalPanelOpen={isSignalPanelOpen}
         onToggleTrafficSignalPanel={() => setIsSignalPanelOpen((v) => !v)}
         onFocusTrafficSignal={handleFocusSignal}
+        activeScenarioId={currentScenarioId}
       />
 
       {/* 5. Telemetry & Analytics Dashboard */}

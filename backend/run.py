@@ -6,10 +6,11 @@ from pathlib import Path
 BACKEND_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(BACKEND_DIR))
 
-# Ensure network is built
+# Ensure networks are built
 net_file = BACKEND_DIR / "sumo_config" / "road.net.xml"
-if not net_file.exists():
-    print("road.net.xml not found. Building network with netconvert...")
+intersection_net = BACKEND_DIR / "sumo_config" / "scenarios" / "three_way_intersection" / "intersection.net.xml"
+if not net_file.exists() or not intersection_net.exists():
+    print("Networks missing. Building all scenario networks with netconvert...")
     from sumo_config.build_network import build
     build()
 

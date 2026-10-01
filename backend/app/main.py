@@ -78,6 +78,26 @@ async def spawn_vehicle(req: SpawnRequest):
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
+@app.get("/api/scenarios")
+async def list_scenarios():
+    from .scenarios.registry import registry
+    return registry.list_all()
+
+@app.get("/api/scenario/current")
+async def get_current_scenario():
+    return sim_manager.scenario.get_metadata()
+
+@app.post("/api/scenario/select")
+async def select_scenario(req: dict):
+    scenario_id = req.get("scenario_id")
+    if not scenario_id:
+        raise HTTPException(status_code=400, detail="scenario_id is required")
+    try:
+        await sim_manager.select_scenario(scenario_id)
+        return {"status": "ok", "scenario": sim_manager.scenario.get_metadata().model_dump()}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
 @app.post("/api/auto-spawn")
 async def configure_auto_spawn(config: AutoSpawnConfig):
     sim_manager.set_auto_spawn(config)
@@ -112,6 +132,10 @@ async def websocket_endpoint(websocket: WebSocket):
                     await sim_manager.reset()
                 elif action == "step":
                     await sim_manager.step_once()
+                elif action == "select_scenario":
+                    scenario_id = payload.get("scenario_id")
+                    if scenario_id:
+                        await sim_manager.select_scenario(scenario_id)
                 elif action == "spawn":
                     spawn_req = SpawnRequest(**payload)
                     veh_id = await sim_manager.spawn_vehicle(spawn_req)

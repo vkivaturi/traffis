@@ -356,3 +356,14 @@ npm run build
 2. Run `python backend/sumo_config/build_network.py` to regenerate [`road.net.xml`](file:///Users/vijay/Projects/traffis/backend/sumo_config/road.net.xml).
 3. Update `NUM_LANES` and lane mapping in [`backend/app/config.py`](file:///Users/vijay/Projects/traffis/backend/app/config.py) and [`backend/app/simulation.py`](file:///Users/vijay/Projects/traffis/backend/app/simulation.py) (`get_network_info`).
 4. Update [`frontend/src/components/CanvasView.tsx`](file:///Users/vijay/Projects/traffis/frontend/src/components/CanvasView.tsx) and [`frontend/src/components/MiniMap.tsx`](file:///Users/vijay/Projects/traffis/frontend/src/components/MiniMap.tsx) to match the new lane count and boundary offsets.
+
+### Recipe 4: Adding a New Road / Simulation Scenario (e.g. 4-Way Crossroads, Roundabout)
+1. **Network XML Definition**:
+   In [`backend/sumo_config/build_network.py`](file:///Users/vijay/Projects/traffis/backend/sumo_config/build_network.py), add the scenario's nodes (`.nod.xml`), edges (`.edg.xml`), routes (`.rou.xml`), and configuration (`.sumocfg`). Compile the `.net.xml` network into `backend/sumo_config/scenarios/<scenario_id>/`.
+2. **Backend Scenario Class**:
+   Create a new class in `backend/app/scenarios/<scenario_id>.py` extending [`BaseScenario`](file:///Users/vijay/Projects/traffis/backend/app/scenarios/base.py). Implement `get_metadata()`, `get_network_info()`, `get_spawn_route()`, `get_auto_spawn_request()`, and traffic light handlers.
+3. **Register Scenario**:
+   In [`backend/app/scenarios/registry.py`](file:///Users/vijay/Projects/traffis/backend/app/scenarios/registry.py), register the new scenario instance in `init_registry()`. It will immediately appear in `GET /api/scenarios` and the frontend Road dropdown.
+4. **Frontend Canvas & Radar Support**:
+   In [`frontend/src/components/CanvasView.tsx`](file:///Users/vijay/Projects/traffis/frontend/src/components/CanvasView.tsx) and [`frontend/src/components/MiniMap.tsx`](file:///Users/vijay/Projects/traffis/frontend/src/components/MiniMap.tsx), add a renderer function for the scenario's road geometry.
+

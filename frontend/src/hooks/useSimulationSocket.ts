@@ -1,10 +1,18 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import type { SimulationState, NetworkInfo, SpawnOptions, AutoSpawnSettings, TrafficLightSettings } from '../types/simulation';
+import type {
+  SimulationState,
+  NetworkInfo,
+  ScenarioMetadata,
+  SpawnOptions,
+  AutoSpawnSettings,
+  TrafficLightSettings,
+} from '../types/simulation';
 
 const INITIAL_STATE: SimulationState = {
   sim_time: 0,
   step: 0,
   is_running: true,
+  scenario_id: 'straight_road',
   vehicles: [],
   stats: {
     active_vehicles: 0,
@@ -31,20 +39,22 @@ const INITIAL_STATE: SimulationState = {
 export function useSimulationSocket() {
   const [state, setState] = useState<SimulationState>(INITIAL_STATE);
   const [networkInfo, setNetworkInfo] = useState<NetworkInfo | null>(null);
+  const [scenarios, setScenarios] = useState<ScenarioMetadata[]>([]);
+  const [activeScenario, setActiveScenario] = useState<ScenarioMetadata | null>(null);
   const [connected, setConnected] = useState<boolean>(false);
   const [latencyMs, setLatencyMs] = useState<number>(0);
   const [updateRateHz, setUpdateRateHz] = useState<number>(0);
 
   const socketRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<number | null>(null);
-  const lastMsgTimeRef = useRef<number>(performance.now());
+  const lastMsgTimeRef = useRef<number>(0);
   const msgCountRef = useRef<number>(0);
   const rateCalcIntervalRef = useRef<number | null>(null);
+  const connectRef = useRef<() => void>(() => {});
 
   const connect = useCallback(() => {
     if (socketRef.current?.readyState === WebSocket.OPEN) return;
 
-    // Use current host with fallback to port 8000 for direct connection
     const isSecure = window.location.protocol === 'https:';
     const wsProto = isSecure ? 'wss:' : 'ws:';
     const targetUrl = `${wsProto}//${window.location.host}/ws`;
@@ -59,14 +69,14 @@ export function useSimulationSocket() {
 
     ws.onmessage = (event) => {
       const now = performance.now();
-      const delta = now - lastMsgTimeRef.current;
+      if (lastMsgTimeRef.current > 0) {
+        const delta = now - lastMsgTimeRef.current;
+        if (delta > 0 && delta < 500) {
+          setLatencyMs(Math.round(delta));
+        }
+      }
       lastMsgTimeRef.current = now;
       msgCountRef.current += 1;
-
-      // Approximate instantaneous latency / jitter
-      if (delta > 0 && delta < 500) {
-        setLatencyMs(Math.round(delta));
-      }
 
       try {
         const data = JSON.parse(event.data);
@@ -74,6 +84,13 @@ export function useSimulationSocket() {
           setState(data);
         } else if (data.type === 'network_info') {
           setNetworkInfo(data.data);
+          if (data.data?.scenario) {
+            setActiveScenario(data.data.scenario);
+          }
+        } else if (data.type === 'scenario_switched') {
+          if (data.scenario) {
+            setActiveScenario(data.scenario);
+          }
         }
       } catch (err) {
         console.error('Failed to parse simulation message:', err);
@@ -83,9 +100,8 @@ export function useSimulationSocket() {
     ws.onclose = () => {
       setConnected(false);
       socketRef.current = null;
-      // Schedule reconnect after 1.5s
       reconnectTimeoutRef.current = window.setTimeout(() => {
-        connect();
+        connectRef.current();
       }, 1500);
     };
 
@@ -96,9 +112,28 @@ export function useSimulationSocket() {
   }, []);
 
   useEffect(() => {
+    connectRef.current = connect;
+  }, [connect]);
+
+  // Load available scenarios
+  useEffect(() => {
+    let active = true;
+    fetch('/api/scenarios')
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data: ScenarioMetadata[]) => {
+        if (active && data.length > 0) {
+          setScenarios(data);
+        }
+      })
+      .catch((e) => console.warn('Failed to load scenarios:', e));
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
     connect();
 
-    // Calculate actual incoming message rate every 1 second
     rateCalcIntervalRef.current = window.setInterval(() => {
       setUpdateRateHz(msgCountRef.current);
       msgCountRef.current = 0;
@@ -118,12 +153,26 @@ export function useSimulationSocket() {
     if (socketRef.current?.readyState === WebSocket.OPEN) {
       socketRef.current.send(JSON.stringify({ action, payload }));
     } else {
-      // Fallback to REST API if WebSocket is momentarily disconnected
       fetch(`/api/${action}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       }).catch((e) => console.warn('REST fallback failed:', e));
+    }
+  }, []);
+
+  const selectScenario = useCallback((scenarioId: string) => {
+    if (socketRef.current?.readyState === WebSocket.OPEN) {
+      socketRef.current.send(JSON.stringify({
+        action: 'select_scenario',
+        payload: { scenario_id: scenarioId },
+      }));
+    } else {
+      fetch('/api/scenario/select', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ scenario_id: scenarioId }),
+      }).catch((e) => console.warn('Failed to switch scenario via REST:', e));
     }
   }, []);
 
@@ -151,6 +200,9 @@ export function useSimulationSocket() {
   return {
     state,
     networkInfo,
+    scenarios,
+    activeScenario,
+    selectScenario,
     connected,
     latencyMs,
     updateRateHz,

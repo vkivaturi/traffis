@@ -15,6 +15,7 @@ interface ControlsProps {
   isTrafficSignalPanelOpen: boolean;
   onToggleTrafficSignalPanel: () => void;
   onFocusTrafficSignal: () => void;
+  activeScenarioId?: string;
 }
 
 const COLOR_OPTIONS = [
@@ -41,22 +42,44 @@ export const Controls: React.FC<ControlsProps> = ({
   isTrafficSignalPanelOpen,
   onToggleTrafficSignalPanel,
   onFocusTrafficSignal,
+  activeScenarioId = 'straight_road',
 }) => {
+  const isIntersection = activeScenarioId === 'three_way_intersection';
+
+  // For straight road
   const [selectedDirection, setSelectedDirection] = useState<'east' | 'west' | 'random'>('east');
+
+  // For 3-way intersection
+  const [selectedOrigin, setSelectedOrigin] = useState<'west' | 'east' | 'north' | 'random'>('west');
+  const [selectedTurn, setSelectedTurn] = useState<'straight' | 'left' | 'right' | 'random'>('random');
+
   const [selectedLane, setSelectedLane] = useState<number | null>(null); // null = random, 0 = L0 (Slow), 1 = L1 (Fast)
   const [vehicleType, setVehicleType] = useState<'car' | 'sports' | 'truck' | 'van'>('car');
   const [vehicleColor, setVehicleColor] = useState<string>('#38bdf8');
-  const [initialSpeed, setInitialSpeed] = useState<number>(25); // m/s (~90 km/h)
+  const [initialSpeed, setInitialSpeed] = useState<number>(isIntersection ? 15 : 25); // m/s (~55 km/h for intersection, 90 km/h for highway)
   const [isSpawnMenuOpen, setIsSpawnMenuOpen] = useState<boolean>(false);
 
   const handleSpawn = () => {
-    onSpawnVehicle({
-      direction: selectedDirection,
-      lane: selectedLane,
-      type: vehicleType,
-      color: vehicleColor,
-      speed: initialSpeed,
-    });
+    if (isIntersection) {
+      onSpawnVehicle({
+        origin: selectedOrigin,
+        direction: selectedOrigin,
+        turn: selectedTurn,
+        lane: selectedLane,
+        type: vehicleType,
+        color: vehicleColor,
+        speed: initialSpeed,
+      });
+    } else {
+      onSpawnVehicle({
+        direction: selectedDirection,
+        origin: selectedDirection,
+        lane: selectedLane,
+        type: vehicleType,
+        color: vehicleColor,
+        speed: initialSpeed,
+      });
+    }
   };
 
   return (
@@ -132,7 +155,7 @@ export const Controls: React.FC<ControlsProps> = ({
       </div>
 
       {/* 2. Quick Vehicle Spawner Bar */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
         <button
           id="btn-quick-spawn"
           className="btn-primary"
@@ -143,54 +166,210 @@ export const Controls: React.FC<ControlsProps> = ({
           <span>SPAWN VEHICLE</span>
         </button>
 
-        {/* Direction Selector Pills */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', backgroundColor: 'rgba(0,0,0,0.3)', padding: '3px', borderRadius: '8px' }}>
-          <span style={{ fontSize: '0.72rem', color: '#64748b', padding: '0 6px', fontWeight: 600 }}>
-            DIR:
-          </span>
-          <button
-            className={`btn-secondary ${selectedDirection === 'east' ? 'active' : ''}`}
+        {/* Direction / Origin Selector Pills */}
+        {isIntersection ? (
+          <div
             style={{
-              padding: '4px 8px',
-              fontSize: '0.75rem',
-              backgroundColor: selectedDirection === 'east' ? '#0284c7' : 'transparent',
-              borderColor: selectedDirection === 'east' ? '#38bdf8' : 'transparent',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              backgroundColor: 'rgba(0,0,0,0.3)',
+              padding: '3px',
+              borderRadius: '8px',
             }}
-            onClick={() => setSelectedDirection('east')}
-            title="Eastbound: Travels from 0m to 1000m (Right →)"
           >
-            East →
-          </button>
-          <button
-            className={`btn-secondary ${selectedDirection === 'west' ? 'active' : ''}`}
+            <span style={{ fontSize: '0.72rem', color: '#64748b', padding: '0 6px', fontWeight: 600 }}>
+              ARM:
+            </span>
+            <button
+              className={`btn-secondary ${selectedOrigin === 'west' ? 'active' : ''}`}
+              style={{
+                padding: '4px 8px',
+                fontSize: '0.75rem',
+                backgroundColor: selectedOrigin === 'west' ? '#0284c7' : 'transparent',
+                borderColor: selectedOrigin === 'west' ? '#38bdf8' : 'transparent',
+              }}
+              onClick={() => setSelectedOrigin('west')}
+              title="West Arm: approaches heading East (→)"
+            >
+              West →
+            </button>
+            <button
+              className={`btn-secondary ${selectedOrigin === 'east' ? 'active' : ''}`}
+              style={{
+                padding: '4px 8px',
+                fontSize: '0.75rem',
+                backgroundColor: selectedOrigin === 'east' ? '#0284c7' : 'transparent',
+                borderColor: selectedOrigin === 'east' ? '#38bdf8' : 'transparent',
+              }}
+              onClick={() => setSelectedOrigin('east')}
+              title="East Arm: approaches heading West (←)"
+            >
+              ← East
+            </button>
+            <button
+              className={`btn-secondary ${selectedOrigin === 'north' ? 'active' : ''}`}
+              style={{
+                padding: '4px 8px',
+                fontSize: '0.75rem',
+                backgroundColor: selectedOrigin === 'north' ? '#0284c7' : 'transparent',
+                borderColor: selectedOrigin === 'north' ? '#38bdf8' : 'transparent',
+              }}
+              onClick={() => setSelectedOrigin('north')}
+              title="North Arm: approaches heading South (↓)"
+            >
+              ↓ North
+            </button>
+            <button
+              className={`btn-secondary ${selectedOrigin === 'random' ? 'active' : ''}`}
+              style={{
+                padding: '4px 8px',
+                fontSize: '0.75rem',
+                backgroundColor: selectedOrigin === 'random' ? '#0284c7' : 'transparent',
+                borderColor: selectedOrigin === 'random' ? '#38bdf8' : 'transparent',
+              }}
+              onClick={() => setSelectedOrigin('random')}
+              title="Random Approach Arm"
+            >
+              ⇄ Any
+            </button>
+          </div>
+        ) : (
+          <div
             style={{
-              padding: '4px 8px',
-              fontSize: '0.75rem',
-              backgroundColor: selectedDirection === 'west' ? '#0284c7' : 'transparent',
-              borderColor: selectedDirection === 'west' ? '#38bdf8' : 'transparent',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              backgroundColor: 'rgba(0,0,0,0.3)',
+              padding: '3px',
+              borderRadius: '8px',
             }}
-            onClick={() => setSelectedDirection('west')}
-            title="Westbound: Travels from 1000m to 0m (Left ←)"
           >
-            ← West
-          </button>
-          <button
-            className={`btn-secondary ${selectedDirection === 'random' ? 'active' : ''}`}
+            <span style={{ fontSize: '0.72rem', color: '#64748b', padding: '0 6px', fontWeight: 600 }}>
+              DIR:
+            </span>
+            <button
+              className={`btn-secondary ${selectedDirection === 'east' ? 'active' : ''}`}
+              style={{
+                padding: '4px 8px',
+                fontSize: '0.75rem',
+                backgroundColor: selectedDirection === 'east' ? '#0284c7' : 'transparent',
+                borderColor: selectedDirection === 'east' ? '#38bdf8' : 'transparent',
+              }}
+              onClick={() => setSelectedDirection('east')}
+              title="Eastbound: Travels from 0m to 1000m (Right →)"
+            >
+              East →
+            </button>
+            <button
+              className={`btn-secondary ${selectedDirection === 'west' ? 'active' : ''}`}
+              style={{
+                padding: '4px 8px',
+                fontSize: '0.75rem',
+                backgroundColor: selectedDirection === 'west' ? '#0284c7' : 'transparent',
+                borderColor: selectedDirection === 'west' ? '#38bdf8' : 'transparent',
+              }}
+              onClick={() => setSelectedDirection('west')}
+              title="Westbound: Travels from 1000m to 0m (Left ←)"
+            >
+              ← West
+            </button>
+            <button
+              className={`btn-secondary ${selectedDirection === 'random' ? 'active' : ''}`}
+              style={{
+                padding: '4px 8px',
+                fontSize: '0.75rem',
+                backgroundColor: selectedDirection === 'random' ? '#0284c7' : 'transparent',
+                borderColor: selectedDirection === 'random' ? '#38bdf8' : 'transparent',
+              }}
+              onClick={() => setSelectedDirection('random')}
+              title="Random / Alternating Direction"
+            >
+              ⇄ Auto
+            </button>
+          </div>
+        )}
+
+        {/* Turn Intent Pills for 3-way intersection */}
+        {isIntersection && (
+          <div
             style={{
-              padding: '4px 8px',
-              fontSize: '0.75rem',
-              backgroundColor: selectedDirection === 'random' ? '#0284c7' : 'transparent',
-              borderColor: selectedDirection === 'random' ? '#38bdf8' : 'transparent',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              backgroundColor: 'rgba(0,0,0,0.3)',
+              padding: '3px',
+              borderRadius: '8px',
             }}
-            onClick={() => setSelectedDirection('random')}
-            title="Random / Alternating Direction"
           >
-            ⇄ Auto
-          </button>
-        </div>
+            <span style={{ fontSize: '0.72rem', color: '#64748b', padding: '0 6px', fontWeight: 600 }}>
+              TURN:
+            </span>
+            <button
+              className={`btn-secondary ${selectedTurn === 'random' ? 'active' : ''}`}
+              style={{
+                padding: '4px 8px',
+                fontSize: '0.75rem',
+                backgroundColor: selectedTurn === 'random' ? '#0284c7' : 'transparent',
+                borderColor: selectedTurn === 'random' ? '#38bdf8' : 'transparent',
+              }}
+              onClick={() => setSelectedTurn('random')}
+            >
+              Auto
+            </button>
+            <button
+              className={`btn-secondary ${selectedTurn === 'straight' ? 'active' : ''}`}
+              style={{
+                padding: '4px 8px',
+                fontSize: '0.75rem',
+                backgroundColor: selectedTurn === 'straight' ? '#0284c7' : 'transparent',
+                borderColor: selectedTurn === 'straight' ? '#38bdf8' : 'transparent',
+              }}
+              onClick={() => setSelectedTurn('straight')}
+              title="Straight ahead (for West and East approaches)"
+            >
+              Straight
+            </button>
+            <button
+              className={`btn-secondary ${selectedTurn === 'left' ? 'active' : ''}`}
+              style={{
+                padding: '4px 8px',
+                fontSize: '0.75rem',
+                backgroundColor: selectedTurn === 'left' ? '#0284c7' : 'transparent',
+                borderColor: selectedTurn === 'left' ? '#38bdf8' : 'transparent',
+              }}
+              onClick={() => setSelectedTurn('left')}
+              title="Turn Left"
+            >
+              Turn ↰
+            </button>
+            <button
+              className={`btn-secondary ${selectedTurn === 'right' ? 'active' : ''}`}
+              style={{
+                padding: '4px 8px',
+                fontSize: '0.75rem',
+                backgroundColor: selectedTurn === 'right' ? '#0284c7' : 'transparent',
+                borderColor: selectedTurn === 'right' ? '#38bdf8' : 'transparent',
+              }}
+              onClick={() => setSelectedTurn('right')}
+              title="Turn Right"
+            >
+              Turn ↱
+            </button>
+          </div>
+        )}
 
         {/* Lane Selector Pills */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', backgroundColor: 'rgba(0,0,0,0.3)', padding: '3px', borderRadius: '8px' }}>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '4px',
+            backgroundColor: 'rgba(0,0,0,0.3)',
+            padding: '3px',
+            borderRadius: '8px',
+          }}
+        >
           <span style={{ fontSize: '0.72rem', color: '#64748b', padding: '0 6px', fontWeight: 600 }}>
             LANE:
           </span>
@@ -248,7 +427,13 @@ export const Controls: React.FC<ControlsProps> = ({
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
           <Sparkles size={15} color={autoSpawnSettings.enabled ? '#38bdf8' : '#64748b'} />
-          <span style={{ fontSize: '0.78rem', fontWeight: 700, color: autoSpawnSettings.enabled ? '#f8fafc' : '#64748b' }}>
+          <span
+            style={{
+              fontSize: '0.78rem',
+              fontWeight: 700,
+              color: autoSpawnSettings.enabled ? '#f8fafc' : '#64748b',
+            }}
+          >
             INFLOW:
           </span>
           <button
@@ -291,7 +476,15 @@ export const Controls: React.FC<ControlsProps> = ({
               title={`Inflow Rate: ${autoSpawnSettings.rate_per_minute} vehicles per minute`}
             />
 
-            <span style={{ fontSize: '0.78rem', fontFamily: 'var(--font-mono)', color: '#38bdf8', fontWeight: 800, minWidth: '55px' }}>
+            <span
+              style={{
+                fontSize: '0.78rem',
+                fontFamily: 'var(--font-mono)',
+                color: '#38bdf8',
+                fontWeight: 800,
+                minWidth: '55px',
+              }}
+            >
               {autoSpawnSettings.rate_per_minute}/m
             </span>
 
@@ -315,7 +508,7 @@ export const Controls: React.FC<ControlsProps> = ({
                       rate_per_minute: preset,
                     })
                   }
-                  title={`Set to ${preset} vehicles/min (1 every ${(60 / preset).toFixed(1)}s)`}
+                  title={`Set to ${preset} vehicles/min`}
                 >
                   {preset}
                 </button>
@@ -350,22 +543,13 @@ export const Controls: React.FC<ControlsProps> = ({
                   : 'rgba(239, 68, 68, 0.5)',
               backgroundColor:
                 trafficLight.state === 'green'
-                  ? 'rgba(16, 185, 129, 0.15)'
+                  ? 'rgba(16, 185, 129, 0.1)'
                   : trafficLight.state === 'yellow'
-                  ? 'rgba(245, 158, 11, 0.15)'
-                  : 'rgba(239, 68, 68, 0.15)',
-              color:
-                trafficLight.state === 'green'
-                  ? '#10b981'
-                  : trafficLight.state === 'yellow'
-                  ? '#f59e0b'
-                  : '#ef4444',
-              boxShadow: isTrafficSignalPanelOpen
-                ? `0 0 12px ${trafficLight.state === 'green' ? '#10b981' : trafficLight.state === 'yellow' ? '#f59e0b' : '#ef4444'}44`
-                : 'none',
+                  ? 'rgba(245, 158, 11, 0.1)'
+                  : 'rgba(239, 68, 68, 0.1)',
             }}
             onClick={onToggleTrafficSignalPanel}
-            title="Configure Traffic Signal Timings & Controls"
+            title="Toggle Traffic Signal Control Panel"
           >
             <span
               style={{
@@ -378,53 +562,71 @@ export const Controls: React.FC<ControlsProps> = ({
                     : trafficLight.state === 'yellow'
                     ? '#f59e0b'
                     : '#ef4444',
-                boxShadow: `0 0 8px ${trafficLight.state === 'green' ? '#10b981' : trafficLight.state === 'yellow' ? '#f59e0b' : '#ef4444'}`,
+                boxShadow:
+                  trafficLight.state === 'green'
+                    ? '0 0 8px #10b981'
+                    : trafficLight.state === 'yellow'
+                    ? '0 0 8px #f59e0b'
+                    : '0 0 8px #ef4444',
               }}
             />
-            <span>
-              SIGNAL: {trafficLight.state.toUpperCase()} [{trafficLight.phase_remaining.toFixed(1)}s]
+            <span
+              style={{
+                color:
+                  trafficLight.state === 'green'
+                    ? '#34d399'
+                    : trafficLight.state === 'yellow'
+                    ? '#fbbf24'
+                    : '#f87171',
+              }}
+            >
+              SIGNAL: {trafficLight.state.toUpperCase()}
             </span>
+            <span style={{ color: '#94a3b8' }}>[{trafficLight.phase_remaining.toFixed(0)}s]</span>
           </button>
+
           <button
             className="btn-icon"
-            style={{ width: '32px', height: '32px' }}
             onClick={onFocusTrafficSignal}
-            title="Focus camera on Traffic Signal (500m)"
+            title="Focus Camera on Traffic Signal"
           >
-            <Crosshair size={15} color="#38bdf8" />
+            <Crosshair size={15} />
           </button>
         </div>
       )}
 
-      {/* Expanded Customizer Drawer (when open) */}
+      {/* 5. Dropdown Menu for Detailed Vehicle Customizer */}
       {isSpawnMenuOpen && (
         <div
+          className="glass-panel"
           style={{
             width: '100%',
             display: 'flex',
-            flexWrap: 'wrap',
             alignItems: 'center',
             justifyContent: 'space-between',
-            paddingTop: '12px',
-            marginTop: '4px',
-            borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+            flexWrap: 'wrap',
+            padding: '12px 16px',
+            backgroundColor: 'rgba(15, 23, 42, 0.95)',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+            borderRadius: '10px',
             gap: '16px',
+            marginTop: '8px',
           }}
         >
-          {/* Type selector */}
+          {/* Vehicle Type */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 600 }}>TYPE:</span>
+            <span style={{ fontSize: '0.78rem', color: '#94a3b8', fontWeight: 600 }}>TYPE:</span>
             {(['car', 'sports', 'truck', 'van'] as const).map((t) => (
               <button
                 key={t}
-                className="btn-secondary"
+                className={`btn-secondary ${vehicleType === t ? 'active' : ''}`}
                 style={{
                   padding: '4px 10px',
                   fontSize: '0.75rem',
                   textTransform: 'capitalize',
-                  backgroundColor: vehicleType === t ? 'rgba(56, 189, 248, 0.2)' : undefined,
-                  borderColor: vehicleType === t ? '#38bdf8' : undefined,
-                  color: vehicleType === t ? '#38bdf8' : undefined,
+                  backgroundColor: vehicleType === t ? '#0284c7' : 'transparent',
+                  borderColor: vehicleType === t ? '#38bdf8' : 'rgba(255,255,255,0.1)',
+                  color: vehicleType === t ? '#ffffff' : '#cbd5e1',
                 }}
                 onClick={() => setVehicleType(t)}
               >
@@ -433,42 +635,53 @@ export const Controls: React.FC<ControlsProps> = ({
             ))}
           </div>
 
-          {/* Color palette */}
+          {/* Color Palette */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 600 }}>COLOR:</span>
-            {COLOR_OPTIONS.map((c) => (
-              <div
-                key={c}
-                onClick={() => setVehicleColor(c)}
-                style={{
-                  width: '20px',
-                  height: '20px',
-                  borderRadius: '50%',
-                  backgroundColor: c,
-                  cursor: 'pointer',
-                  border: vehicleColor === c ? '2px solid #ffffff' : '1px solid rgba(0,0,0,0.5)',
-                  boxShadow: vehicleColor === c ? `0 0 10px ${c}` : 'none',
-                  transform: vehicleColor === c ? 'scale(1.2)' : 'scale(1)',
-                  transition: 'all 0.15s ease',
-                }}
-              />
-            ))}
+            <span style={{ fontSize: '0.78rem', color: '#94a3b8', fontWeight: 600 }}>COLOR:</span>
+            <div style={{ display: 'flex', gap: '6px' }}>
+              {COLOR_OPTIONS.map((c) => (
+                <button
+                  key={c}
+                  onClick={() => setVehicleColor(c)}
+                  style={{
+                    width: '20px',
+                    height: '20px',
+                    borderRadius: '50%',
+                    backgroundColor: c,
+                    border: vehicleColor === c ? '2px solid #ffffff' : '1px solid rgba(255,255,255,0.3)',
+                    cursor: 'pointer',
+                    boxShadow: vehicleColor === c ? `0 0 10px ${c}` : 'none',
+                    transform: vehicleColor === c ? 'scale(1.2)' : 'scale(1)',
+                    transition: 'all 0.15s ease',
+                  }}
+                  title={c}
+                />
+              ))}
+            </div>
           </div>
 
-          {/* Speed slider */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <span style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 600 }}>SPEED:</span>
+          {/* Initial Speed */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '0.78rem', color: '#94a3b8', fontWeight: 600 }}>SPEED:</span>
             <input
               type="range"
-              min="15"
+              min="10"
               max="45"
               step="1"
               value={initialSpeed}
               onChange={(e) => setInitialSpeed(Number(e.target.value))}
               style={{ width: '100px', accentColor: '#38bdf8', cursor: 'pointer' }}
             />
-            <span style={{ fontSize: '0.75rem', fontFamily: 'var(--font-mono)', color: '#f8fafc', minWidth: '70px' }}>
-              {Math.round(initialSpeed * 3.6)} km/h
+            <span
+              style={{
+                fontSize: '0.78rem',
+                fontFamily: 'var(--font-mono)',
+                color: '#38bdf8',
+                fontWeight: 700,
+                minWidth: '70px',
+              }}
+            >
+              {(initialSpeed * 3.6).toFixed(0)} km/h
             </span>
           </div>
         </div>

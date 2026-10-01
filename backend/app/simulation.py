@@ -18,6 +18,8 @@ from .schemas import (
     TrafficLightState,
     TrafficLightConfig,
 )
+from .scenarios.registry import registry
+from .scenarios.base import BaseScenario
 
 logger = logging.getLogger("sumo_simulation")
 logging.basicConfig(level=logging.INFO)
@@ -58,18 +60,12 @@ class SimulationManager:
         self.vehicle_counter = 0
         self.vehicle_colors: Dict[str, str] = {}
         
+        # Active scenario (extensible)
+        self.scenario: BaseScenario = registry.get_or_default("straight_road")
+
         # Auto-spawn settings
         self.auto_spawn = AutoSpawnConfig(enabled=True, rate_per_minute=25.0)
         self.last_auto_spawn_time = 0.0
-
-        # Traffic Light settings
-        self.tl_id = "traffic_light"
-        self.tl_state = "green"  # "green" | "yellow" | "red"
-        self.tl_mode = "auto"    # "auto" | "manual"
-        self.tl_green_duration = settings.DEFAULT_GREEN_DURATION
-        self.tl_yellow_duration = settings.DEFAULT_YELLOW_DURATION
-        self.tl_red_duration = settings.DEFAULT_RED_DURATION
-        self.tl_phase_timer = 0.0
 
         # Concurrency & WebSockets
         self.lock = asyncio.Lock()
@@ -89,17 +85,18 @@ class SimulationManager:
             logger.info("Simulation loop background task started.")
 
     def _start_traci(self):
-        """Start the headless SUMO process via TraCI."""
+        """Start the headless SUMO process via TraCI using current scenario."""
+        cfg_path = self.scenario.sumocfg_file
         cmd = [
             settings.SUMO_BINARY,
-            "-c", settings.SUMOCFG_FILE,
+            "-c", cfg_path,
             "--step-length", str(settings.STEP_LENGTH),
             "--start",
             "--quit-on-end",
             "--no-step-log", "true",
             "--no-warnings", "true"
         ]
-        logger.info("Starting SUMO TraCI with command: %s", " ".join(cmd))
+        logger.info("Starting SUMO TraCI for scenario '%s' with command: %s", self.scenario.id, " ".join(cmd))
         traci.start(cmd)
         self.step_count = 0
         self.sim_time = 0.0
@@ -107,103 +104,48 @@ class SimulationManager:
         self.total_arrived = 0
         self.vehicle_counter = 0
         self.vehicle_colors.clear()
-        self.tl_state = "green"
-        self.tl_phase_timer = 0.0
-        self._apply_traffic_light_state(self.tl_state)
+        self.scenario.reset_state()
 
-    def _get_tl_raw_state(self, state: str) -> str:
-        char = "r" if state == "red" else "y" if state == "yellow" else "G"
-        try:
-            controlled = traci.trafficlight.getControlledLinks(self.tl_id)
-            num_links = len(controlled) if controlled else 4
-            return char * num_links
-        except Exception:
-            return char * 4
+    async def select_scenario(self, scenario_id: str) -> None:
+        """Switch to a different scenario (e.g. straight road vs 3-way intersection)."""
+        target = registry.get(scenario_id)
+        if not target:
+            raise ValueError(f"Unknown scenario ID: {scenario_id}")
 
-    def _apply_traffic_light_state(self, state: str):
-        raw = self._get_tl_raw_state(state)
-        try:
-            traci.trafficlight.setRedYellowGreenState(self.tl_id, raw)
-        except Exception as e:
-            logger.warning("Could not set traffic light state '%s' (%s): %s", state, raw, e)
+        async with self.lock:
+            logger.info("Switching scenario to '%s' (%s)...", target.id, target.name)
+            if self.is_initialized:
+                try:
+                    traci.close()
+                except Exception as e:
+                    logger.warning("Error closing traci during scenario switch: %s", e)
+                self.is_initialized = False
 
-    def _update_traffic_light(self, dt: float):
-        if self.tl_mode != "auto":
-            return
+            self.scenario = target
+            self._start_traci()
+            self.is_initialized = True
+            self.is_running = True
+            self.last_auto_spawn_time = 0.0
 
-        self.tl_phase_timer += dt
-        if self.tl_state == "green":
-            if self.tl_phase_timer >= self.tl_green_duration:
-                self.tl_state = "yellow"
-                self.tl_phase_timer = 0.0
-                self._apply_traffic_light_state("yellow")
-        elif self.tl_state == "yellow":
-            if self.tl_phase_timer >= self.tl_yellow_duration:
-                self.tl_state = "red"
-                self.tl_phase_timer = 0.0
-                self._apply_traffic_light_state("red")
-        elif self.tl_state == "red":
-            if self.tl_phase_timer >= self.tl_red_duration:
-                self.tl_state = "green"
-                self.tl_phase_timer = 0.0
-                self._apply_traffic_light_state("green")
+        # Broadcast scenario switch, new network info, and state
+        await self._broadcast_scenario_switched()
+        await self._broadcast_network_info()
+        await self._broadcast_current_state()
 
     async def set_traffic_light(self, config: TrafficLightConfig):
         async with self.lock:
-            if config.green_duration is not None:
-                self.tl_green_duration = config.green_duration
-            if config.yellow_duration is not None:
-                self.tl_yellow_duration = config.yellow_duration
-            if config.red_duration is not None:
-                self.tl_red_duration = config.red_duration
-            if config.mode is not None:
-                self.tl_mode = config.mode
-            if config.state is not None:
-                self.tl_state = config.state
-                self.tl_phase_timer = 0.0
-                self._apply_traffic_light_state(self.tl_state)
-            logger.info("Traffic light updated: mode=%s, state=%s, G=%.1fs, Y=%.1fs, R=%.1fs",
-                        self.tl_mode, self.tl_state, self.tl_green_duration, self.tl_yellow_duration, self.tl_red_duration)
+            self.scenario.set_traffic_light_config(config)
+            logger.info("Traffic light updated for scenario '%s'", self.scenario.id)
         await self._broadcast_current_state()
 
     async def next_traffic_light_phase(self):
         async with self.lock:
-            if self.tl_state == "green":
-                self.tl_state = "yellow"
-            elif self.tl_state == "yellow":
-                self.tl_state = "red"
-            else:
-                self.tl_state = "green"
-            self.tl_phase_timer = 0.0
-            self._apply_traffic_light_state(self.tl_state)
-            logger.info("Traffic light manual step -> %s", self.tl_state)
+            self.scenario.next_traffic_light_phase()
+            logger.info("Traffic light manual step next for scenario '%s'", self.scenario.id)
         await self._broadcast_current_state()
 
     def _get_traffic_light_data(self) -> TrafficLightState:
-        if self.tl_state == "green":
-            dur = self.tl_green_duration
-            next_st = "yellow"
-        elif self.tl_state == "yellow":
-            dur = self.tl_yellow_duration
-            next_st = "red"
-        else:
-            dur = self.tl_red_duration
-            next_st = "green"
-
-        rem = max(0.0, round(dur - self.tl_phase_timer, 1))
-        return TrafficLightState(
-            id=self.tl_id,
-            x=settings.TRAFFIC_LIGHT_X,
-            state=self.tl_state,
-            raw_state=self._get_tl_raw_state(self.tl_state),
-            mode=self.tl_mode,
-            green_duration=self.tl_green_duration,
-            yellow_duration=self.tl_yellow_duration,
-            red_duration=self.tl_red_duration,
-            phase_timer=round(self.tl_phase_timer, 2),
-            phase_remaining=rem,
-            next_state=next_st
-        )
+        return self.scenario.get_traffic_light_data()
 
     async def stop(self):
         """Stop simulation loop and close TraCI."""
@@ -224,15 +166,15 @@ class SimulationManager:
                 self.is_initialized = False
 
     async def reset(self):
-        """Reset the simulation back to t=0."""
+        """Reset the current simulation back to t=0."""
         async with self.lock:
-            logger.info("Resetting simulation...")
+            logger.info("Resetting simulation for scenario '%s'...", self.scenario.id)
             try:
                 traci.close()
             except Exception as e:
                 logger.warning("Error while closing traci on reset: %s", e)
             
-            # Restart TraCI
+            # Restart TraCI with current scenario
             self._start_traci()
             self.is_running = True
             self.last_auto_spawn_time = 0.0
@@ -270,16 +212,10 @@ class SimulationManager:
         veh_id = f"veh_{self.vehicle_counter}"
         v_type = req.type if req.type in ["car", "truck", "sports", "van"] else "car"
         
-        # Direction selection ('east' or 'west')
-        direction = req.direction or "east"
-        if direction == "random":
-            direction = random.choice(["east", "west"])
-        elif direction not in ["east", "west"]:
-            direction = "east"
-            
-        route_id = "route_west" if direction == "west" else "route_east"
+        # Resolve route using scenario logic
+        route_id = self.scenario.get_spawn_route(req)
 
-        # Lane selection (2 lanes per direction: 0 = right / slow, 1 = left / fast)
+        # Lane selection (0 = right / slow, 1 = left / fast)
         if req.lane is not None and 0 <= req.lane <= 2:
             target_lane = min(req.lane, 1)
             depart_lane = str(target_lane)
@@ -310,7 +246,7 @@ class SimulationManager:
             return veh_id
         except traci.TraCIException as e:
             logger.warning("Failed to insert vehicle %s on %s: %s", veh_id, route_id, e)
-            # Try with safe defaults if lane was blocked
+            # Try with safe free lane if chosen lane was blocked
             try:
                 traci.vehicle.add(
                     vehID=veh_id,
@@ -331,24 +267,11 @@ class SimulationManager:
         logger.info("Auto-spawn updated: enabled=%s, rate=%.1f/min", config.enabled, config.rate_per_minute)
 
     def get_network_info(self) -> NetworkInfo:
-        lanes = [
-            {"id": "road_west_0", "index": 0, "direction": "west", "name": "Westbound Right Lane (Slow)", "width": 3.2, "y_center": 4.8, "speed_limit_kmh": 120.0},
-            {"id": "road_west_1", "index": 1, "direction": "west", "name": "Westbound Left Lane (Fast / Overtake)", "width": 3.2, "y_center": 1.6, "speed_limit_kmh": 120.0},
-            {"id": "road_east_1", "index": 1, "direction": "east", "name": "Eastbound Left Lane (Fast / Overtake)", "width": 3.2, "y_center": -1.6, "speed_limit_kmh": 120.0},
-            {"id": "road_east_0", "index": 0, "direction": "east", "name": "Eastbound Right Lane (Slow)", "width": 3.2, "y_center": -4.8, "speed_limit_kmh": 120.0},
-        ]
-        return NetworkInfo(
-            road_length=settings.ROAD_LENGTH_M,
-            num_lanes=settings.NUM_LANES,
-            num_lanes_per_dir=settings.NUM_LANES_PER_DIR,
-            lane_width=settings.LANE_WIDTH_M,
-            traffic_light_x=settings.TRAFFIC_LIGHT_X,
-            lanes=lanes
-        )
+        return self.scenario.get_network_info()
 
     def _do_step(self):
         """Synchronous SUMO step execution (call while holding self.lock)."""
-        self._update_traffic_light(settings.STEP_LENGTH)
+        self.scenario.update_traffic_light(settings.STEP_LENGTH)
         traci.simulationStep()
         self.step_count += 1
         self.sim_time = round(self.step_count * settings.STEP_LENGTH, 2)
@@ -389,8 +312,8 @@ class SimulationManager:
                 leader_id = leader_info[0] if leader_info else None
                 leader_dist = round(leader_info[1], 1) if leader_info else None
 
-                # Direction detection
-                v_dir = "west" if ("west" in lane_id or angle > 180) else "east"
+                # Direction detection delegated to scenario
+                v_dir = self.scenario.enrich_vehicle_direction(lane_id, angle, x, y)
 
                 vehicle_list.append(VehicleData(
                     id=vid,
@@ -411,12 +334,12 @@ class SimulationManager:
                     leader_dist=leader_dist
                 ))
             except traci.TraCIException:
-                # Vehicle might have arrived/departed during query
                 continue
 
         active_count = len(vehicle_list)
         avg_speed = round(total_speed_kmh / active_count, 1) if active_count > 0 else 0.0
-        density = round(active_count / (settings.ROAD_LENGTH_M / 1000.0), 1)
+        road_km = self.scenario.get_network_info().road_length / 1000.0
+        density = round(active_count / max(0.2, road_km), 1)
 
         stats = SimulationStats(
             active_vehicles=active_count,
@@ -432,6 +355,7 @@ class SimulationManager:
             sim_time=self.sim_time,
             step=self.step_count,
             is_running=self.is_running,
+            scenario_id=self.scenario.id,
             vehicles=vehicle_list,
             stats=stats,
             traffic_light=tl_data
@@ -450,6 +374,27 @@ class SimulationManager:
         json_data = state_msg.model_dump_json()
         await self._send_to_all(json_data)
 
+    async def _broadcast_scenario_switched(self):
+        """Broadcast scenario_switched message to all connected WebSockets."""
+        if not self.active_websockets:
+            return
+        payload = json.dumps({
+            "type": "scenario_switched",
+            "scenario": self.scenario.get_metadata().model_dump()
+        })
+        await self._send_to_all(payload)
+
+    async def _broadcast_network_info(self):
+        """Broadcast network_info message to all connected WebSockets."""
+        if not self.active_websockets:
+            return
+        net_info = self.get_network_info()
+        payload = json.dumps({
+            "type": "network_info",
+            "data": net_info.model_dump()
+        })
+        await self._send_to_all(payload)
+
     async def _send_to_all(self, message: str):
         dead_sockets = set()
         for ws in self.active_websockets:
@@ -463,7 +408,7 @@ class SimulationManager:
 
     async def _simulation_loop(self):
         """20 Hz simulation loop (every 0.05 seconds)."""
-        interval = 1.0 / settings.UPDATE_RATE_HZ  # 0.05 seconds
+        interval = 1.0 / settings.UPDATE_RATE_HZ
         logger.info("Simulation loop running at %.1f Hz (%.3fs interval)...", settings.UPDATE_RATE_HZ, interval)
 
         while True:
@@ -471,24 +416,19 @@ class SimulationManager:
             try:
                 if self.is_running and self.is_initialized:
                     async with self.lock:
-                        # Auto-spawning logic
+                        # Auto-spawning logic using scenario generator
                         if self.auto_spawn.enabled and self.auto_spawn.rate_per_minute > 0:
                             spawn_interval = 60.0 / self.auto_spawn.rate_per_minute
                             if (self.sim_time - self.last_auto_spawn_time) >= spawn_interval:
                                 self.last_auto_spawn_time = self.sim_time
-                                v_type = random.choices(["car", "sports", "van", "truck"], weights=[0.6, 0.15, 0.15, 0.1])[0]
-                                v_dir = random.choice(["east", "west"])
-                                self._insert_vehicle(SpawnRequest(
-                                    direction=v_dir,
-                                    lane=random.randint(0, 1),
-                                    type=v_type
-                                ))
+                                auto_req = self.scenario.get_auto_spawn_request()
+                                self._insert_vehicle(auto_req)
 
                         # Advance SUMO simulation
                         self._do_step()
                         state_msg = self._collect_current_state()
 
-                    # Broadcast outside the lock to minimize lock contention
+                    # Broadcast outside the lock to minimize contention
                     if self.active_websockets:
                         json_payload = state_msg.model_dump_json()
                         await self._send_to_all(json_payload)

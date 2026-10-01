@@ -100,8 +100,41 @@ async def test_full_flow():
         # Receive reset state
         state = await recv_type("state")
         print(f"After reset: sim_time={state.get('sim_time')}s, active_vehs={len(state.get('vehicles', []))}, tl={state.get('traffic_light', {}).get('state')}")
+
+        # 11. Test Scenario Switching over WebSocket to 3-Way Intersection
+        print("Testing Scenario Switch to three_way_intersection...")
+        await ws.send(json.dumps({
+            "action": "select_scenario",
+            "payload": {"scenario_id": "three_way_intersection"}
+        }))
+        scenario_ack = await recv_type("scenario_switched")
+        print("Scenario Switched Ack:", scenario_ack.get("scenario", {}).get("name"))
+        assert scenario_ack.get("scenario", {}).get("id") == "three_way_intersection"
+
+        # Receive new network_info for 3-way intersection
+        net_info_3way = await recv_type("network_info")
+        print("Received 3-way network info:", net_info_3way.get("data", {}).get("scenario", {}).get("name"))
+
+        # Spawn on 3-way intersection from West arm
+        print("Spawning vehicle on 3-way intersection from West arm...")
+        await ws.send(json.dumps({
+            "action": "spawn",
+            "payload": {"origin": "west", "turn": "straight", "lane": 0, "type": "car"}
+        }))
+        spawn_3way = await recv_type("spawn_ack")
+        print("3-way spawn ack:", spawn_3way)
+
+        # 12. Switch back to straight_road
+        print("Switching back to straight_road...")
+        await ws.send(json.dumps({
+            "action": "select_scenario",
+            "payload": {"scenario_id": "straight_road"}
+        }))
+        scenario_ack_straight = await recv_type("scenario_switched")
+        print("Scenario Switched back Ack:", scenario_ack_straight.get("scenario", {}).get("name"))
+        assert scenario_ack_straight.get("scenario", {}).get("id") == "straight_road"
         
-    print("\n>>> ALL BACKEND & WEBSOCKET VERIFICATIONS PASSED 100%! <<<")
+    print("\n>>> ALL BACKEND, SCENARIOS & WEBSOCKET VERIFICATIONS PASSED 100%! <<<")
 
 if __name__ == "__main__":
     asyncio.run(test_full_flow())
