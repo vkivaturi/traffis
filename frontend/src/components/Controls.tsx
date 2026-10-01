@@ -43,6 +43,8 @@ interface ControlsProps {
   latencyMs?: number;
   updateRateHz?: number;
   dataExchangedMB?: number;
+  defaultSpeedKmh?: number;
+  onUpdateDefaultSpeed?: (speedKmh: number) => void;
 }
 
 const COLOR_OPTIONS = [
@@ -82,6 +84,8 @@ export const Controls: React.FC<ControlsProps> = ({
   latencyMs = 0,
   updateRateHz = 20,
   dataExchangedMB = 0,
+  defaultSpeedKmh = 50,
+  onUpdateDefaultSpeed,
 }) => {
   const isIntersection = activeScenarioId === 'three_way_intersection';
   const currentVehPerHour =
@@ -98,7 +102,8 @@ export const Controls: React.FC<ControlsProps> = ({
   const [selectedLane, setSelectedLane] = useState<number | null>(null); // null = random, 0 = Slow/Kerb, 1 = Fast/Overtake
   const [vehicleType, setVehicleType] = useState<'car' | 'sports' | 'truck' | 'van'>('car');
   const [vehicleColor, setVehicleColor] = useState<string>('#38bdf8');
-  const [initialSpeed, setInitialSpeed] = useState<number>(isIntersection ? 15 : 25);
+  // Default vehicle speed is 50 km/h (~13.9 m/s)
+  const [initialSpeed, setInitialSpeed] = useState<number>(13.9);
 
   const handleSpawn = () => {
     if (isIntersection) {
@@ -490,6 +495,87 @@ export const Controls: React.FC<ControlsProps> = ({
                   <Car size={18} />
                   <span>SPAWN VEHICLE NOW [S]</span>
                 </button>
+              </div>
+
+              {/* Global Default Cruising Speed Control (Adjustable Baseline Speed) */}
+              <div
+                style={{
+                  gridColumn: '1 / -1',
+                  marginTop: '8px',
+                  padding: '14px 18px',
+                  backgroundColor: 'rgba(15, 23, 42, 0.65)',
+                  borderRadius: '10px',
+                  border: '1px solid rgba(56, 189, 248, 0.25)',
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: '14px',
+                }}
+              >
+                <div style={{ flex: '1 1 240px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '2px' }}>
+                    <Gauge size={16} color="#38bdf8" />
+                    <span style={{ fontSize: '0.8rem', fontWeight: 800, color: '#f8fafc', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                      Default Vehicle Speed
+                    </span>
+                    <span
+                      style={{
+                        fontSize: '0.85rem',
+                        fontWeight: 800,
+                        color: '#38bdf8',
+                        padding: '2px 8px',
+                        borderRadius: '4px',
+                        backgroundColor: 'rgba(56, 189, 248, 0.15)',
+                        border: '1px solid rgba(56, 189, 248, 0.3)',
+                      }}
+                    >
+                      {Math.round(defaultSpeedKmh)} km/h ({(defaultSpeedKmh / 3.6).toFixed(1)} m/s)
+                    </span>
+                  </div>
+                  <div style={{ fontSize: '0.72rem', color: '#94a3b8' }}>
+                    Baseline cruising speed limit for auto-spawned vehicles & road network (default: 50 km/h).
+                  </div>
+                </div>
+
+                <div style={{ flex: '2 1 300px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <input
+                    type="range"
+                    min="20"
+                    max="120"
+                    step="5"
+                    value={defaultSpeedKmh}
+                    onChange={(e) => onUpdateDefaultSpeed?.(Number(e.target.value))}
+                    style={{ width: '100%', accentColor: '#38bdf8' }}
+                  />
+                  <div style={{ display: 'flex', gap: '6px' }}>
+                    {[
+                      { spd: 30, label: '30 km/h (City)' },
+                      { spd: 50, label: '50 km/h (Default)' },
+                      { spd: 80, label: '80 km/h (Express)' },
+                      { spd: 100, label: '100 km/h (Highway)' },
+                    ].map(({ spd, label }) => (
+                      <button
+                        key={spd}
+                        className="btn-secondary"
+                        style={{
+                          flex: 1,
+                          padding: '4px 6px',
+                          fontSize: '0.72rem',
+                          fontWeight: 700,
+                          backgroundColor:
+                            Math.round(defaultSpeedKmh) === spd ? '#0284c7' : 'rgba(15, 23, 42, 0.4)',
+                          borderColor:
+                            Math.round(defaultSpeedKmh) === spd ? '#38bdf8' : 'rgba(255, 255, 255, 0.1)',
+                          color: Math.round(defaultSpeedKmh) === spd ? '#ffffff' : '#94a3b8',
+                        }}
+                        onClick={() => onUpdateDefaultSpeed?.(spd)}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
             </div>
           )}

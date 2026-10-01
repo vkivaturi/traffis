@@ -45,7 +45,10 @@ class Settings(BaseModel):
     SUMO_BINARY: str = resolve_sumo_binary("sumo")
     SUMOCFG_FILE: str = str(SUMO_CONFIG_DIR / "road.sumocfg")
     STEP_LENGTH: float = 0.05  # 50ms per simulation step
-    UPDATE_RATE_HZ: float = 20.0  # 20 updates per second
+    SIMULATION_RATE_HZ: float = 20.0  # 20 simulation steps per second (high-fidelity SUMO physics)
+    BROADCAST_RATE_HZ: float = 10.0  # 10 Hz WebSocket broadcasting to reduce network traffic by 50%
+    UPDATE_RATE_HZ: float = 20.0  # Backward-compatible alias
+    DEFAULT_SPEED_KMH: float = 50.0  # Default vehicle cruising speed (50 km/h = 13.89 m/s)
     ROAD_LENGTH_M: float = 1000.0
     NUM_LANES_PER_DIR: int = 2
     NUM_LANES: int = 4  # 2 lanes per direction (Westbound + Eastbound)

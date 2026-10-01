@@ -56,9 +56,11 @@ class SimulationStateMessage(BaseModel):
     step: int
     is_running: bool
     scenario_id: str = "straight_road"
-    vehicles: List[VehicleData]
+    vehicles: Optional[List[VehicleData]] = None
+    compact_vehicles: Optional[List[List[Any]]] = None
     stats: SimulationStats
     traffic_light: TrafficLightState
+    default_speed_kmh: Optional[float] = 50.0
 
 class SpawnRequest(BaseModel):
     direction: Optional[str] = Field(None, description="Travel direction or spawn origin: 'east', 'west', 'north', 'random'")

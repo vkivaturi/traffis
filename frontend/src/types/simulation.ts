@@ -60,8 +60,10 @@ export interface SimulationState {
   is_running: boolean;
   scenario_id?: string;
   vehicles: Vehicle[];
+  compact_vehicles?: (string | number | null)[][];
   stats: SimulationStats;
   traffic_light?: TrafficLightData;
+  default_speed_kmh?: number;
 }
 
 export interface LaneInfo {

@@ -27,13 +27,14 @@ export const App: React.FC = () => {
     setAutoSpawn,
     setTrafficLight,
     nextTrafficLightPhase,
+    setDefaultSpeed,
   } = useSimulationSocket();
 
   const currentScenarioId = activeScenario?.id || state.scenario_id || 'straight_road';
   const isIntersection = currentScenarioId === 'three_way_intersection';
 
   const [camera, setCamera] = useState<CameraState>({
-    x: 100,
+    x: 500,
     y: 0,
     zoom: 12,
     followingId: null,
@@ -80,7 +81,7 @@ export const App: React.FC = () => {
       });
     } else {
       setCamera({
-        x: 100,
+        x: 500,
         y: 0,
         zoom: 12,
         followingId: null,
@@ -100,7 +101,7 @@ export const App: React.FC = () => {
     setCamera((prev) => ({
       ...prev,
       followingId: null,
-      x: isIntersection ? 0 : 100,
+      x: isIntersection ? 0 : 500,
       y: isIntersection ? 70 : 0,
       zoom: isIntersection ? 3.8 : 12,
     }));
@@ -251,6 +252,8 @@ export const App: React.FC = () => {
         latencyMs={latencyMs}
         updateRateHz={updateRateHz}
         dataExchangedMB={dataExchangedMB}
+        defaultSpeedKmh={state.default_speed_kmh ?? 50}
+        onUpdateDefaultSpeed={setDefaultSpeed}
       />
     </div>
   );

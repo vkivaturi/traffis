@@ -16,15 +16,22 @@ async def test_full_flow():
                     return msg
             raise TimeoutError(f"Did not receive {expected_type}")
 
+        def get_vehs(st_msg):
+            if st_msg.get("vehicles"):
+                return st_msg["vehicles"]
+            if st_msg.get("compact_vehicles"):
+                return [{"id": c[0], "direction": c[13], "speed": c[3], "lane": c[6]} for c in st_msg["compact_vehicles"]]
+            return []
+
         # 1. Receive initial messages
         net_info = await recv_type("network_info")
         print("Received network info:", net_info.get("type"), "TL X:", net_info.get("data", {}).get("traffic_light_x"))
         
-        # 2. Test receiving 5 state packets at 20Hz
+        # 2. Test receiving 5 state packets
         for i in range(5):
             state = await recv_type("state")
             st = state.get("sim_time")
-            n_veh = len(state.get("vehicles", []))
+            n_veh = len(get_vehs(state))
             avg_spd = state.get("stats", {}).get("avg_speed_kmh")
             tl_st = state.get("traffic_light", {}).get("state")
             print(f"State tick {i}: time={st}s active_vehs={n_veh} avg_speed={avg_spd} km/h tl={tl_st}")
@@ -48,13 +55,23 @@ async def test_full_flow():
         
         # 4. Receive next state and check spawned vehicles & traffic light
         state = await recv_type("state")
-        vehs = state.get("vehicles", [])
+        vehs = get_vehs(state)
         tl = state.get("traffic_light", {})
         print("After spawn - vehicle count:", len(vehs))
         directions = [v.get("direction") for v in vehs]
         print("Vehicle directions in state:", directions)
         print("Traffic light data in state:", tl)
         assert tl.get("state") in ["green", "yellow", "red"], f"Invalid TL state: {tl}"
+
+        # 4b. Test Default Speed Adjustment to 50 km/h
+        print("Testing set_default_speed to 50 km/h...")
+        await ws.send(json.dumps({
+            "action": "set_default_speed",
+            "payload": {"speed_kmh": 50.0}
+        }))
+        spd_ack = await recv_type("default_speed_ack")
+        print("Default Speed Ack:", spd_ack)
+        assert spd_ack.get("default_speed_kmh") == 50.0
 
         # 5. Test Traffic Light Timing Configuration
         print("Testing set_traffic_light timings...")
@@ -99,7 +116,7 @@ async def test_full_flow():
 
         # Receive reset state
         state = await recv_type("state")
-        print(f"After reset: sim_time={state.get('sim_time')}s, active_vehs={len(state.get('vehicles', []))}, tl={state.get('traffic_light', {}).get('state')}")
+        print(f"After reset: sim_time={state.get('sim_time')}s, active_vehs={len(get_vehs(state))}, tl={state.get('traffic_light', {}).get('state')}")
 
         # 11. Test Scenario Switching over WebSocket to 3-Way Intersection
         print("Testing Scenario Switch to three_way_intersection...")

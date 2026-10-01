@@ -75,6 +75,7 @@ class SimulationManager:
         self.auto_spawn = AutoSpawnConfig(enabled=True, rate_per_minute=25.0, rate_per_hour=1500.0)
         self.last_auto_spawn_time = 0.0
         self.auto_spawn_accumulator = 0.0
+        self.default_speed_kmh: float = settings.DEFAULT_SPEED_KMH
 
         # Concurrency & WebSockets
         self.lock = asyncio.Lock()
@@ -115,6 +116,14 @@ class SimulationManager:
         self.auto_spawn_accumulator = 0.0
         self.vehicle_colors.clear()
         self.scenario.reset_state()
+
+        # Apply default speed limit to all lanes
+        default_speed_m_s = self.default_speed_kmh / 3.6
+        try:
+            for lane_id in traci.lane.getIDList():
+                traci.lane.setMaxSpeed(lane_id, default_speed_m_s)
+        except Exception as e:
+            logger.warning("Could not set initial lane speed limit: %s", e)
 
     async def select_scenario(self, scenario_id: str) -> None:
         """Switch to a different scenario (e.g. straight road vs 3-way intersection)."""
@@ -232,11 +241,14 @@ class SimulationManager:
         else:
             depart_lane = "random"
 
-        # Speed selection
+        # Speed selection (defaults to configured cruising speed e.g. 50 km/h = 13.89 m/s)
         if req.speed is not None and req.speed > 0:
-            depart_speed = str(req.speed)
+            depart_speed = str(round(req.speed, 2))
+            max_v_speed = req.speed
         else:
-            depart_speed = "desired"
+            default_m_s = self.default_speed_kmh / 3.6
+            depart_speed = str(round(default_m_s, 2))
+            max_v_speed = default_m_s
 
         # Color selection
         chosen_color = req.color or random.choice(COLOR_PALETTE)
@@ -252,6 +264,7 @@ class SimulationManager:
                 departSpeed=depart_speed
             )
             traci.vehicle.setColor(veh_id, rgba)
+            traci.vehicle.setMaxSpeed(veh_id, max_v_speed)
             self.total_spawned += 1
             return veh_id
         except traci.TraCIException as e:
@@ -263,15 +276,32 @@ class SimulationManager:
                     routeID=route_id,
                     typeID=v_type,
                     departLane="free",
-                    departSpeed="desired"
+                    departSpeed=depart_speed
                 )
                 traci.vehicle.setColor(veh_id, rgba)
+                traci.vehicle.setMaxSpeed(veh_id, max_v_speed)
                 self.total_spawned += 1
                 return veh_id
             except Exception as e2:
                 # If entry lanes are temporarily saturated, skip without throwing to keep loop ticking
                 logger.debug("Entry temporarily saturated on %s: %s", route_id, e2)
                 return ""
+
+    async def set_default_speed(self, speed_kmh: float):
+        """Update default cruising speed and adjust existing vehicles and lanes."""
+        async with self.lock:
+            self.default_speed_kmh = max(10.0, min(150.0, round(speed_kmh, 1)))
+            speed_m_s = self.default_speed_kmh / 3.6
+            if self.is_initialized:
+                try:
+                    for lane_id in traci.lane.getIDList():
+                        traci.lane.setMaxSpeed(lane_id, speed_m_s)
+                    for vid in traci.vehicle.getIDList():
+                        traci.vehicle.setMaxSpeed(vid, speed_m_s)
+                except Exception as e:
+                    logger.warning("Error updating max speed on lanes/vehicles: %s", e)
+        logger.info("Default vehicle speed updated to %.1f km/h (%.2f m/s)", self.default_speed_kmh, self.default_speed_kmh / 3.6)
+        await self._broadcast_current_state()
 
     def set_auto_spawn(self, config: AutoSpawnConfig):
         if config.rate_per_hour is not None and config.rate_per_hour >= 0:
@@ -298,10 +328,13 @@ class SimulationManager:
             self.vehicle_colors.pop(arr_id, None)
 
     def _collect_current_state(self) -> SimulationStateMessage:
-        """Extract all current vehicle coordinates and metrics."""
+        """Extract all current vehicle coordinates and metrics in compact format for network efficiency."""
         veh_ids = traci.vehicle.getIDList()
-        vehicle_list: List[VehicleData] = []
+        compact_list: List[List[Any]] = []
         total_speed_kmh = 0.0
+
+        road_km = self.scenario.get_network_info().road_length / 1000.0
+        total_pce = 0.0
 
         for vid in veh_ids:
             try:
@@ -309,13 +342,15 @@ class SimulationManager:
                 speed = traci.vehicle.getSpeed(vid)
                 speed_kmh = round(speed * 3.6, 1)
                 total_speed_kmh += speed_kmh
-                accel = round(traci.vehicle.getAcceleration(vid), 2)
+                accel = round(traci.vehicle.getAcceleration(vid), 1)
                 lane_idx = traci.vehicle.getLaneIndex(vid)
                 lane_id = traci.vehicle.getLaneID(vid)
                 angle = round(traci.vehicle.getAngle(vid), 1)
                 v_type = traci.vehicle.getTypeID(vid)
-                length = traci.vehicle.getLength(vid)
-                width = traci.vehicle.getWidth(vid)
+                length = round(traci.vehicle.getLength(vid), 1)
+                width = round(traci.vehicle.getWidth(vid), 1)
+
+                total_pce += PCE_WEIGHTS.get(v_type, 1.0)
 
                 color_hex = self.vehicle_colors.get(vid)
                 if not color_hex:
@@ -331,34 +366,32 @@ class SimulationManager:
                 # Direction detection delegated to scenario
                 v_dir = self.scenario.enrich_vehicle_direction(lane_id, angle, x, y)
 
-                vehicle_list.append(VehicleData(
-                    id=vid,
-                    x=round(x, 2),
-                    y=round(y, 2),
-                    direction=v_dir,
-                    lane_index=lane_idx,
-                    lane_id=lane_id,
-                    speed=round(speed, 2),
-                    speed_kmh=speed_kmh,
-                    acceleration=accel,
-                    angle=angle,
-                    type=v_type,
-                    color=color_hex,
-                    length=length,
-                    width=width,
-                    leader_id=leader_id,
-                    leader_dist=leader_dist
-                ))
+                # Compact tuple format:
+                # [0:id, 1:x, 2:y, 3:speed, 4:accel, 5:angle, 6:lane_idx, 7:type, 8:color, 9:len, 10:wid, 11:leader_id, 12:leader_dist, 13:direction]
+                compact_list.append([
+                    vid,
+                    round(x, 1),
+                    round(y, 1),
+                    round(speed, 1),
+                    accel,
+                    angle,
+                    lane_idx,
+                    v_type,
+                    color_hex,
+                    length,
+                    width,
+                    leader_id,
+                    leader_dist,
+                    v_dir
+                ])
             except traci.TraCIException:
                 continue
 
-        active_count = len(vehicle_list)
+        active_count = len(compact_list)
         avg_speed = round(total_speed_kmh / active_count, 1) if active_count > 0 else 0.0
-        road_km = self.scenario.get_network_info().road_length / 1000.0
         density = round(active_count / max(0.2, road_km), 1)
 
         # Indian Traffic Engineering: Passenger Car Equivalent (PCE/PCU) calculation
-        total_pce = sum(PCE_WEIGHTS.get(v.type, 1.0) for v in vehicle_list)
         density_pce_km = total_pce / max(0.2, road_km)
         # Flow rate q = k * v (in PCE / hour)
         if active_count > 0 and avg_speed > 0:
@@ -385,13 +418,15 @@ class SimulationManager:
             step=self.step_count,
             is_running=self.is_running,
             scenario_id=self.scenario.id,
-            vehicles=vehicle_list,
+            compact_vehicles=compact_list,
+            vehicles=None,
             stats=stats,
-            traffic_light=tl_data
+            traffic_light=tl_data,
+            default_speed_kmh=self.default_speed_kmh
         )
 
     async def _broadcast_current_state(self):
-        """Broadcast state to all connected WebSockets."""
+        """Broadcast state to all connected WebSockets using compact JSON serialization."""
         if not self.active_websockets:
             return
 
@@ -400,7 +435,7 @@ class SimulationManager:
                 return
             state_msg = self._collect_current_state()
 
-        json_data = state_msg.model_dump_json()
+        json_data = state_msg.model_dump_json(exclude_none=True)
         await self._send_to_all(json_data)
 
     async def _broadcast_scenario_switched(self):
@@ -436,10 +471,19 @@ class SimulationManager:
             self.active_websockets.discard(ws)
 
     async def _simulation_loop(self):
-        """20 Hz simulation loop (every 0.05 seconds)."""
-        interval = 1.0 / settings.UPDATE_RATE_HZ
-        logger.info("Simulation loop running at %.1f Hz (%.3fs interval)...", settings.UPDATE_RATE_HZ, interval)
+        """High-performance simulation loop:
+        Steps SUMO physics at 20 Hz (interval = 0.05s) for Krauss car-following accuracy.
+        Broadcasts WebSocket state at 10 Hz (every 2nd step) to cut network traffic by 50%
+        while CanvasView 60 FPS lerp ensures silky smooth motion.
+        """
+        step_interval = 1.0 / settings.SIMULATION_RATE_HZ
+        broadcast_step_interval = max(1, int(round(settings.SIMULATION_RATE_HZ / settings.BROADCAST_RATE_HZ)))
+        logger.info(
+            "Simulation loop: physics @ %.1f Hz (%.3fs), WebSocket broadcast @ %.1f Hz (every %d steps)...",
+            settings.SIMULATION_RATE_HZ, step_interval, settings.BROADCAST_RATE_HZ, broadcast_step_interval
+        )
 
+        step_counter = 0
         while True:
             t0 = time.monotonic()
             try:
@@ -458,18 +502,24 @@ class SimulationManager:
 
                         # Advance SUMO simulation
                         self._do_step()
-                        state_msg = self._collect_current_state()
+                        step_counter += 1
+
+                        should_broadcast = (step_counter % broadcast_step_interval == 0)
+                        if should_broadcast and self.active_websockets:
+                            state_msg = self._collect_current_state()
+                        else:
+                            state_msg = None
 
                     # Broadcast outside the lock to minimize contention
-                    if self.active_websockets:
-                        json_payload = state_msg.model_dump_json()
+                    if state_msg and self.active_websockets:
+                        json_payload = state_msg.model_dump_json(exclude_none=True)
                         await self._send_to_all(json_payload)
 
             except Exception as e:
                 logger.error("Error in simulation loop: %s", e, exc_info=True)
 
             elapsed = time.monotonic() - t0
-            sleep_duration = max(0.001, interval - elapsed)
+            sleep_duration = max(0.001, step_interval - elapsed)
             await asyncio.sleep(sleep_duration)
 
     async def register_websocket(self, ws: WebSocket):
@@ -485,7 +535,7 @@ class SimulationManager:
         async with self.lock:
             if self.is_initialized:
                 state_msg = self._collect_current_state()
-                await ws.send_text(state_msg.model_dump_json())
+                await ws.send_text(state_msg.model_dump_json(exclude_none=True))
 
     def unregister_websocket(self, ws: WebSocket):
         self.active_websockets.discard(ws)

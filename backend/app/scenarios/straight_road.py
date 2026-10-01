@@ -24,7 +24,7 @@ class StraightRoadScenario(BaseScenario):
     description = "1000m Dual Carriageway with 4 lanes (2 Eastbound, 2 Westbound) and Mid-Highway Traffic Signal"
     type = "straight"
     bounds = {"min_x": 0.0, "max_x": 1000.0, "min_y": -6.4, "max_y": 6.4}
-    default_camera = {"x": 100.0, "y": 0.0, "zoom": 12.0}
+    default_camera = {"x": 500.0, "y": 0.0, "zoom": 12.0}
 
     def __init__(self, sumocfg_file: str):
         self.sumocfg_file = sumocfg_file

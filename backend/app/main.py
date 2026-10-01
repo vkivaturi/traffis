@@ -113,6 +113,12 @@ async def next_traffic_light_phase():
     await sim_manager.next_traffic_light_phase()
     return {"status": "ok", "traffic_light": sim_manager._get_traffic_light_data().model_dump()}
 
+@app.post("/api/default-speed")
+async def set_default_speed(payload: dict):
+    speed_kmh = float(payload.get("speed_kmh", 50.0))
+    await sim_manager.set_default_speed(speed_kmh)
+    return {"status": "ok", "default_speed_kmh": sim_manager.default_speed_kmh}
+
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     await sim_manager.register_websocket(websocket)
@@ -136,6 +142,13 @@ async def websocket_endpoint(websocket: WebSocket):
                     scenario_id = payload.get("scenario_id")
                     if scenario_id:
                         await sim_manager.select_scenario(scenario_id)
+                elif action == "set_default_speed":
+                    speed_kmh = float(payload.get("speed_kmh", 50.0))
+                    await sim_manager.set_default_speed(speed_kmh)
+                    await websocket.send_text(json.dumps({
+                        "type": "default_speed_ack",
+                        "default_speed_kmh": sim_manager.default_speed_kmh
+                    }))
                 elif action == "spawn":
                     spawn_req = SpawnRequest(**payload)
                     veh_id = await sim_manager.spawn_vehicle(spawn_req)

@@ -86,6 +86,30 @@ export function useSimulationSocket() {
       try {
         const data = JSON.parse(event.data);
         if (data.type === 'state') {
+          if (data.compact_vehicles && Array.isArray(data.compact_vehicles)) {
+            // Unpack compact tuple format:
+            // [0:id, 1:x, 2:y, 3:speed, 4:accel, 5:angle, 6:lane_idx, 7:type, 8:color, 9:len, 10:wid, 11:leader_id, 12:leader_dist, 13:direction]
+            data.vehicles = data.compact_vehicles.map((c: (string | number | null)[]) => ({
+              id: c[0] as string,
+              x: c[1] as number,
+              y: c[2] as number,
+              speed: c[3] as number,
+              speed_kmh: Math.round((c[3] as number) * 36) / 10,
+              acceleration: c[4] as number,
+              angle: c[5] as number,
+              lane_index: c[6] as number,
+              type: (c[7] as string) || 'car',
+              color: (c[8] as string) || '#38bdf8',
+              length: (c[9] as number) || 5.0,
+              width: (c[10] as number) || 1.8,
+              leader_id: (c[11] as string | null) ?? null,
+              leader_dist: (c[12] as number | null) ?? null,
+              direction: (c[13] as 'east' | 'west' | 'north' | 'south') || ((c[5] as number) > 225 && (c[5] as number) < 315 ? 'west' : (c[5] as number) > 135 && (c[5] as number) <= 225 ? 'south' : 'east'),
+              lane_id: `lane_${c[6]}`,
+            }));
+          } else if (!data.vehicles) {
+            data.vehicles = [];
+          }
           setState(data);
         } else if (data.type === 'network_info') {
           setNetworkInfo(data.data);
@@ -208,6 +232,10 @@ export function useSimulationSocket() {
     send('next_traffic_light_phase');
   }, [send]);
 
+  const setDefaultSpeed = useCallback((speedKmh: number) => {
+    send('set_default_speed', { speed_kmh: speedKmh });
+  }, [send]);
+
   return {
     state,
     networkInfo,
@@ -226,5 +254,6 @@ export function useSimulationSocket() {
     setAutoSpawn,
     setTrafficLight,
     nextTrafficLightPhase,
+    setDefaultSpeed,
   };
 }
