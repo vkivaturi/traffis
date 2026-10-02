@@ -1,16 +1,33 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { ExternalLink } from 'lucide-react';
+import { ExternalLink, Info } from 'lucide-react';
 import { useSimulationSocket } from './hooks/useSimulationSocket';
+import { useAuth } from './hooks/useAuth';
 import { Header } from './components/Header';
 import { MiniMap } from './components/MiniMap';
 import { CanvasView } from './components/CanvasView';
 import { Controls } from './components/Controls';
 import { VehicleInspector } from './components/VehicleInspector';
 import { TrafficSignalPanel } from './components/TrafficSignalPanel';
+import { LandingPage } from './components/LandingPage';
+import { AboutModal } from './components/AboutModal';
 import type { CameraState, SpawnOptions, AutoSpawnSettings } from './types/simulation';
 import { soundSystem } from './utils/audio';
 
 export const App: React.FC = () => {
+  const {
+    user,
+    isAuthenticated,
+    signInWithGoogle,
+    signOut,
+  } = useAuth();
+
+  // View state: 'landing' | 'simulator'
+  // Only authenticated users can access 'simulator'
+  const [currentView, setCurrentView] = useState<'landing' | 'simulator'>('landing');
+  const [isAboutOpen, setIsAboutOpen] = useState(false);
+
+  const activeView = isAuthenticated ? currentView : 'landing';
+
   const {
     state,
     scenarios,
@@ -54,13 +71,13 @@ export const App: React.FC = () => {
   // Sound effect when traffic signal changes
   const prevSignalStateRef = useRef<string | undefined>(undefined);
   useEffect(() => {
-    if (state.traffic_light && soundEnabled) {
+    if (state.traffic_light && soundEnabled && activeView === 'simulator') {
       if (prevSignalStateRef.current && prevSignalStateRef.current !== state.traffic_light.state) {
         soundSystem.playSignalChangeSound(state.traffic_light.state);
       }
       prevSignalStateRef.current = state.traffic_light.state;
     }
-  }, [state.traffic_light, soundEnabled]);
+  }, [state.traffic_light, soundEnabled, activeView]);
 
   const handleToggleSound = () => {
     const nextVal = !soundEnabled;
@@ -127,8 +144,10 @@ export const App: React.FC = () => {
 
   const selectedVehicle = state.vehicles.find((v) => v.id === selectedVehicleId) || null;
 
-  // Keyboard Shortcuts
+  // Keyboard Shortcuts (only active in simulator view)
   useEffect(() => {
+    if (activeView !== 'simulator') return;
+
     const handleKeyDown = (e: KeyboardEvent) => {
       if (['INPUT', 'SELECT', 'TEXTAREA'].includes((e.target as HTMLElement).tagName)) {
         return;
@@ -149,8 +168,26 @@ export const App: React.FC = () => {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [state.is_running, pause, play, handleReset, handleSpawn]);
+  }, [activeView, state.is_running, pause, play, handleReset, handleSpawn]);
 
+  // If user is on landing page or not authenticated, display Landing Page
+  if (activeView === 'landing') {
+    return (
+      <LandingPage
+        user={user}
+        isAuthenticated={isAuthenticated}
+        onLaunchSimulator={() => {
+          if (isAuthenticated) {
+            setCurrentView('simulator');
+          }
+        }}
+        onSignInWithGoogle={signInWithGoogle}
+        onSignOut={signOut}
+      />
+    );
+  }
+
+  // Authenticated Simulator View
   return (
     <div
       id="app-root"
@@ -163,7 +200,7 @@ export const App: React.FC = () => {
         backgroundColor: 'var(--bg-primary)',
       }}
     >
-      {/* 1. Header Navigation with Road Selection Dropdown */}
+      {/* 1. Header Navigation with Road Selection Dropdown, Home link, and Profile */}
       <Header
         state={state}
         connected={connected}
@@ -175,6 +212,10 @@ export const App: React.FC = () => {
         scenarios={scenarios}
         activeScenarioId={currentScenarioId}
         onSelectScenario={handleSelectScenario}
+        user={user}
+        onNavigateHome={() => setCurrentView('landing')}
+        onOpenAbout={() => setIsAboutOpen(true)}
+        onSignOut={signOut}
       />
 
       {/* 2. Scenario-aware Radar Bar */}
@@ -266,7 +307,7 @@ export const App: React.FC = () => {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          gap: '6px',
+          gap: '12px',
           padding: '4px 16px',
           backgroundColor: 'rgba(8, 12, 20, 0.95)',
           borderTop: '1px solid rgba(255, 255, 255, 0.06)',
@@ -276,6 +317,23 @@ export const App: React.FC = () => {
           flexShrink: 0,
         }}
       >
+        <button
+          onClick={() => setIsAboutOpen(true)}
+          style={{
+            background: 'none',
+            border: 'none',
+            color: '#38bdf8',
+            cursor: 'pointer',
+            fontSize: '0.7rem',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '3px',
+          }}
+        >
+          <Info size={11} />
+          About Traffis
+        </button>
+        <span style={{ color: '#334155' }}>•</span>
         <span>Simulation engine powered by</span>
         <a
           href="https://eclipse.dev/sumo/"
@@ -295,9 +353,10 @@ export const App: React.FC = () => {
           <span>Eclipse SUMO</span>
           <ExternalLink size={11} />
         </a>
-        <span style={{ color: '#334155' }}>—</span>
-        <span>Open source microscopic traffic simulation suite</span>
       </footer>
+
+      {/* Global About Modal */}
+      <AboutModal isOpen={isAboutOpen} onClose={() => setIsAboutOpen(false)} />
     </div>
   );
 };

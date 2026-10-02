@@ -1,6 +1,22 @@
 import React from 'react';
-import { Activity, Radio, Cpu, Clock, Zap, Volume2, VolumeX, GitFork, Milestone, ChevronDown, ArrowDownUp } from 'lucide-react';
+import {
+  Activity,
+  Radio,
+  Cpu,
+  Clock,
+  Zap,
+  Volume2,
+  VolumeX,
+  GitFork,
+  Milestone,
+  ChevronDown,
+  ArrowDownUp,
+  Home,
+  Info,
+  LogOut,
+} from 'lucide-react';
 import type { SimulationState, ScenarioMetadata } from '../types/simulation';
+import type { User } from '../types/auth';
 
 interface HeaderProps {
   state: SimulationState;
@@ -13,6 +29,10 @@ interface HeaderProps {
   scenarios: ScenarioMetadata[];
   activeScenarioId: string;
   onSelectScenario: (scenarioId: string) => void;
+  user?: User | null;
+  onNavigateHome?: () => void;
+  onOpenAbout?: () => void;
+  onSignOut?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -26,6 +46,10 @@ export const Header: React.FC<HeaderProps> = ({
   scenarios,
   activeScenarioId,
   onSelectScenario,
+  user,
+  onNavigateHome,
+  onOpenAbout,
+  onSignOut,
 }) => {
   const currentScenario = scenarios.find((s) => s.id === activeScenarioId) || scenarios[0];
   const isIntersection = currentScenario?.type === 'intersection' || activeScenarioId.includes('intersection');
@@ -44,13 +68,32 @@ export const Header: React.FC<HeaderProps> = ({
         zIndex: 20,
       }}
     >
-      {/* Left: Brand, Road Selection Dropdown & Status */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '18px' }}>
+      {/* Left: Brand, Home, Road Selection Dropdown & Status */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+        {/* Home / Landing Page button */}
+        {onNavigateHome && (
+          <button
+            onClick={onNavigateHome}
+            className="btn-secondary"
+            style={{
+              padding: '6px 12px',
+              fontSize: '0.78rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+            }}
+            title="Return to Main Landing Page"
+          >
+            <Home size={14} color="#38bdf8" />
+            <span>Landing</span>
+          </button>
+        )}
+
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <div
             style={{
-              width: '34px',
-              height: '34px',
+              width: '32px',
+              height: '32px',
               borderRadius: '8px',
               background: 'linear-gradient(135deg, #0284c7 0%, #38bdf8 100%)',
               display: 'flex',
@@ -59,13 +102,13 @@ export const Header: React.FC<HeaderProps> = ({
               boxShadow: '0 0 15px rgba(56, 189, 248, 0.4)',
             }}
           >
-            <Activity size={18} color="#ffffff" />
+            <Activity size={17} color="#ffffff" />
           </div>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <span
                 style={{
-                  fontSize: '1.05rem',
+                  fontSize: '1.0rem',
                   fontWeight: 800,
                   letterSpacing: '0.05em',
                   background: 'linear-gradient(90deg, #ffffff, #94a3b8)',
@@ -77,24 +120,18 @@ export const Header: React.FC<HeaderProps> = ({
               </span>
               <span
                 style={{
-                  fontSize: '0.65rem',
+                  fontSize: '0.62rem',
                   fontWeight: 700,
                   textTransform: 'uppercase',
-                  padding: '2px 8px',
+                  padding: '2px 6px',
                   borderRadius: '4px',
                   backgroundColor: 'rgba(245, 158, 11, 0.15)',
                   color: '#f59e0b',
                   border: '1px solid rgba(245, 158, 11, 0.35)',
-                  letterSpacing: '0.04em',
                 }}
               >
-                🇮🇳 Indian Roads (LHT)
+                🇮🇳 LHT
               </span>
-            </div>
-            <div style={{ fontSize: '0.72rem', color: '#64748b' }}>
-              {isIntersection
-                ? '3-Way T-Intersection • Left-Hand Traffic • TraCI 20Hz'
-                : '1000m Highway • Left-Hand Traffic • TraCI 20Hz'}
             </div>
           </div>
         </div>
@@ -124,7 +161,7 @@ export const Header: React.FC<HeaderProps> = ({
           <div style={{ display: 'flex', flexDirection: 'column' }}>
             <span
               style={{
-                fontSize: '0.62rem',
+                fontSize: '0.6rem',
                 fontWeight: 700,
                 color: '#64748b',
                 textTransform: 'uppercase',
@@ -144,7 +181,7 @@ export const Header: React.FC<HeaderProps> = ({
                 border: 'none',
                 outline: 'none',
                 fontWeight: 700,
-                fontSize: '0.82rem',
+                fontSize: '0.8rem',
                 cursor: 'pointer',
                 paddingRight: '14px',
                 WebkitAppearance: 'none',
@@ -201,24 +238,24 @@ export const Header: React.FC<HeaderProps> = ({
         >
           <span
             style={{
-              width: '8px',
-              height: '8px',
+              width: '7px',
+              height: '7px',
               borderRadius: '50%',
               backgroundColor: connected ? '#10b981' : '#f43f5e',
               boxShadow: connected ? '0 0 8px #10b981' : '0 0 8px #f43f5e',
             }}
             className={connected ? 'pulse-indicator' : ''}
           />
-          <span style={{ color: connected ? '#34d399' : '#fb7185', fontWeight: 600 }}>
+          <span style={{ color: connected ? '#34d399' : '#fb7185', fontWeight: 600, fontSize: '0.72rem' }}>
             {connected ? 'CONNECTED' : 'DISCONNECTED'}
           </span>
         </div>
       </div>
 
       {/* Center: Live Telemetry ticker */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
         <div className="glass-pill" title="Simulation Time">
-          <Clock size={13} color="#94a3b8" />
+          <Clock size={12} color="#94a3b8" />
           <span style={{ color: '#94a3b8' }}>SIM T:</span>
           <span style={{ color: '#f8fafc', fontWeight: 600 }}>
             {state.sim_time.toFixed(2)}s
@@ -226,7 +263,7 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
 
         <div className="glass-pill" title="Simulation Step (50ms increments)">
-          <Cpu size={13} color="#94a3b8" />
+          <Cpu size={12} color="#94a3b8" />
           <span style={{ color: '#94a3b8' }}>STEP:</span>
           <span style={{ color: '#f8fafc', fontWeight: 600 }}>
             {state.step}
@@ -234,7 +271,7 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
 
         <div className="glass-pill" title="WebSocket Update Frequency">
-          <Radio size={13} color="#38bdf8" />
+          <Radio size={12} color="#38bdf8" />
           <span style={{ color: '#94a3b8' }}>RATE:</span>
           <span style={{ color: '#38bdf8', fontWeight: 600 }}>
             {updateRateHz} Hz
@@ -242,15 +279,15 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
 
         <div className="glass-pill" title="Packet roundtrip estimate">
-          <Zap size={13} color="#10b981" />
+          <Zap size={12} color="#10b981" />
           <span style={{ color: '#94a3b8' }}>PING:</span>
           <span style={{ color: '#10b981', fontWeight: 600 }}>
             {latencyMs}ms
           </span>
         </div>
 
-        <div className="glass-pill" title="Cumulative data exchanged between browser and service during simulation">
-          <ArrowDownUp size={13} color="#a855f7" />
+        <div className="glass-pill" title="Cumulative data exchanged between browser and service">
+          <ArrowDownUp size={12} color="#a855f7" />
           <span style={{ color: '#94a3b8' }}>DATA:</span>
           <span style={{ color: '#c084fc', fontWeight: 600 }}>
             {dataExchangedMB.toFixed(2)} MB
@@ -258,26 +295,72 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
       </div>
 
-      {/* Right: Sound toggle & Links */}
+      {/* Right: Sound toggle, About & User Profile */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        {/* Sound toggle */}
         <button
           id="btn-sound-toggle"
           className="btn-icon"
           onClick={onToggleSound}
           title={soundEnabled ? 'Mute engine audio' : 'Enable engine audio'}
+          style={{ width: '32px', height: '32px' }}
         >
-          {soundEnabled ? <Volume2 size={16} /> : <VolumeX size={16} />}
+          {soundEnabled ? <Volume2 size={15} /> : <VolumeX size={15} />}
         </button>
 
-        <a
-          href="/api/health"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="btn-secondary"
-          style={{ textDecoration: 'none', padding: '6px 12px', fontSize: '0.78rem' }}
-        >
-          API Status
-        </a>
+        {/* About Modal button */}
+        {onOpenAbout && (
+          <button
+            onClick={onOpenAbout}
+            className="btn-secondary"
+            style={{ padding: '6px 12px', fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '5px' }}
+            title="About Traffis & Contact Details"
+          >
+            <Info size={14} color="#38bdf8" />
+            <span>About</span>
+          </button>
+        )}
+
+        {/* Signed-in User badge */}
+        {user && (
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              background: 'rgba(30, 41, 59, 0.7)',
+              padding: '3px 8px 3px 4px',
+              borderRadius: '24px',
+              border: '1px solid rgba(255, 255, 255, 0.12)',
+            }}
+          >
+            <img
+              src={user.avatar}
+              alt={user.name}
+              style={{ width: '24px', height: '24px', borderRadius: '50%', objectFit: 'cover' }}
+            />
+            <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#f8fafc', maxWidth: '100px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {user.name.split(' ')[0]}
+            </span>
+            {onSignOut && (
+              <button
+                onClick={onSignOut}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#94a3b8',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  padding: '2px',
+                }}
+                title="Sign out"
+              >
+                <LogOut size={13} />
+              </button>
+            )}
+          </div>
+        )}
       </div>
     </header>
   );

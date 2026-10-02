@@ -19,3 +19,12 @@ dist/
 
 # SUMO temporary outputs
 *.dump.xml
+
+# Environment variables & Secrets
+.env
+.env.local
+.env.*.local
+frontend/.env
+frontend/.env.local
+*.json.secret
+client_secret*.json

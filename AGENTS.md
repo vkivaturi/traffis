@@ -85,11 +85,17 @@ flowchart TD
         ├── App.css               # App-level styling
         ├── index.css             # Design tokens, CSS variables, glassmorphism & resets
         ├── types/
-        │   └── simulation.ts     # TypeScript interfaces matching backend Pydantic models
+        │   ├── simulation.ts     # TypeScript interfaces matching backend Pydantic models
+        │   └── auth.ts           # User profile & authentication schema contracts
         ├── hooks/
-        │   └── useSimulationSocket.ts # WebSocket connection, reconnection, rate/jitter tracker
+        │   ├── useSimulationSocket.ts # WebSocket connection, reconnection, rate/jitter tracker
+        │   └── useAuth.ts        # Persistent Google authentication state & session manager
         ├── components/
-        │   ├── Header.tsx        # Top status bar, connection health, audio toggle, reset
+        │   ├── LandingPage.tsx   # Main landing page with 4 screenshot cards, hero banner & CTA
+        │   ├── GoogleSignInModal.tsx # Google OAuth modal dialog with one-click profile picker
+        │   ├── AboutModal.tsx    # About popup with system specs, architecture & contact email
+        │   ├── ImageLightboxModal.tsx # Fullscreen screenshot inspector with technical specs
+        │   ├── Header.tsx        # Top status bar, connection health, audio toggle, reset & profile
         │   ├── CanvasView.tsx    # HTML5 Canvas viewport: camera pan/zoom/follow, traffic gantry & 60fps lerp
         │   ├── MiniMap.tsx       # 1000m radar bar, vehicle dots, traffic signal marker, viewport bounding box
         │   ├── Controls.tsx      # Transport controls, vehicle spawner, vehicle inflow rate slider, signal quick pill
