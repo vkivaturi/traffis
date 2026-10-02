@@ -12,26 +12,27 @@ from ..schemas import (
     SpawnRequest,
     TrafficLightState,
     TrafficLightConfig,
+    SignalGroupTiming,
 )
 
 logger = logging.getLogger("scenario_four_way_intersection")
 
 # 4-way crossroads traffic light phase definitions.
-# Standard 4-phase signal: NS-Green → NS-Yellow → EW-Green → EW-Yellow
+# Standard 4-phase signal: EW-Green → EW-Yellow → NS-Green → NS-Yellow
 PHASE_DEFS = [
     {
         "index": 0,
         "name": "East-West Green / North-South Red",
         "state": "green",
-        "raw": "GGgrrrrGGgrrrr",
-        "default_duration": 15.0,
+        "raw": "rrrrGGGgrrrrGGGg",
+        "default_duration": 30.0,
         "active_approaches": ["west", "east"],
     },
     {
         "index": 1,
         "name": "East-West Yellow",
         "state": "yellow",
-        "raw": "yyyrrrryyyrrrr",
+        "raw": "rrrryyyyrrrryyyy",
         "default_duration": 3.0,
         "active_approaches": ["west", "east"],
     },
@@ -39,15 +40,15 @@ PHASE_DEFS = [
         "index": 2,
         "name": "North-South Green / East-West Red",
         "state": "green",
-        "raw": "rrrrGGgrrrrGGg",
-        "default_duration": 15.0,
+        "raw": "GGGgrrrrGGGgrrrr",
+        "default_duration": 30.0,
         "active_approaches": ["north", "south"],
     },
     {
         "index": 3,
         "name": "North-South Yellow",
         "state": "yellow",
-        "raw": "rrrryyyrrrryyy",
+        "raw": "yyyyrrrryyyyrrrr",
         "default_duration": 3.0,
         "active_approaches": ["north", "south"],
     },
@@ -72,7 +73,8 @@ class FourWayIntersectionScenario(BaseScenario):
         self.current_phase_idx = 0
         self.phase_timer = 0.0
         self.tl_mode = "auto"
-        self.phase_durations = [15.0, 3.0, 15.0, 3.0]  # EW-Green, EW-Yellow, NS-Green, NS-Yellow
+        # Default green to 30s for all directions, amber fixed to 3s
+        self.phase_durations = [30.0, 3.0, 30.0, 3.0]  # EW-Green (30s), EW-Yellow (3s), NS-Green (30s), NS-Yellow (3s)
 
     def get_metadata(self) -> ScenarioMetadata:
         origins = [
@@ -273,12 +275,19 @@ class FourWayIntersectionScenario(BaseScenario):
             self.apply_traffic_light_state("")
 
     def set_traffic_light_config(self, config: TrafficLightConfig) -> None:
-        if config.green_duration is not None:
-            self.phase_durations[0] = config.green_duration
-            self.phase_durations[2] = config.green_duration  # Symmetric: NS gets same green as EW
-        if config.yellow_duration is not None:
-            self.phase_durations[1] = config.yellow_duration
-            self.phase_durations[3] = config.yellow_duration
+        if config.green_durations:
+            if "east_west" in config.green_durations:
+                self.phase_durations[0] = float(config.green_durations["east_west"])
+            if "north_south" in config.green_durations:
+                self.phase_durations[2] = float(config.green_durations["north_south"])
+        elif config.green_duration is not None:
+            self.phase_durations[0] = float(config.green_duration)
+            self.phase_durations[2] = float(config.green_duration)
+
+        # Fixed amber/yellow duration of 3.0s
+        self.phase_durations[1] = 3.0
+        self.phase_durations[3] = 3.0
+
         if config.mode is not None:
             self.tl_mode = config.mode
         if config.state is not None:
@@ -303,6 +312,34 @@ class FourWayIntersectionScenario(BaseScenario):
         next_idx = (self.current_phase_idx + 1) % len(PHASE_DEFS)
         next_phase = PHASE_DEFS[next_idx]
 
+        ew_green = self.phase_durations[0]
+        ns_green = self.phase_durations[2]
+        amber = 3.0
+
+        # System calculates red times:
+        # While opposing approach is Green + Amber, this approach is Red
+        ew_calc_red = ns_green + amber
+        ns_calc_red = ew_green + amber
+
+        signal_groups = [
+            SignalGroupTiming(
+                id="east_west",
+                name="East-West Approach (West & East Arms)",
+                green_duration=ew_green,
+                amber_duration=amber,
+                calculated_red_duration=ew_calc_red,
+                is_active_green=(self.current_phase_idx == 0)
+            ),
+            SignalGroupTiming(
+                id="north_south",
+                name="North-South Approach (North & South Arms)",
+                green_duration=ns_green,
+                amber_duration=amber,
+                calculated_red_duration=ns_calc_red,
+                is_active_green=(self.current_phase_idx == 2)
+            ),
+        ]
+
         return TrafficLightState(
             id=self.tl_id,
             x=self.tl_x,
@@ -310,14 +347,15 @@ class FourWayIntersectionScenario(BaseScenario):
             state=curr["state"],
             raw_state=curr["raw"],
             mode=self.tl_mode,
-            green_duration=self.phase_durations[0],
-            yellow_duration=self.phase_durations[1],
-            red_duration=self.phase_durations[2],
+            green_duration=ew_green,
+            yellow_duration=amber,
+            red_duration=ew_calc_red,
             phase_timer=round(self.phase_timer, 2),
             phase_remaining=rem,
             next_state=next_phase["state"],
             phase_index=self.current_phase_idx,
-            phase_name=curr["name"]
+            phase_name=curr["name"],
+            signal_groups=signal_groups
         )
 
     def enrich_vehicle_direction(self, lane_id: str, angle: float, x: float, y: float) -> str:

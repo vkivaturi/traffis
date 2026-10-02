@@ -25,8 +25,6 @@ export const TrafficSignalPanel: React.FC<TrafficSignalPanelProps> = ({
     state,
     mode,
     green_duration,
-    yellow_duration,
-    red_duration,
     phase_remaining,
     next_state,
   } = trafficLight;
@@ -39,11 +37,6 @@ export const TrafficSignalPanel: React.FC<TrafficSignalPanelProps> = ({
     onUpdateSettings({ mode: 'manual', state: forceColor });
   };
 
-  const handleDurationChange = (type: 'green' | 'yellow' | 'red', val: number) => {
-    if (type === 'green') onUpdateSettings({ green_duration: val });
-    if (type === 'yellow') onUpdateSettings({ yellow_duration: val });
-    if (type === 'red') onUpdateSettings({ red_duration: val });
-  };
 
   const getStateColor = (color: TrafficSignalColor) => {
     if (color === 'green') return '#10b981';
@@ -433,20 +426,25 @@ export const TrafficSignalPanel: React.FC<TrafficSignalPanelProps> = ({
             </button>
           </div>
 
-          {/* Timing Configuration Sliders */}
+          {/* Timing Configuration Section: Green Duration Selection & System-Calculated Red */}
           <div
             style={{
               display: 'flex',
               flexDirection: 'column',
-              gap: '10px',
-              paddingTop: '8px',
+              gap: '12px',
+              paddingTop: '10px',
               borderTop: '1px solid rgba(255, 255, 255, 0.08)',
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#cbd5e1', textTransform: 'uppercase' }}>
-                Signal Timings (Seconds)
-              </span>
+              <div>
+                <div style={{ fontSize: '0.74rem', fontWeight: 700, color: '#f8fafc', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  Green Phase Durations
+                </div>
+                <div style={{ fontSize: '0.65rem', color: '#64748b' }}>
+                  Amber fixed to 3s • Red calculated automatically
+                </div>
+              </div>
               <button
                 style={{
                   background: 'none',
@@ -458,73 +456,127 @@ export const TrafficSignalPanel: React.FC<TrafficSignalPanelProps> = ({
                   display: 'flex',
                   alignItems: 'center',
                   gap: '4px',
+                  padding: '2px 6px',
+                  borderRadius: '4px',
                 }}
                 onClick={() => {
-                  onUpdateSettings({ green_duration: 15, yellow_duration: 3, red_duration: 12 });
+                  onUpdateSettings({
+                    green_duration: 30,
+                    green_durations: {
+                      main: 30,
+                      east_west: 30,
+                      north: 30,
+                      north_south: 30,
+                    },
+                  });
                 }}
-                title="Reset to 15s Green, 3s Yellow, 12s Red"
+                title="Reset all signals to 30s Green default"
               >
                 <RotateCcw size={10} />
-                Defaults
+                Defaults (30s)
               </button>
             </div>
 
-            {/* Green Timing Slider */}
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem', marginBottom: '3px' }}>
-                <span style={{ color: '#10b981', fontWeight: 600 }}>● Green Duration</span>
-                <span style={{ fontFamily: 'var(--font-mono)', color: '#f8fafc', fontWeight: 700 }}>
-                  {green_duration}s
-                </span>
-              </div>
-              <input
-                type="range"
-                min="5"
-                max="60"
-                step="1"
-                value={green_duration}
-                onChange={(e) => handleDurationChange('green', Number(e.target.value))}
-                style={{ width: '100%', accentColor: '#10b981' }}
-              />
-            </div>
+            {/* Per-Signal / Approach Green Sliders */}
+            {trafficLight.signal_groups && trafficLight.signal_groups.length > 0 ? (
+              trafficLight.signal_groups.map((group) => (
+                <div
+                  key={group.id}
+                  style={{
+                    backgroundColor: 'rgba(15, 23, 42, 0.6)',
+                    borderRadius: '8px',
+                    padding: '8px 10px',
+                    border: group.is_active_green ? '1px solid rgba(16, 185, 129, 0.35)' : '1px solid rgba(255, 255, 255, 0.06)',
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#f1f5f9' }}>
+                        {group.name}
+                      </span>
+                      {group.is_active_green && (
+                        <span
+                          style={{
+                            fontSize: '0.6rem',
+                            fontWeight: 800,
+                            padding: '1px 5px',
+                            borderRadius: '3px',
+                            backgroundColor: 'rgba(16, 185, 129, 0.2)',
+                            color: '#10b981',
+                            textTransform: 'uppercase',
+                          }}
+                        >
+                          ACTIVE GREEN
+                        </span>
+                      )}
+                    </div>
+                    <span style={{ fontFamily: 'var(--font-mono)', color: '#10b981', fontWeight: 800, fontSize: '0.8rem' }}>
+                      {group.green_duration}s Green
+                    </span>
+                  </div>
 
-            {/* Yellow Timing Slider */}
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem', marginBottom: '3px' }}>
-                <span style={{ color: '#f59e0b', fontWeight: 600 }}>● Yellow Duration</span>
-                <span style={{ fontFamily: 'var(--font-mono)', color: '#f8fafc', fontWeight: 700 }}>
-                  {yellow_duration}s
-                </span>
-              </div>
-              <input
-                type="range"
-                min="2"
-                max="10"
-                step="1"
-                value={yellow_duration}
-                onChange={(e) => handleDurationChange('yellow', Number(e.target.value))}
-                style={{ width: '100%', accentColor: '#f59e0b' }}
-              />
-            </div>
+                  <input
+                    type="range"
+                    min="5"
+                    max="120"
+                    step="1"
+                    value={group.green_duration}
+                    onChange={(e) => {
+                      const val = Number(e.target.value);
+                      onUpdateSettings({
+                        green_durations: {
+                          ...(trafficLight.signal_groups?.reduce((acc, g) => ({ ...acc, [g.id]: g.green_duration }), {})),
+                          [group.id]: val,
+                        },
+                      });
+                    }}
+                    style={{ width: '100%', accentColor: '#10b981', cursor: 'pointer' }}
+                  />
 
-            {/* Red Timing Slider */}
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem', marginBottom: '3px' }}>
-                <span style={{ color: '#ef4444', fontWeight: 600 }}>● Red Duration</span>
-                <span style={{ fontFamily: 'var(--font-mono)', color: '#f8fafc', fontWeight: 700 }}>
-                  {red_duration}s
-                </span>
+                  {/* Calculated Timings Badges */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '4px', fontSize: '0.65rem' }}>
+                    <span style={{ color: '#f59e0b', fontWeight: 600 }}>
+                      ● Amber: <strong style={{ color: '#fbbf24' }}>3s</strong> (fixed)
+                    </span>
+                    <span style={{ color: '#94a3b8' }}>
+                      Calculated Red:{' '}
+                      <strong style={{ color: '#f87171', fontFamily: 'var(--font-mono)' }}>
+                        {group.calculated_red_duration}s
+                      </strong>
+                    </span>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem', marginBottom: '4px' }}>
+                  <span style={{ color: '#10b981', fontWeight: 600 }}>● Green Duration</span>
+                  <span style={{ fontFamily: 'var(--font-mono)', color: '#f8fafc', fontWeight: 700 }}>
+                    {green_duration}s
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min="5"
+                  max="120"
+                  step="1"
+                  value={green_duration}
+                  onChange={(e) => onUpdateSettings({ green_duration: Number(e.target.value) })}
+                  style={{ width: '100%', accentColor: '#10b981', cursor: 'pointer' }}
+                />
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '4px', fontSize: '0.65rem' }}>
+                  <span style={{ color: '#f59e0b', fontWeight: 600 }}>
+                    ● Amber: <strong style={{ color: '#fbbf24' }}>3s</strong> (fixed)
+                  </span>
+                  <span style={{ color: '#94a3b8' }}>
+                    Calculated Red:{' '}
+                    <strong style={{ color: '#f87171', fontFamily: 'var(--font-mono)' }}>
+                      {green_duration + 3}s
+                    </strong>
+                  </span>
+                </div>
               </div>
-              <input
-                type="range"
-                min="5"
-                max="60"
-                step="1"
-                value={red_duration}
-                onChange={(e) => handleDurationChange('red', Number(e.target.value))}
-                style={{ width: '100%', accentColor: '#ef4444' }}
-              />
-            </div>
+            )}
           </div>
         </div>
       )}

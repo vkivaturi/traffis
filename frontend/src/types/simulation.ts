@@ -29,6 +29,15 @@ export interface SimulationStats {
 export type TrafficSignalColor = 'green' | 'yellow' | 'red';
 export type TrafficSignalMode = 'auto' | 'manual';
 
+export interface SignalGroupTiming {
+  id: string;
+  name: string;
+  green_duration: number;
+  amber_duration: number;
+  calculated_red_duration: number;
+  is_active_green: boolean;
+}
+
 export interface TrafficLightData {
   id: string;
   x: number;
@@ -44,6 +53,7 @@ export interface TrafficLightData {
   next_state: TrafficSignalColor;
   phase_index?: number;
   phase_name?: string;
+  signal_groups?: SignalGroupTiming[];
 }
 
 export interface TrafficLightSettings {
@@ -52,6 +62,7 @@ export interface TrafficLightSettings {
   green_duration?: number;
   yellow_duration?: number;
   red_duration?: number;
+  green_durations?: Record<string, number>;
 }
 
 export interface SimulationState {

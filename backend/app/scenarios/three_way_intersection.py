@@ -12,6 +12,7 @@ from ..schemas import (
     SpawnRequest,
     TrafficLightState,
     TrafficLightConfig,
+    SignalGroupTiming,
 )
 
 logger = logging.getLogger("scenario_three_way_intersection")
@@ -22,7 +23,7 @@ PHASE_DEFS = [
         "name": "East-West Green / North Red",
         "state": "green",
         "raw": "GGgrrrGGG",
-        "default_duration": 15.0,
+        "default_duration": 30.0,
         "active_approaches": ["west", "east"],
     },
     {
@@ -38,7 +39,7 @@ PHASE_DEFS = [
         "name": "North Green / East-West Red",
         "state": "green",
         "raw": "rrrGGGGrr",
-        "default_duration": 12.0,
+        "default_duration": 30.0,
         "active_approaches": ["north"],
     },
     {
@@ -69,7 +70,8 @@ class ThreeWayIntersectionScenario(BaseScenario):
         self.current_phase_idx = 0
         self.phase_timer = 0.0
         self.tl_mode = "auto"
-        self.phase_durations = [15.0, 3.0, 12.0, 3.0]  # EW-Green, EW-Yellow, N-Green, N-Yellow
+        # Default green to 30s for all directions, amber fixed to 3s
+        self.phase_durations = [30.0, 3.0, 30.0, 3.0]  # EW-Green (30s), EW-Yellow (3s), N-Green (30s), N-Yellow (3s)
 
     def get_metadata(self) -> ScenarioMetadata:
         origins = [
@@ -232,12 +234,19 @@ class ThreeWayIntersectionScenario(BaseScenario):
             self.apply_traffic_light_state("")
 
     def set_traffic_light_config(self, config: TrafficLightConfig) -> None:
-        if config.green_duration is not None:
-            self.phase_durations[0] = config.green_duration
-            self.phase_durations[2] = max(5.0, config.green_duration * 0.8)
-        if config.yellow_duration is not None:
-            self.phase_durations[1] = config.yellow_duration
-            self.phase_durations[3] = config.yellow_duration
+        if config.green_durations:
+            if "east_west" in config.green_durations:
+                self.phase_durations[0] = float(config.green_durations["east_west"])
+            if "north" in config.green_durations:
+                self.phase_durations[2] = float(config.green_durations["north"])
+        elif config.green_duration is not None:
+            self.phase_durations[0] = float(config.green_duration)
+            self.phase_durations[2] = float(config.green_duration)
+
+        # Fixed amber/yellow duration of 3.0s
+        self.phase_durations[1] = 3.0
+        self.phase_durations[3] = 3.0
+
         if config.mode is not None:
             self.tl_mode = config.mode
         if config.state is not None:
@@ -262,6 +271,34 @@ class ThreeWayIntersectionScenario(BaseScenario):
         next_idx = (self.current_phase_idx + 1) % len(PHASE_DEFS)
         next_phase = PHASE_DEFS[next_idx]
 
+        ew_green = self.phase_durations[0]
+        n_green = self.phase_durations[2]
+        amber = 3.0
+
+        # System calculates red times:
+        # While opposing approach is Green + Amber, this approach is Red
+        ew_calc_red = n_green + amber
+        n_calc_red = ew_green + amber
+
+        signal_groups = [
+            SignalGroupTiming(
+                id="east_west",
+                name="East-West Approach (West & East Arms)",
+                green_duration=ew_green,
+                amber_duration=amber,
+                calculated_red_duration=ew_calc_red,
+                is_active_green=(self.current_phase_idx == 0)
+            ),
+            SignalGroupTiming(
+                id="north",
+                name="North Approach",
+                green_duration=n_green,
+                amber_duration=amber,
+                calculated_red_duration=n_calc_red,
+                is_active_green=(self.current_phase_idx == 2)
+            ),
+        ]
+
         return TrafficLightState(
             id=self.tl_id,
             x=self.tl_x,
@@ -269,14 +306,15 @@ class ThreeWayIntersectionScenario(BaseScenario):
             state=curr["state"],
             raw_state=curr["raw"],
             mode=self.tl_mode,
-            green_duration=self.phase_durations[0],
-            yellow_duration=self.phase_durations[1],
-            red_duration=self.phase_durations[2],
+            green_duration=ew_green,
+            yellow_duration=amber,
+            red_duration=ew_calc_red,
             phase_timer=round(self.phase_timer, 2),
             phase_remaining=rem,
             next_state=next_phase["state"],
             phase_index=self.current_phase_idx,
-            phase_name=curr["name"]
+            phase_name=curr["name"],
+            signal_groups=signal_groups
         )
 
     def enrich_vehicle_direction(self, lane_id: str, angle: float, x: float, y: float) -> str:

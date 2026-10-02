@@ -13,6 +13,7 @@ from ..schemas import (
     SpawnRequest,
     TrafficLightState,
     TrafficLightConfig,
+    SignalGroupTiming,
 )
 from ..config import settings
 
@@ -148,12 +149,15 @@ class StraightRoadScenario(BaseScenario):
                 self.apply_traffic_light_state("green")
 
     def set_traffic_light_config(self, config: TrafficLightConfig) -> None:
-        if config.green_duration is not None:
-            self.tl_green_duration = config.green_duration
-        if config.yellow_duration is not None:
-            self.tl_yellow_duration = config.yellow_duration
-        if config.red_duration is not None:
-            self.tl_red_duration = config.red_duration
+        if config.green_durations and "main" in config.green_durations:
+            self.tl_green_duration = float(config.green_durations["main"])
+        elif config.green_duration is not None:
+            self.tl_green_duration = float(config.green_duration)
+        
+        # Amber is fixed to 3.0s, system calculates red duration
+        self.tl_yellow_duration = 3.0
+        self.tl_red_duration = self.tl_green_duration + 3.0
+
         if config.mode is not None:
             self.tl_mode = config.mode
         if config.state is not None:
@@ -182,6 +186,17 @@ class StraightRoadScenario(BaseScenario):
             next_st = "green"
 
         rem = max(0.0, round(dur - self.tl_phase_timer, 1))
+        signal_groups = [
+            SignalGroupTiming(
+                id="main",
+                name="Main Highway Signal",
+                green_duration=self.tl_green_duration,
+                amber_duration=3.0,
+                calculated_red_duration=self.tl_red_duration,
+                is_active_green=(self.tl_state == "green")
+            )
+        ]
+
         return TrafficLightState(
             id=self.tl_id,
             x=self.tl_x,
@@ -196,7 +211,8 @@ class StraightRoadScenario(BaseScenario):
             phase_remaining=rem,
             next_state=next_st,
             phase_index=0 if self.tl_state == "green" else 1 if self.tl_state == "yellow" else 2,
-            phase_name=f"Highway {self.tl_state.capitalize()}"
+            phase_name=f"Highway {self.tl_state.capitalize()}",
+            signal_groups=signal_groups
         )
 
     def enrich_vehicle_direction(self, lane_id: str, angle: float, x: float, y: float) -> str:

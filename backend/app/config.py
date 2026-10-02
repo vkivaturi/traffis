@@ -54,9 +54,9 @@ class Settings(BaseModel):
     NUM_LANES: int = 4  # 2 lanes per direction (Westbound + Eastbound)
     LANE_WIDTH_M: float = 3.2
     TRAFFIC_LIGHT_X: float = 500.0
-    DEFAULT_GREEN_DURATION: float = 15.0
+    DEFAULT_GREEN_DURATION: float = 30.0
     DEFAULT_YELLOW_DURATION: float = 3.0
-    DEFAULT_RED_DURATION: float = 12.0
+    DEFAULT_RED_DURATION: float = 33.0
     RATE_LIMIT_MB_PER_HOUR: float = float(os.environ.get("RATE_LIMIT_MB_PER_HOUR", "100"))
     
 settings = Settings()

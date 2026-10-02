@@ -27,6 +27,14 @@ class SimulationStats(BaseModel):
     density_veh_km: float
     pce_per_hour: float = 0.0  # Hourly traffic flow in Passenger Car Equivalent (PCE/h)
 
+class SignalGroupTiming(BaseModel):
+    id: str = Field(..., description="Unique identifier of the signal group / approach arm")
+    name: str = Field(..., description="Human readable name of the approach")
+    green_duration: float = Field(30.0, description="Green light duration in seconds")
+    amber_duration: float = Field(3.0, description="Fixed amber/yellow duration (3.0s)")
+    calculated_red_duration: float = Field(33.0, description="System calculated red light duration")
+    is_active_green: bool = Field(False, description="Whether this signal group currently has green")
+
 class TrafficLightState(BaseModel):
     id: str = "traffic_light"
     x: float = 500.0
@@ -34,21 +42,23 @@ class TrafficLightState(BaseModel):
     state: str = "green"  # "green" | "yellow" | "red"
     raw_state: str = "GGGG"
     mode: str = "auto"    # "auto" | "manual"
-    green_duration: float = 15.0
+    green_duration: float = 30.0
     yellow_duration: float = 3.0
-    red_duration: float = 12.0
+    red_duration: float = 33.0
     phase_timer: float = 0.0
-    phase_remaining: float = 15.0
+    phase_remaining: float = 30.0
     next_state: str = "yellow"
     phase_index: int = 0
     phase_name: Optional[str] = None
+    signal_groups: Optional[List[SignalGroupTiming]] = None
 
 class TrafficLightConfig(BaseModel):
     mode: Optional[str] = Field(None, description="'auto' or 'manual'")
     state: Optional[str] = Field(None, description="'green', 'yellow', or 'red'")
-    green_duration: Optional[float] = Field(None, ge=1.0, le=120.0, description="Green light duration in seconds")
-    yellow_duration: Optional[float] = Field(None, ge=1.0, le=30.0, description="Yellow light duration in seconds")
-    red_duration: Optional[float] = Field(None, ge=1.0, le=120.0, description="Red light duration in seconds")
+    green_duration: Optional[float] = Field(None, ge=1.0, le=180.0, description="Default / Global Green light duration in seconds")
+    yellow_duration: Optional[float] = Field(3.0, ge=1.0, le=10.0, description="Fixed yellow/amber duration (3.0s)")
+    red_duration: Optional[float] = Field(None, ge=1.0, le=180.0, description="Red light duration")
+    green_durations: Optional[Dict[str, float]] = Field(None, description="Map of signal group ID to custom green duration in seconds, e.g. {'east_west': 30, 'north': 40}")
 
 class SimulationStateMessage(BaseModel):
     type: str = "state"
