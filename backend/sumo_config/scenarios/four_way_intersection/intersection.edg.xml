@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<edges xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/edges_file.xsd">
+    <!-- West Arm (2 lanes inbound, 2 lanes outbound) -->
+    <edge id="west_in" from="west" to="center" numLanes="2" speed="16.67" width="3.2"/>
+    <edge id="west_out" from="center" to="west" numLanes="2" speed="16.67" width="3.2"/>
+
+    <!-- East Arm (2 lanes inbound, 2 lanes outbound) -->
+    <edge id="east_in" from="east" to="center" numLanes="2" speed="16.67" width="3.2"/>
+    <edge id="east_out" from="center" to="east" numLanes="2" speed="16.67" width="3.2"/>
+
+    <!-- North Arm (2 lanes inbound, 2 lanes outbound) -->
+    <edge id="north_in" from="north" to="center" numLanes="2" speed="16.67" width="3.2"/>
+    <edge id="north_out" from="center" to="north" numLanes="2" speed="16.67" width="3.2"/>
+
+    <!-- South Arm (2 lanes inbound, 2 lanes outbound) -->
+    <edge id="south_in" from="south" to="center" numLanes="2" speed="16.67" width="3.2"/>
+    <edge id="south_out" from="center" to="south" numLanes="2" speed="16.67" width="3.2"/>
+</edges>

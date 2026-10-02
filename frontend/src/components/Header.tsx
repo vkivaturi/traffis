@@ -28,7 +28,7 @@ export const Header: React.FC<HeaderProps> = ({
   onSelectScenario,
 }) => {
   const currentScenario = scenarios.find((s) => s.id === activeScenarioId) || scenarios[0];
-  const isIntersection = currentScenario?.type === 'intersection' || activeScenarioId === 'three_way_intersection';
+  const isIntersection = currentScenario?.type === 'intersection' || activeScenarioId.includes('intersection');
 
   return (
     <header
@@ -169,6 +169,9 @@ export const Header: React.FC<HeaderProps> = ({
                   </option>
                   <option value="three_way_intersection" style={{ backgroundColor: '#0f172a', color: '#f8fafc' }}>
                     3-Way Intersection
+                  </option>
+                  <option value="four_way_intersection" style={{ backgroundColor: '#0f172a', color: '#f8fafc' }}>
+                    4-Way Crossroads
                   </option>
                 </>
               )}

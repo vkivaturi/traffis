@@ -129,6 +129,85 @@ THREE_WAY_SUMOCFG = """<?xml version="1.0" encoding="UTF-8"?>
 """
 
 
+# Scenario 3: 4-Way Crossroads (2 lanes per direction on each of the 4 arms)
+FOUR_WAY_NODES = """<?xml version="1.0" encoding="UTF-8"?>
+<nodes xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/nodes_file.xsd">
+    <node id="west" x="-250.0" y="0.0" type="priority"/>
+    <node id="center" x="0.0" y="0.0" type="traffic_light"/>
+    <node id="east" x="250.0" y="0.0" type="priority"/>
+    <node id="north" x="0.0" y="250.0" type="priority"/>
+    <node id="south" x="0.0" y="-250.0" type="priority"/>
+</nodes>
+"""
+
+FOUR_WAY_EDGES = """<?xml version="1.0" encoding="UTF-8"?>
+<edges xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/edges_file.xsd">
+    <!-- West Arm (2 lanes inbound, 2 lanes outbound) -->
+    <edge id="west_in" from="west" to="center" numLanes="2" speed="16.67" width="3.2"/>
+    <edge id="west_out" from="center" to="west" numLanes="2" speed="16.67" width="3.2"/>
+
+    <!-- East Arm (2 lanes inbound, 2 lanes outbound) -->
+    <edge id="east_in" from="east" to="center" numLanes="2" speed="16.67" width="3.2"/>
+    <edge id="east_out" from="center" to="east" numLanes="2" speed="16.67" width="3.2"/>
+
+    <!-- North Arm (2 lanes inbound, 2 lanes outbound) -->
+    <edge id="north_in" from="north" to="center" numLanes="2" speed="16.67" width="3.2"/>
+    <edge id="north_out" from="center" to="north" numLanes="2" speed="16.67" width="3.2"/>
+
+    <!-- South Arm (2 lanes inbound, 2 lanes outbound) -->
+    <edge id="south_in" from="south" to="center" numLanes="2" speed="16.67" width="3.2"/>
+    <edge id="south_out" from="center" to="south" numLanes="2" speed="16.67" width="3.2"/>
+</edges>
+"""
+
+FOUR_WAY_ROUTES = f"""<?xml version="1.0" encoding="UTF-8"?>
+<routes xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/routes_file.xsd">
+{VTYPES_XML}
+    <!-- Routes from West approach -->
+    <route id="route_west_east" edges="west_in east_out"/>
+    <route id="route_west_north" edges="west_in north_out"/>
+    <route id="route_west_south" edges="west_in south_out"/>
+
+    <!-- Routes from East approach -->
+    <route id="route_east_west" edges="east_in west_out"/>
+    <route id="route_east_north" edges="east_in north_out"/>
+    <route id="route_east_south" edges="east_in south_out"/>
+
+    <!-- Routes from North approach -->
+    <route id="route_north_south" edges="north_in south_out"/>
+    <route id="route_north_west" edges="north_in west_out"/>
+    <route id="route_north_east" edges="north_in east_out"/>
+
+    <!-- Routes from South approach -->
+    <route id="route_south_north" edges="south_in north_out"/>
+    <route id="route_south_west" edges="south_in west_out"/>
+    <route id="route_south_east" edges="south_in east_out"/>
+</routes>
+"""
+
+FOUR_WAY_SUMOCFG = """<?xml version="1.0" encoding="UTF-8"?>
+<configuration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+    <input>
+        <net-file value="intersection.net.xml"/>
+        <route-files value="intersection.rou.xml"/>
+    </input>
+    <time>
+        <begin value="0"/>
+        <end value="100000"/>
+        <step-length value="0.05"/>
+    </time>
+    <processing>
+        <collision.action value="none"/>
+        <time-to-teleport value="-1"/>
+    </processing>
+    <report>
+        <no-step-log value="true"/>
+        <no-warnings value="true"/>
+    </report>
+</configuration>
+"""
+
+
 def find_sumo_binary(binary_name="netconvert"):
     import shutil
     p = shutil.which(binary_name)
@@ -221,6 +300,23 @@ def build_three_way_intersection():
     compile_network(nod, edg, net, disable_offset_normalization=True)
 
 
+def build_four_way_intersection():
+    target_dir = SCENARIOS_DIR / "four_way_intersection"
+    target_dir.mkdir(parents=True, exist_ok=True)
+    
+    nod = target_dir / "intersection.nod.xml"
+    edg = target_dir / "intersection.edg.xml"
+    rou = target_dir / "intersection.rou.xml"
+    cfg = target_dir / "intersection.sumocfg"
+    net = target_dir / "intersection.net.xml"
+    
+    nod.write_text(FOUR_WAY_NODES, encoding="utf-8")
+    edg.write_text(FOUR_WAY_EDGES, encoding="utf-8")
+    rou.write_text(FOUR_WAY_ROUTES, encoding="utf-8")
+    cfg.write_text(FOUR_WAY_SUMOCFG, encoding="utf-8")
+    compile_network(nod, edg, net, disable_offset_normalization=True)
+
+
 def build():
     CONFIG_DIR.mkdir(parents=True, exist_ok=True)
     SCENARIOS_DIR.mkdir(parents=True, exist_ok=True)
@@ -228,6 +324,8 @@ def build():
     build_straight_road()
     print("Building scenario 2: 3-Way Intersection...")
     build_three_way_intersection()
+    print("Building scenario 3: 4-Way Intersection...")
+    build_four_way_intersection()
     print("All road networks built successfully!")
 
 

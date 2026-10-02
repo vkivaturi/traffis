@@ -141,7 +141,30 @@ async def test_full_flow():
         spawn_3way = await recv_type("spawn_ack")
         print("3-way spawn ack:", spawn_3way)
 
-        # 12. Switch back to straight_road
+        # 12. Test Scenario Switching over WebSocket to 4-Way Intersection
+        print("Testing Scenario Switch to four_way_intersection...")
+        await ws.send(json.dumps({
+            "action": "select_scenario",
+            "payload": {"scenario_id": "four_way_intersection"}
+        }))
+        scenario_ack_4way = await recv_type("scenario_switched")
+        print("Scenario Switched Ack:", scenario_ack_4way.get("scenario", {}).get("name"))
+        assert scenario_ack_4way.get("scenario", {}).get("id") == "four_way_intersection"
+
+        # Receive new network_info for 4-way intersection
+        net_info_4way = await recv_type("network_info")
+        print("Received 4-way network info:", net_info_4way.get("data", {}).get("scenario", {}).get("name"))
+
+        # Spawn on 4-way intersection from South arm
+        print("Spawning vehicle on 4-way intersection from South arm...")
+        await ws.send(json.dumps({
+            "action": "spawn",
+            "payload": {"origin": "south", "turn": "left", "lane": 1, "type": "sports"}
+        }))
+        spawn_4way = await recv_type("spawn_ack")
+        print("4-way spawn ack:", spawn_4way)
+
+        # 13. Switch back to straight_road
         print("Switching back to straight_road...")
         await ws.send(json.dumps({
             "action": "select_scenario",

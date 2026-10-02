@@ -3,8 +3,12 @@ import logging
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.requests import Request
+from starlette.responses import Response
 
-from .config import settings
+from .config import settings, bandwidth_limiter
 from .schemas import SpawnRequest, AutoSpawnConfig, NetworkInfo, TrafficLightConfig
 from .simulation import sim_manager
 
@@ -36,6 +40,54 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+class BandwidthMiddleware(BaseHTTPMiddleware):
+    """ASGI middleware that tracks outbound REST response bytes against the
+    shared bandwidth limiter. Returns HTTP 429 when the budget is exhausted.
+
+    WebSocket upgrades and the /api/bandwidth monitoring endpoint are exempt.
+    """
+
+    EXEMPT_PATHS = {"/api/bandwidth", "/api/health"}
+
+    async def dispatch(self, request: Request, call_next):
+        # Don't rate-limit WebSocket upgrade requests or monitoring endpoints
+        if request.url.path in self.EXEMPT_PATHS:
+            return await call_next(request)
+
+        # Pre-check: if already throttled, reject early with 429
+        if not bandwidth_limiter.is_allowed(0):
+            return JSONResponse(
+                status_code=429,
+                content={
+                    "error": "bandwidth_limit_exceeded",
+                    "message": "Server bandwidth budget exhausted. Try again later.",
+                    "usage": bandwidth_limiter.get_usage(),
+                },
+            )
+
+        response = await call_next(request)
+
+        # Track response body bytes by wrapping the body iterator
+        original_body = b""
+        async for chunk in response.body_iterator:
+            if isinstance(chunk, str):
+                chunk = chunk.encode("utf-8")
+            original_body += chunk
+
+        # Record the bytes transferred
+        bandwidth_limiter.record(len(original_body))
+
+        return Response(
+            content=original_body,
+            status_code=response.status_code,
+            headers=dict(response.headers),
+            media_type=response.media_type,
+        )
+
+
+app.add_middleware(BandwidthMiddleware)
+
 @app.get("/api/health")
 async def health_check():
     return {
@@ -43,8 +95,14 @@ async def health_check():
         "sumo_initialized": sim_manager.is_initialized,
         "is_running": sim_manager.is_running,
         "sim_time": sim_manager.sim_time,
-        "active_clients": len(sim_manager.active_websockets)
+        "active_clients": len(sim_manager.active_websockets),
+        "bandwidth": bandwidth_limiter.get_usage()
     }
+
+@app.get("/api/bandwidth")
+async def get_bandwidth_usage():
+    """Monitor current bandwidth usage and budget."""
+    return bandwidth_limiter.get_usage()
 
 @app.get("/api/network-info", response_model=NetworkInfo)
 async def get_network_info():
@@ -122,6 +180,13 @@ async def set_default_speed(payload: dict):
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     await sim_manager.register_websocket(websocket)
+
+    async def _ws_send(data: dict) -> None:
+        """Send a JSON message over the WebSocket and record bytes transferred."""
+        payload = json.dumps(data)
+        bandwidth_limiter.record(len(payload.encode("utf-8")))
+        await websocket.send_text(payload)
+
     try:
         while True:
             text = await websocket.receive_text()
@@ -145,37 +210,37 @@ async def websocket_endpoint(websocket: WebSocket):
                 elif action == "set_default_speed":
                     speed_kmh = float(payload.get("speed_kmh", 50.0))
                     await sim_manager.set_default_speed(speed_kmh)
-                    await websocket.send_text(json.dumps({
+                    await _ws_send({
                         "type": "default_speed_ack",
                         "default_speed_kmh": sim_manager.default_speed_kmh
-                    }))
+                    })
                 elif action == "spawn":
                     spawn_req = SpawnRequest(**payload)
                     veh_id = await sim_manager.spawn_vehicle(spawn_req)
-                    await websocket.send_text(json.dumps({
+                    await _ws_send({
                         "type": "spawn_ack",
                         "vehicle_id": veh_id
-                    }))
+                    })
                 elif action == "set_auto_spawn":
                     auto_cfg = AutoSpawnConfig(**payload)
                     sim_manager.set_auto_spawn(auto_cfg)
-                    await websocket.send_text(json.dumps({
+                    await _ws_send({
                         "type": "auto_spawn_ack",
                         "auto_spawn": auto_cfg.model_dump()
-                    }))
+                    })
                 elif action == "set_traffic_light":
                     tl_cfg = TrafficLightConfig(**payload)
                     await sim_manager.set_traffic_light(tl_cfg)
-                    await websocket.send_text(json.dumps({
+                    await _ws_send({
                         "type": "traffic_light_ack",
                         "traffic_light": sim_manager._get_traffic_light_data().model_dump()
-                    }))
+                    })
                 elif action == "next_traffic_light_phase":
                     await sim_manager.next_traffic_light_phase()
-                    await websocket.send_text(json.dumps({
+                    await _ws_send({
                         "type": "traffic_light_ack",
                         "traffic_light": sim_manager._get_traffic_light_data().model_dump()
-                    }))
+                    })
             except json.JSONDecodeError:
                 logger.warning("Invalid JSON received over WebSocket: %s", text)
             except Exception as e:
@@ -185,3 +250,4 @@ async def websocket_endpoint(websocket: WebSocket):
     except Exception as e:
         logger.warning("WebSocket error: %s", e)
         sim_manager.unregister_websocket(websocket)
+

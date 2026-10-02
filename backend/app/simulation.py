@@ -7,7 +7,7 @@ from typing import Set, Dict, Any, Optional, List
 import traci
 from fastapi import WebSocket
 
-from .config import settings
+from .config import settings, bandwidth_limiter
 from .schemas import (
     VehicleData,
     SimulationStats,
@@ -460,6 +460,28 @@ class SimulationManager:
         await self._send_to_all(payload)
 
     async def _send_to_all(self, message: str):
+        msg_bytes = len(message.encode("utf-8"))
+        total_bytes = msg_bytes * len(self.active_websockets)
+
+        # Check bandwidth budget before sending
+        if not bandwidth_limiter.try_record(total_bytes):
+            # Budget exhausted — send a throttle notification instead (once)
+            # to inform clients, then skip the actual payload
+            throttle_msg = json.dumps({
+                "type": "throttled",
+                "reason": "bandwidth_limit",
+                "usage": bandwidth_limiter.get_usage()
+            })
+            dead_sockets = set()
+            for ws in self.active_websockets:
+                try:
+                    await ws.send_text(throttle_msg)
+                except Exception:
+                    dead_sockets.add(ws)
+            for ws in dead_sockets:
+                self.active_websockets.discard(ws)
+            return
+
         dead_sockets = set()
         for ws in self.active_websockets:
             try:
@@ -528,14 +550,18 @@ class SimulationManager:
         logger.info("WebSocket connected. Active clients: %d", len(self.active_websockets))
         # Send initial network info and current state immediately
         net_info = self.get_network_info()
-        await ws.send_text(json.dumps({
+        net_info_payload = json.dumps({
             "type": "network_info",
             "data": net_info.model_dump()
-        }))
+        })
+        bandwidth_limiter.record(len(net_info_payload.encode("utf-8")))
+        await ws.send_text(net_info_payload)
         async with self.lock:
             if self.is_initialized:
                 state_msg = self._collect_current_state()
-                await ws.send_text(state_msg.model_dump_json(exclude_none=True))
+                state_payload = state_msg.model_dump_json(exclude_none=True)
+                bandwidth_limiter.record(len(state_payload.encode("utf-8")))
+                await ws.send_text(state_payload)
 
     def unregister_websocket(self, ws: WebSocket):
         self.active_websockets.discard(ws)

@@ -87,7 +87,7 @@ export const Controls: React.FC<ControlsProps> = ({
   defaultSpeedKmh = 50,
   onUpdateDefaultSpeed,
 }) => {
-  const isIntersection = activeScenarioId === 'three_way_intersection';
+  const isIntersection = activeScenarioId.includes('intersection');
   const currentVehPerHour =
     autoSpawnSettings.rate_per_hour ?? Math.round(autoSpawnSettings.rate_per_minute * 60);
 
@@ -97,7 +97,7 @@ export const Controls: React.FC<ControlsProps> = ({
 
   // Spawner states (Left-Hand Traffic oriented)
   const [selectedDirection, setSelectedDirection] = useState<'east' | 'west' | 'random'>('east');
-  const [selectedOrigin, setSelectedOrigin] = useState<'west' | 'east' | 'north' | 'random'>('west');
+  const [selectedOrigin, setSelectedOrigin] = useState<'west' | 'east' | 'north' | 'south' | 'random'>('west');
   const [selectedTurn, setSelectedTurn] = useState<'straight' | 'left' | 'right' | 'random'>('random');
   const [selectedLane, setSelectedLane] = useState<number | null>(null); // null = random, 0 = Slow/Kerb, 1 = Fast/Overtake
   const [vehicleType, setVehicleType] = useState<'car' | 'sports' | 'truck' | 'van'>('car');
@@ -280,8 +280,11 @@ export const Controls: React.FC<ControlsProps> = ({
                 </label>
                 {isIntersection ? (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <div style={{ display: 'flex', gap: '6px' }}>
-                      {(['west', 'east', 'north', 'random'] as const).map((arm) => (
+                    <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                      {(activeScenarioId === 'four_way_intersection'
+                        ? ['west', 'east', 'north', 'south', 'random'] as const
+                        : ['west', 'east', 'north', 'random'] as const
+                      ).map((arm) => (
                         <button
                           key={arm}
                           className="btn-secondary"
@@ -292,10 +295,11 @@ export const Controls: React.FC<ControlsProps> = ({
                             textTransform: 'capitalize',
                             backgroundColor: selectedOrigin === arm ? '#0284c7' : 'rgba(15, 23, 42, 0.6)',
                             borderColor: selectedOrigin === arm ? '#38bdf8' : 'rgba(255, 255, 255, 0.1)',
+                            minWidth: '55px',
                           }}
                           onClick={() => setSelectedOrigin(arm)}
                         >
-                          {arm === 'west' ? 'West →' : arm === 'east' ? '← East' : arm === 'north' ? '↓ North' : 'Random'}
+                          {arm === 'west' ? 'West →' : arm === 'east' ? '← East' : arm === 'north' ? '↓ North' : arm === 'south' ? '↑ South' : 'Random'}
                         </button>
                       ))}
                     </div>

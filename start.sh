@@ -11,7 +11,7 @@ echo "=================================================="
 echo "SUMO_HOME: $SUMO_HOME"
 
 # 1. Compile SUMO Networks if not compiled
-if [ ! -f "$PROJECT_ROOT/backend/sumo_config/road.net.xml" ] || [ ! -f "$PROJECT_ROOT/backend/sumo_config/scenarios/three_way_intersection/intersection.net.xml" ]; then
+if [ ! -f "$PROJECT_ROOT/backend/sumo_config/road.net.xml" ] || [ ! -f "$PROJECT_ROOT/backend/sumo_config/scenarios/three_way_intersection/intersection.net.xml" ] || [ ! -f "$PROJECT_ROOT/backend/sumo_config/scenarios/four_way_intersection/intersection.net.xml" ]; then
     echo "Compiling scenario road networks with netconvert..."
     "$PROJECT_ROOT/backend/.venv/bin/python" "$PROJECT_ROOT/backend/sumo_config/build_network.py"
 fi

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { ExternalLink } from 'lucide-react';
 import { useSimulationSocket } from './hooks/useSimulationSocket';
 import { Header } from './components/Header';
 import { MiniMap } from './components/MiniMap';
@@ -31,7 +32,7 @@ export const App: React.FC = () => {
   } = useSimulationSocket();
 
   const currentScenarioId = activeScenario?.id || state.scenario_id || 'straight_road';
-  const isIntersection = currentScenarioId === 'three_way_intersection';
+  const isIntersection = activeScenario?.type === 'intersection';
 
   const [camera, setCamera] = useState<CameraState>({
     x: 500,
@@ -72,11 +73,13 @@ export const App: React.FC = () => {
     setSelectedVehicleId(null);
     soundSystem.playResetSound();
 
-    if (scenarioId === 'three_way_intersection') {
+    // Use the scenario's default_camera from metadata if available
+    const targetScenario = scenarios.find(s => s.id === scenarioId);
+    if (targetScenario?.default_camera) {
       setCamera({
-        x: 0,
-        y: 70,
-        zoom: 3.8,
+        x: targetScenario.default_camera.x,
+        y: targetScenario.default_camera.y,
+        zoom: targetScenario.default_camera.zoom,
         followingId: null,
       });
     } else {
@@ -101,11 +104,11 @@ export const App: React.FC = () => {
     setCamera((prev) => ({
       ...prev,
       followingId: null,
-      x: isIntersection ? 0 : 500,
-      y: isIntersection ? 70 : 0,
-      zoom: isIntersection ? 3.8 : 12,
+      x: activeScenario?.default_camera?.x ?? (isIntersection ? 0 : 500),
+      y: activeScenario?.default_camera?.y ?? (isIntersection ? 0 : 0),
+      zoom: activeScenario?.default_camera?.zoom ?? (isIntersection ? 3.2 : 12),
     }));
-  }, [reset, isIntersection]);
+  }, [reset, isIntersection, activeScenario?.default_camera]);
 
   const handleUpdateAutoSpawn = (settings: AutoSpawnSettings) => {
     setAutoSpawnSettings(settings);
@@ -255,6 +258,46 @@ export const App: React.FC = () => {
         defaultSpeedKmh={state.default_speed_kmh ?? 50}
         onUpdateDefaultSpeed={setDefaultSpeed}
       />
+
+      {/* 5. Open-Source Attribution Credits Footer */}
+      <footer
+        id="app-credits-footer"
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '6px',
+          padding: '4px 16px',
+          backgroundColor: 'rgba(8, 12, 20, 0.95)',
+          borderTop: '1px solid rgba(255, 255, 255, 0.06)',
+          fontSize: '0.7rem',
+          color: '#64748b',
+          zIndex: 30,
+          flexShrink: 0,
+        }}
+      >
+        <span>Simulation engine powered by</span>
+        <a
+          href="https://eclipse.dev/sumo/"
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            color: '#38bdf8',
+            textDecoration: 'none',
+            fontWeight: 600,
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '3px',
+          }}
+          onMouseEnter={(e) => (e.currentTarget.style.textDecoration = 'underline')}
+          onMouseLeave={(e) => (e.currentTarget.style.textDecoration = 'none')}
+        >
+          <span>Eclipse SUMO</span>
+          <ExternalLink size={11} />
+        </a>
+        <span style={{ color: '#334155' }}>—</span>
+        <span>Open source microscopic traffic simulation suite</span>
+      </footer>
     </div>
   );
 };
