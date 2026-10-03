@@ -30,11 +30,13 @@ export const useAuth = () => {
 
   const signInWithGoogle = useCallback((customUser?: Partial<User>) => {
     const userId = customUser?.id || 'usr_' + Math.random().toString(36).substring(2, 9);
+    const userEmail = customUser?.email || '';
+    const userName = customUser?.name || (userEmail ? userEmail.split('@')[0] : 'Google User');
     const defaultUser: User = {
       id: userId,
-      name: customUser?.name || 'Vijay Kivaturi',
-      email: customUser?.email || 'vijay.kivaturi@gmail.com',
-      avatar: customUser?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=128&auto=format&fit=crop&q=80',
+      name: userName,
+      email: userEmail,
+      avatar: customUser?.avatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(userEmail || userId)}`,
       provider: 'google',
       signedInAt: new Date().toISOString(),
       token: customUser?.token || `dev_${userId}_${Date.now()}`,

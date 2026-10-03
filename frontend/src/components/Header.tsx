@@ -2,9 +2,7 @@ import React from 'react';
 import {
   Activity,
   Radio,
-  Cpu,
   Clock,
-  Zap,
   Volume2,
   VolumeX,
   GitFork,
@@ -22,7 +20,6 @@ import type { User } from '../types/auth';
 interface HeaderProps {
   state: SimulationState;
   connected: boolean;
-  latencyMs: number;
   updateRateHz: number;
   dataExchangedMB?: number;
   soundEnabled: boolean;
@@ -39,7 +36,6 @@ interface HeaderProps {
 export const Header: React.FC<HeaderProps> = ({
   state,
   connected,
-  latencyMs,
   updateRateHz,
   dataExchangedMB = 0,
   soundEnabled,
@@ -292,27 +288,11 @@ export const Header: React.FC<HeaderProps> = ({
           );
         })()}
 
-        <div className="glass-pill" title="Simulation Step (50ms increments)">
-          <Cpu size={12} color="#94a3b8" />
-          <span style={{ color: '#94a3b8' }}>STEP:</span>
-          <span style={{ color: '#f8fafc', fontWeight: 600 }}>
-            {state.step}
-          </span>
-        </div>
-
         <div className="glass-pill" title="WebSocket Update Frequency">
           <Radio size={12} color="#38bdf8" />
           <span style={{ color: '#94a3b8' }}>RATE:</span>
           <span style={{ color: '#38bdf8', fontWeight: 600 }}>
             {updateRateHz} Hz
-          </span>
-        </div>
-
-        <div className="glass-pill" title="Packet roundtrip estimate">
-          <Zap size={12} color="#10b981" />
-          <span style={{ color: '#94a3b8' }}>PING:</span>
-          <span style={{ color: '#10b981', fontWeight: 600 }}>
-            {latencyMs}ms
           </span>
         </div>
 

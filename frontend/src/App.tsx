@@ -206,7 +206,6 @@ export const App: React.FC = () => {
       <Header
         state={state}
         connected={connected}
-        latencyMs={latencyMs}
         updateRateHz={updateRateHz}
         dataExchangedMB={dataExchangedMB}
         soundEnabled={soundEnabled}
@@ -281,6 +280,7 @@ export const App: React.FC = () => {
       {/* 4. Controls Dock with Visible Section & Expandable Advanced Tools */}
       <Controls
         isRunning={state.is_running}
+        step={state.step}
         onPlay={play}
         onPause={pause}
         onReset={handleReset}

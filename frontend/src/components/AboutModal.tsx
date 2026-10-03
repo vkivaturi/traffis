@@ -20,8 +20,7 @@ interface AboutModalProps {
 
 export const AboutModal: React.FC<AboutModalProps> = ({ isOpen, onClose }) => {
   const [copiedEmail, setCopiedEmail] = useState(false);
-  const contactEmail = 'support@traffis.dev';
-  const authorEmail = 'vijay.kivaturi@gmail.com';
+  const contactEmail = 'contact@traffis.in';
 
   if (!isOpen) return null;
 
@@ -322,53 +321,6 @@ export const AboutModal: React.FC<AboutModalProps> = ({ isOpen, onClose }) => {
                 >
                   {copiedEmail ? <Check size={14} /> : <Copy size={14} />}
                   {copiedEmail ? 'Copied' : 'Copy'}
-                </button>
-              </div>
-
-              {/* Developer Email Link */}
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  background: 'rgba(15, 23, 42, 0.9)',
-                  padding: '8px 12px',
-                  borderRadius: '8px',
-                  border: '1px solid rgba(255, 255, 255, 0.12)',
-                  flex: 1,
-                  minWidth: '220px',
-                }}
-              >
-                <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Developer:</span>
-                <a
-                  href={`mailto:${authorEmail}`}
-                  style={{
-                    color: '#f8fafc',
-                    textDecoration: 'none',
-                    fontWeight: 500,
-                    fontSize: '0.82rem',
-                    flex: 1,
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                  }}
-                >
-                  {authorEmail}
-                </a>
-                <button
-                  type="button"
-                  onClick={() => handleCopyEmail(authorEmail)}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    color: '#94a3b8',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    padding: '3px',
-                  }}
-                  title="Copy email address"
-                >
-                  <Copy size={13} />
                 </button>
               </div>
             </div>

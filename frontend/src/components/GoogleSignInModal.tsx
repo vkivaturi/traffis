@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { GoogleLogin, type CredentialResponse } from '@react-oauth/google';
-import { X, ShieldCheck, Check, Sparkles, ArrowRight, AlertCircle } from 'lucide-react';
+import { X, ShieldCheck, Check, AlertCircle, Mail } from 'lucide-react';
 import type { User } from '../types/auth';
 
 interface GoogleSignInModalProps {
@@ -45,11 +45,11 @@ export const GoogleSignInModal: React.FC<GoogleSignInModalProps> = ({
     setAuthError(null);
     if (credentialResponse.credential) {
       const payload = decodeJwt(credentialResponse.credential);
-      if (payload) {
+      if (payload && payload.email) {
         onSignIn({
-          name: payload.name || payload.given_name || 'Google User',
-          email: payload.email || 'user@gmail.com',
-          avatar: payload.picture || `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(payload.email || 'user')}`,
+          name: payload.name || payload.given_name || payload.email.split('@')[0],
+          email: payload.email,
+          avatar: payload.picture || `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(payload.email)}`,
           provider: 'google',
           token: credentialResponse.credential,
         });
@@ -57,57 +57,29 @@ export const GoogleSignInModal: React.FC<GoogleSignInModalProps> = ({
         return;
       }
     }
-    // Fallback if payload decode had issues
-    onSignIn({
-      name: 'Google Verified User',
-      email: 'user@gmail.com',
-      avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=128&auto=format&fit=crop&q=80',
-      provider: 'google',
-      token: credentialResponse.credential || `dev_google_${Date.now()}`,
-    });
+    setAuthError('Unable to extract Google account email. Please enter your email manually.');
     setLoading(false);
   };
 
   const handleGoogleError = () => {
-    setAuthError('Google sign-in popup was cancelled or origin not authorized yet.');
-  };
-
-  const handleQuickSignIn = (accountIndex: number) => {
-    setLoading(true);
-    setAuthError(null);
-    setTimeout(() => {
-      if (accountIndex === 1) {
-        onSignIn({
-          name: 'Vijay Kivaturi',
-          email: 'vijay.kivaturi@gmail.com',
-          avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=128&auto=format&fit=crop&q=80',
-          token: `dev_vijay_${Date.now()}`,
-        });
-      } else {
-        onSignIn({
-          name: 'Traffic Engineer',
-          email: 'engineer@traffis.dev',
-          avatar: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=128&auto=format&fit=crop&q=80',
-          token: `dev_engineer_${Date.now()}`,
-        });
-      }
-      setLoading(false);
-    }, 400);
+    setAuthError('Google sign-in was cancelled or origin is not authorized yet.');
   };
 
   const handleCustomSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!customEmail) return;
+    const emailTrimmed = customEmail.trim();
+    if (!emailTrimmed) return;
     setLoading(true);
+    setAuthError(null);
     setTimeout(() => {
       onSignIn({
-        name: customName || customEmail.split('@')[0],
-        email: customEmail,
-        avatar: `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(customEmail)}`,
-        token: `dev_custom_${btoa(customEmail).replace(/=/g, '')}`,
+        name: customName.trim() || emailTrimmed.split('@')[0],
+        email: emailTrimmed,
+        avatar: `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(emailTrimmed)}`,
+        token: `dev_custom_${btoa(emailTrimmed).replace(/=/g, '')}`,
       });
       setLoading(false);
-    }, 400);
+    }, 300);
   };
 
   return (
@@ -132,8 +104,8 @@ export const GoogleSignInModal: React.FC<GoogleSignInModalProps> = ({
         className="glass-panel"
         style={{
           width: '100%',
-          maxWidth: '460px',
-          background: 'linear-gradient(180deg, rgba(17, 24, 39, 0.95) 0%, rgba(10, 15, 29, 0.98) 100%)',
+          maxWidth: '440px',
+          background: 'linear-gradient(180deg, rgba(17, 24, 39, 0.96) 0%, rgba(10, 15, 29, 0.98) 100%)',
           border: '1px solid rgba(255, 255, 255, 0.12)',
           borderRadius: '16px',
           boxShadow: '0 25px 60px -15px rgba(0, 0, 0, 0.7), 0 0 30px rgba(56, 189, 248, 0.15)',
@@ -250,13 +222,18 @@ export const GoogleSignInModal: React.FC<GoogleSignInModalProps> = ({
               </span>
             </div>
           ) : !isCustomMode ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '18px', alignItems: 'center' }}>
+              <p style={{ fontSize: '0.84rem', color: '#94a3b8', textAlign: 'center', lineHeight: 1.5 }}>
+                Sign in with your verified Google Account to launch the interactive microscopic traffic simulator.
+              </p>
+
               {/* Official Google Login Button Component */}
               <div
                 style={{
                   display: 'flex',
                   justifyContent: 'center',
-                  padding: '8px 0',
+                  width: '100%',
+                  padding: '12px 0',
                   background: 'rgba(255, 255, 255, 0.03)',
                   borderRadius: '12px',
                   border: '1px solid rgba(255, 255, 255, 0.08)',
@@ -269,7 +246,7 @@ export const GoogleSignInModal: React.FC<GoogleSignInModalProps> = ({
                   shape="rectangular"
                   size="large"
                   text="signin_with"
-                  width="360"
+                  width="320"
                 />
               </div>
 
@@ -278,131 +255,48 @@ export const GoogleSignInModal: React.FC<GoogleSignInModalProps> = ({
                   display: 'flex',
                   alignItems: 'center',
                   gap: '10px',
+                  width: '100%',
                   margin: '4px 0',
                 }}
               >
-                <div style={{ flex: 1, height: '1px', backgroundColor: 'rgba(255, 255, 255, 0.1)' }} />
+                <div style={{ flex: 1, height: '1px', backgroundColor: 'rgba(255, 255, 255, 0.08)' }} />
                 <span style={{ fontSize: '0.72rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                  or quick profile login
+                  or
                 </span>
-                <div style={{ flex: 1, height: '1px', backgroundColor: 'rgba(255, 255, 255, 0.1)' }} />
+                <div style={{ flex: 1, height: '1px', backgroundColor: 'rgba(255, 255, 255, 0.08)' }} />
               </div>
 
-              {/* Quick Account option 1 */}
-              <button
-                onClick={() => handleQuickSignIn(1)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '14px',
-                  padding: '10px 14px',
-                  borderRadius: '10px',
-                  background: 'rgba(30, 41, 59, 0.7)',
-                  border: '1px solid rgba(255, 255, 255, 0.1)',
-                  cursor: 'pointer',
-                  textAlign: 'left',
-                  transition: 'all 0.2s ease',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = 'rgba(56, 189, 248, 0.15)';
-                  e.currentTarget.style.borderColor = 'rgba(56, 189, 248, 0.4)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'rgba(30, 41, 59, 0.7)';
-                  e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
-                }}
-              >
-                <img
-                  src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=128&auto=format&fit=crop&q=80"
-                  alt="Vijay Kivaturi"
-                  style={{ width: '38px', height: '38px', borderRadius: '50%', objectFit: 'cover' }}
-                />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: '0.88rem', fontWeight: 600, color: '#ffffff' }}>
-                    Vijay Kivaturi
-                  </div>
-                  <div style={{ fontSize: '0.75rem', color: '#94a3b8', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    vijay.kivaturi@gmail.com
-                  </div>
-                </div>
-                <div
-                  style={{
-                    padding: '3px 8px',
-                    borderRadius: '6px',
-                    backgroundColor: 'rgba(56, 189, 248, 0.2)',
-                    color: '#38bdf8',
-                    fontSize: '0.7rem',
-                    fontWeight: 600,
-                  }}
-                >
-                  Primary
-                </div>
-              </button>
-
-              {/* Quick Account option 2 */}
-              <button
-                onClick={() => handleQuickSignIn(2)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '14px',
-                  padding: '10px 14px',
-                  borderRadius: '10px',
-                  background: 'rgba(30, 41, 59, 0.7)',
-                  border: '1px solid rgba(255, 255, 255, 0.1)',
-                  cursor: 'pointer',
-                  textAlign: 'left',
-                  transition: 'all 0.2s ease',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = 'rgba(56, 189, 248, 0.15)';
-                  e.currentTarget.style.borderColor = 'rgba(56, 189, 248, 0.4)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'rgba(30, 41, 59, 0.7)';
-                  e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
-                }}
-              >
-                <img
-                  src="https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=128&auto=format&fit=crop&q=80"
-                  alt="Traffic Engineer"
-                  style={{ width: '38px', height: '38px', borderRadius: '50%', objectFit: 'cover' }}
-                />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: '0.88rem', fontWeight: 600, color: '#ffffff' }}>
-                    Traffic Engineer Demo
-                  </div>
-                  <div style={{ fontSize: '0.75rem', color: '#94a3b8', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    engineer@traffis.dev
-                  </div>
-                </div>
-                <ArrowRight size={16} color="#64748b" />
-              </button>
-
-              {/* Enter custom account button */}
+              {/* Enter custom Google account button */}
               <button
                 type="button"
                 onClick={() => setIsCustomMode(true)}
                 style={{
-                  background: 'none',
-                  border: '1px dashed rgba(255, 255, 255, 0.2)',
+                  width: '100%',
+                  background: 'rgba(30, 41, 59, 0.5)',
+                  border: '1px solid rgba(255, 255, 255, 0.12)',
                   borderRadius: '10px',
-                  padding: '8px 12px',
-                  color: '#38bdf8',
-                  fontSize: '0.78rem',
-                  fontWeight: 500,
+                  padding: '10px 14px',
+                  color: '#cbd5e1',
+                  fontSize: '0.82rem',
+                  fontWeight: 600,
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  gap: '6px',
+                  gap: '8px',
                   transition: 'all 0.2s ease',
                 }}
-                onMouseEnter={(e) => (e.currentTarget.style.borderColor = '#38bdf8')}
-                onMouseLeave={(e) => (e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.2)')}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = '#38bdf8';
+                  e.currentTarget.style.color = '#ffffff';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.12)';
+                  e.currentTarget.style.color = '#cbd5e1';
+                }}
               >
-                <Sparkles size={13} />
-                Use custom email credentials
+                <Mail size={15} color="#38bdf8" />
+                <span>Enter Google Account Manually</span>
               </button>
             </div>
           ) : (
@@ -413,7 +307,7 @@ export const GoogleSignInModal: React.FC<GoogleSignInModalProps> = ({
                 </label>
                 <input
                   type="text"
-                  placeholder="e.g. Alex Mercer"
+                  placeholder="Your Name"
                   value={customName}
                   onChange={(e) => setCustomName(e.target.value)}
                   style={{
@@ -438,7 +332,7 @@ export const GoogleSignInModal: React.FC<GoogleSignInModalProps> = ({
                 <input
                   type="email"
                   required
-                  placeholder="name@gmail.com"
+                  placeholder="your-email@gmail.com"
                   value={customEmail}
                   onChange={(e) => setCustomEmail(e.target.value)}
                   style={{

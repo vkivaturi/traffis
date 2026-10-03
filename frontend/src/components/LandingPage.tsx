@@ -646,7 +646,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           </button>
 
           <a
-            href="mailto:support@traffis.dev"
+            href="mailto:contact@traffis.in"
             style={{
               color: '#94a3b8',
               textDecoration: 'none',
@@ -658,7 +658,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             onMouseLeave={(e) => (e.currentTarget.style.color = '#94a3b8')}
           >
             <Mail size={14} />
-            support@traffis.dev
+            contact@traffis.in
           </a>
 
           <a

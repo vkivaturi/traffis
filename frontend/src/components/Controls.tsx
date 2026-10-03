@@ -15,6 +15,8 @@ import {
   Clock,
   SkipForward,
   AlertCircle,
+  Cpu,
+  Zap,
 } from 'lucide-react';
 import type {
   SpawnOptions,
@@ -27,6 +29,7 @@ import type {
 
 interface ControlsProps {
   isRunning: boolean;
+  step?: number;
   onPlay: () => void;
   onPause: () => void;
   onReset: () => void;
@@ -71,6 +74,7 @@ const VEHICLE_TYPES = [
 
 export const Controls: React.FC<ControlsProps> = ({
   isRunning,
+  step = 0,
   onPlay,
   onPause,
   onReset,
@@ -258,24 +262,69 @@ export const Controls: React.FC<ControlsProps> = ({
               </button>
             </div>
 
-            <button
-              onClick={() => setIsExpanded(false)}
-              style={{
-                background: 'transparent',
-                border: 'none',
-                color: '#64748b',
-                cursor: 'pointer',
-                padding: '4px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '4px',
-                fontSize: '0.75rem',
-              }}
-              title="Close Advanced Panel"
-            >
-              <ChevronDown size={16} />
-              <span>Close</span>
-            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              {/* Quick Diagnostic Widgets: Steps and Ping */}
+              <div
+                className="glass-pill"
+                title="Simulation Step (50ms TraCI increments)"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  padding: '4px 10px',
+                  borderRadius: '6px',
+                  backgroundColor: 'rgba(15, 23, 42, 0.7)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  fontSize: '0.72rem',
+                }}
+              >
+                <Cpu size={13} color="#94a3b8" />
+                <span style={{ color: '#94a3b8', fontWeight: 600 }}>STEP:</span>
+                <span style={{ color: '#f8fafc', fontWeight: 700, fontFamily: 'var(--font-mono)' }}>
+                  {step}
+                </span>
+              </div>
+
+              <div
+                className="glass-pill"
+                title="Packet roundtrip estimate (WebSocket Latency)"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  padding: '4px 10px',
+                  borderRadius: '6px',
+                  backgroundColor: 'rgba(15, 23, 42, 0.7)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  fontSize: '0.72rem',
+                }}
+              >
+                <Zap size={13} color="#10b981" />
+                <span style={{ color: '#94a3b8', fontWeight: 600 }}>PING:</span>
+                <span style={{ color: '#10b981', fontWeight: 700, fontFamily: 'var(--font-mono)' }}>
+                  {latencyMs}ms
+                </span>
+              </div>
+
+              <button
+                onClick={() => setIsExpanded(false)}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  color: '#64748b',
+                  cursor: 'pointer',
+                  padding: '4px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  fontSize: '0.75rem',
+                }}
+                title="Close Advanced Panel"
+              >
+                <ChevronDown size={16} />
+                <span>Close</span>
+              </button>
+            </div>
           </div>
 
           {/* TAB 1: VEHICLE SPAWNER */}
@@ -865,12 +914,29 @@ export const Controls: React.FC<ControlsProps> = ({
                 </div>
 
                 <div style={{ padding: '10px 12px', backgroundColor: 'rgba(15, 23, 42, 0.6)', borderRadius: '8px', border: '1px solid rgba(255, 255, 255, 0.08)' }}>
-                  <div style={{ fontSize: '0.68rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 600 }}>TraCI Tick Rate</div>
+                  <div style={{ fontSize: '0.68rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 600 }}>Simulation Steps</div>
+                  <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#f8fafc', fontFamily: 'var(--font-mono)' }}>
+                    {step}
+                  </div>
+                  <div style={{ fontSize: '0.68rem', color: '#64748b' }}>50ms TraCI intervals</div>
+                </div>
+
+                <div style={{ padding: '10px 12px', backgroundColor: 'rgba(15, 23, 42, 0.6)', borderRadius: '8px', border: '1px solid rgba(255, 255, 255, 0.08)' }}>
+                  <div style={{ fontSize: '0.68rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 600 }}>Network Ping</div>
                   <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#10b981', fontFamily: 'var(--font-mono)' }}>
+                    {latencyMs}{' '}
+                    <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>ms</span>
+                  </div>
+                  <div style={{ fontSize: '0.68rem', color: '#64748b' }}>WebSocket latency</div>
+                </div>
+
+                <div style={{ padding: '10px 12px', backgroundColor: 'rgba(15, 23, 42, 0.6)', borderRadius: '8px', border: '1px solid rgba(255, 255, 255, 0.08)' }}>
+                  <div style={{ fontSize: '0.68rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 600 }}>TraCI Tick Rate</div>
+                  <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#38bdf8', fontFamily: 'var(--font-mono)' }}>
                     {updateRateHz}{' '}
                     <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>Hz</span>
                   </div>
-                  <div style={{ fontSize: '0.68rem', color: '#64748b' }}>{latencyMs}ms roundtrip</div>
+                  <div style={{ fontSize: '0.68rem', color: '#64748b' }}>Physics broadcast rate</div>
                 </div>
 
                 <div style={{ padding: '10px 12px', backgroundColor: 'rgba(15, 23, 42, 0.6)', borderRadius: '8px', border: '1px solid rgba(255, 255, 255, 0.08)' }}>
