@@ -29,16 +29,21 @@ export const useAuth = () => {
   }, [user]);
 
   const signInWithGoogle = useCallback((customUser?: Partial<User>) => {
+    const userId = customUser?.id || 'usr_' + Math.random().toString(36).substring(2, 9);
     const defaultUser: User = {
-      id: 'usr_' + Math.random().toString(36).substring(2, 9),
+      id: userId,
       name: customUser?.name || 'Vijay Kivaturi',
       email: customUser?.email || 'vijay.kivaturi@gmail.com',
       avatar: customUser?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=128&auto=format&fit=crop&q=80',
       provider: 'google',
       signedInAt: new Date().toISOString(),
+      token: customUser?.token || `dev_${userId}_${Date.now()}`,
     };
 
     const newUser = { ...defaultUser, ...customUser };
+    if (!newUser.token) {
+      newUser.token = `dev_${newUser.id}_${Date.now()}`;
+    }
     setUser(newUser);
     setIsAuthModalOpen(false);
     return newUser;

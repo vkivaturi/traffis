@@ -14,6 +14,7 @@ import {
   Home,
   Info,
   LogOut,
+  AlertCircle,
 } from 'lucide-react';
 import type { SimulationState, ScenarioMetadata } from '../types/simulation';
 import type { User } from '../types/auth';
@@ -254,13 +255,42 @@ export const Header: React.FC<HeaderProps> = ({
 
       {/* Center: Live Telemetry ticker */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-        <div className="glass-pill" title="Simulation Time">
-          <Clock size={12} color="#94a3b8" />
-          <span style={{ color: '#94a3b8' }}>SIM T:</span>
-          <span style={{ color: '#f8fafc', fontWeight: 600 }}>
-            {state.sim_time.toFixed(2)}s
-          </span>
-        </div>
+        {(() => {
+          const maxSec = state.max_sim_time ?? 300;
+          const isLimitReached = !!state.time_limit_reached || state.sim_time >= maxSec;
+          const isWarning = state.sim_time >= maxSec - 30 && !isLimitReached;
+          const formatTime = (secs: number) => {
+            const m = Math.floor(secs / 60);
+            const s = Math.floor(secs % 60);
+            return `${m}:${s.toString().padStart(2, '0')}`;
+          };
+
+          return (
+            <div
+              className="glass-pill"
+              title={`Simulation Time: ${state.sim_time.toFixed(1)}s / ${maxSec}s (Hard Limit: 5 Minutes)`}
+              style={{
+                borderColor: isLimitReached ? 'rgba(244, 63, 94, 0.6)' : isWarning ? 'rgba(245, 158, 11, 0.6)' : undefined,
+                backgroundColor: isLimitReached ? 'rgba(244, 63, 94, 0.15)' : isWarning ? 'rgba(245, 158, 11, 0.12)' : undefined,
+              }}
+            >
+              {isLimitReached ? (
+                <AlertCircle size={12} color="#f43f5e" />
+              ) : (
+                <Clock size={12} color={isWarning ? '#f59e0b' : '#94a3b8'} />
+              )}
+              <span style={{ color: isLimitReached ? '#fb7185' : isWarning ? '#fbbf24' : '#94a3b8', fontWeight: 600 }}>
+                {isLimitReached ? '5M LIMIT:' : 'SIM T:'}
+              </span>
+              <span style={{ color: isLimitReached ? '#f43f5e' : isWarning ? '#f59e0b' : '#f8fafc', fontWeight: 700 }}>
+                {formatTime(state.sim_time)} / 5:00
+              </span>
+              <span style={{ color: '#64748b', fontSize: '0.68rem', marginLeft: '-2px' }}>
+                ({state.sim_time.toFixed(1)}s)
+              </span>
+            </div>
+          );
+        })()}
 
         <div className="glass-pill" title="Simulation Step (50ms increments)">
           <Cpu size={12} color="#94a3b8" />

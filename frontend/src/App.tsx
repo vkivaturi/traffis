@@ -46,7 +46,7 @@ export const App: React.FC = () => {
     setTrafficLight,
     nextTrafficLightPhase,
     setDefaultSpeed,
-  } = useSimulationSocket();
+  } = useSimulationSocket(user?.token);
 
   const currentScenarioId = activeScenario?.id || state.scenario_id || 'straight_road';
   const isIntersection = activeScenario?.type === 'intersection';
@@ -153,22 +153,24 @@ export const App: React.FC = () => {
         return;
       }
 
+      const isLimitReached = !!state.time_limit_reached || state.sim_time >= (state.max_sim_time ?? 300);
+
       if (e.code === 'Space') {
         e.preventDefault();
         if (state.is_running) pause();
-        else play();
+        else if (!isLimitReached) play();
       } else if (e.code === 'KeyR') {
         e.preventDefault();
         handleReset();
       } else if (e.code === 'KeyS') {
         e.preventDefault();
-        handleSpawn({});
+        if (!isLimitReached) handleSpawn({});
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [activeView, state.is_running, pause, play, handleReset, handleSpawn]);
+  }, [activeView, state.is_running, state.sim_time, state.max_sim_time, state.time_limit_reached, pause, play, handleReset, handleSpawn]);
 
   // If user is on landing page or not authenticated, display Landing Page
   if (activeView === 'landing') {
@@ -298,6 +300,9 @@ export const App: React.FC = () => {
         dataExchangedMB={dataExchangedMB}
         defaultSpeedKmh={state.default_speed_kmh ?? 50}
         onUpdateDefaultSpeed={setDefaultSpeed}
+        simTime={state.sim_time}
+        maxSimTime={state.max_sim_time ?? 300}
+        timeLimitReached={state.time_limit_reached}
       />
 
       {/* 5. Open-Source Attribution Credits Footer */}

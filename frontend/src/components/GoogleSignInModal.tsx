@@ -51,6 +51,7 @@ export const GoogleSignInModal: React.FC<GoogleSignInModalProps> = ({
           email: payload.email || 'user@gmail.com',
           avatar: payload.picture || `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(payload.email || 'user')}`,
           provider: 'google',
+          token: credentialResponse.credential,
         });
         setLoading(false);
         return;
@@ -62,6 +63,7 @@ export const GoogleSignInModal: React.FC<GoogleSignInModalProps> = ({
       email: 'user@gmail.com',
       avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=128&auto=format&fit=crop&q=80',
       provider: 'google',
+      token: credentialResponse.credential || `dev_google_${Date.now()}`,
     });
     setLoading(false);
   };
@@ -79,12 +81,14 @@ export const GoogleSignInModal: React.FC<GoogleSignInModalProps> = ({
           name: 'Vijay Kivaturi',
           email: 'vijay.kivaturi@gmail.com',
           avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=128&auto=format&fit=crop&q=80',
+          token: `dev_vijay_${Date.now()}`,
         });
       } else {
         onSignIn({
           name: 'Traffic Engineer',
           email: 'engineer@traffis.dev',
           avatar: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=128&auto=format&fit=crop&q=80',
+          token: `dev_engineer_${Date.now()}`,
         });
       }
       setLoading(false);
@@ -100,6 +104,7 @@ export const GoogleSignInModal: React.FC<GoogleSignInModalProps> = ({
         name: customName || customEmail.split('@')[0],
         email: customEmail,
         avatar: `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(customEmail)}`,
+        token: `dev_custom_${btoa(customEmail).replace(/=/g, '')}`,
       });
       setLoading(false);
     }, 400);

@@ -71,6 +71,8 @@ class SimulationStateMessage(BaseModel):
     stats: SimulationStats
     traffic_light: TrafficLightState
     default_speed_kmh: Optional[float] = 50.0
+    max_sim_time: float = 300.0
+    time_limit_reached: bool = False
 
 class SpawnRequest(BaseModel):
     direction: Optional[str] = Field(None, description="Travel direction or spawn origin: 'east', 'west', 'north', 'random'")

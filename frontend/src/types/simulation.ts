@@ -75,6 +75,8 @@ export interface SimulationState {
   stats: SimulationStats;
   traffic_light?: TrafficLightData;
   default_speed_kmh?: number;
+  max_sim_time?: number;
+  time_limit_reached?: boolean;
 }
 
 export interface LaneInfo {

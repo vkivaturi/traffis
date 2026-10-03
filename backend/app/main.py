@@ -1,7 +1,7 @@
 import json
 import logging
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Depends, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -11,6 +11,7 @@ from starlette.responses import Response
 from .config import settings, bandwidth_limiter
 from .schemas import SpawnRequest, AutoSpawnConfig, NetworkInfo, TrafficLightConfig
 from .simulation import sim_manager
+from .auth import get_current_user, verify_ws_token
 
 logger = logging.getLogger("traffis_backend")
 
@@ -95,6 +96,8 @@ async def health_check():
         "sumo_initialized": sim_manager.is_initialized,
         "is_running": sim_manager.is_running,
         "sim_time": sim_manager.sim_time,
+        "max_sim_time": settings.MAX_SIM_TIME_S,
+        "time_limit_reached": sim_manager.time_limit_reached,
         "active_clients": len(sim_manager.active_websockets),
         "bandwidth": bandwidth_limiter.get_usage()
     }
@@ -109,27 +112,38 @@ async def get_network_info():
     return sim_manager.get_network_info()
 
 @app.post("/api/play")
-async def play_simulation():
-    await sim_manager.play()
-    return {"status": "ok", "action": "play", "is_running": sim_manager.is_running}
+async def play_simulation(user: dict = Depends(get_current_user)):
+    resumed = await sim_manager.play()
+    return {
+        "status": "ok" if resumed else "limit_reached",
+        "action": "play",
+        "is_running": sim_manager.is_running,
+        "time_limit_reached": sim_manager.time_limit_reached
+    }
 
 @app.post("/api/pause")
-async def pause_simulation():
+async def pause_simulation(user: dict = Depends(get_current_user)):
     await sim_manager.pause()
     return {"status": "ok", "action": "pause", "is_running": sim_manager.is_running}
 
 @app.post("/api/reset")
-async def reset_simulation():
+async def reset_simulation(user: dict = Depends(get_current_user)):
     await sim_manager.reset()
-    return {"status": "ok", "action": "reset", "sim_time": 0.0}
+    return {"status": "ok", "action": "reset", "sim_time": 0.0, "time_limit_reached": False}
 
 @app.post("/api/step")
-async def step_simulation():
+async def step_simulation(user: dict = Depends(get_current_user)):
     await sim_manager.step_once()
-    return {"status": "ok", "action": "step", "step": sim_manager.step_count}
+    return {
+        "status": "ok",
+        "action": "step",
+        "step": sim_manager.step_count,
+        "is_running": sim_manager.is_running,
+        "time_limit_reached": sim_manager.time_limit_reached
+    }
 
 @app.post("/api/spawn")
-async def spawn_vehicle(req: SpawnRequest):
+async def spawn_vehicle(req: SpawnRequest, user: dict = Depends(get_current_user)):
     try:
         veh_id = await sim_manager.spawn_vehicle(req)
         return {"status": "ok", "vehicle_id": veh_id}
@@ -146,7 +160,7 @@ async def get_current_scenario():
     return sim_manager.scenario.get_metadata()
 
 @app.post("/api/scenario/select")
-async def select_scenario(req: dict):
+async def select_scenario(req: dict, user: dict = Depends(get_current_user)):
     scenario_id = req.get("scenario_id")
     if not scenario_id:
         raise HTTPException(status_code=400, detail="scenario_id is required")
@@ -157,28 +171,34 @@ async def select_scenario(req: dict):
         raise HTTPException(status_code=400, detail=str(e))
 
 @app.post("/api/auto-spawn")
-async def configure_auto_spawn(config: AutoSpawnConfig):
+async def configure_auto_spawn(config: AutoSpawnConfig, user: dict = Depends(get_current_user)):
     sim_manager.set_auto_spawn(config)
     return {"status": "ok", "auto_spawn": config.model_dump()}
 
 @app.post("/api/traffic-light")
-async def configure_traffic_light(config: TrafficLightConfig):
+async def configure_traffic_light(config: TrafficLightConfig, user: dict = Depends(get_current_user)):
     await sim_manager.set_traffic_light(config)
     return {"status": "ok", "traffic_light": sim_manager._get_traffic_light_data().model_dump()}
 
 @app.post("/api/traffic-light/next")
-async def next_traffic_light_phase():
+async def next_traffic_light_phase(user: dict = Depends(get_current_user)):
     await sim_manager.next_traffic_light_phase()
     return {"status": "ok", "traffic_light": sim_manager._get_traffic_light_data().model_dump()}
 
 @app.post("/api/default-speed")
-async def set_default_speed(payload: dict):
+async def set_default_speed(payload: dict, user: dict = Depends(get_current_user)):
     speed_kmh = float(payload.get("speed_kmh", 50.0))
     await sim_manager.set_default_speed(speed_kmh)
     return {"status": "ok", "default_speed_kmh": sim_manager.default_speed_kmh}
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
+    user = verify_ws_token(websocket)
+    if not user:
+        logger.warning("Rejecting unauthenticated WebSocket handshake from %s", websocket.client)
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason="Unauthorized: Google sign-in required")
+        return
+
     await sim_manager.register_websocket(websocket)
 
     async def _ws_send(data: dict) -> None:

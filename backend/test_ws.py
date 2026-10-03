@@ -3,7 +3,7 @@ import json
 import websockets
 
 async def test_full_flow():
-    uri = "ws://127.0.0.1:8000/ws"
+    uri = "ws://127.0.0.1:8000/ws?token=dev_test_session"
     print(f"Connecting to {uri}...")
     async with websockets.connect(uri) as ws:
         async def recv_type(expected_type, timeout=5.0):

@@ -221,7 +221,9 @@ Defined in [`backend/sumo_config/road.rou.xml`](file:///Users/vijay/Projects/tra
        "phase_remaining": 11.5,
        "next_state": "yellow"
      },
-     "default_speed_kmh": 50.0
+     "default_speed_kmh": 50.0,
+     "max_sim_time": 300.0,
+     "time_limit_reached": false
    }
    ```
 3. **Acknowledgments**:

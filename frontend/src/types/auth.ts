@@ -5,6 +5,7 @@ export interface User {
   avatar: string;
   provider: 'google';
   signedInAt: string;
+  token?: string;
 }
 
 export interface AuthContextType {

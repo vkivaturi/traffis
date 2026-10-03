@@ -14,6 +14,7 @@ import {
   Crosshair,
   Clock,
   SkipForward,
+  AlertCircle,
 } from 'lucide-react';
 import type {
   SpawnOptions,
@@ -45,6 +46,9 @@ interface ControlsProps {
   dataExchangedMB?: number;
   defaultSpeedKmh?: number;
   onUpdateDefaultSpeed?: (speedKmh: number) => void;
+  simTime?: number;
+  maxSimTime?: number;
+  timeLimitReached?: boolean;
 }
 
 const COLOR_OPTIONS = [
@@ -86,8 +90,12 @@ export const Controls: React.FC<ControlsProps> = ({
   dataExchangedMB = 0,
   defaultSpeedKmh = 50,
   onUpdateDefaultSpeed,
+  simTime = 0,
+  maxSimTime = 300,
+  timeLimitReached = false,
 }) => {
   const isIntersection = activeScenarioId.includes('intersection');
+  const isLimitReached = !!timeLimitReached || simTime >= maxSimTime;
   const currentVehPerHour =
     autoSpawnSettings.rate_per_hour ?? Math.round(autoSpawnSettings.rate_per_minute * 60);
 
@@ -486,18 +494,22 @@ export const Controls: React.FC<ControlsProps> = ({
 
                 <button
                   className="btn-primary"
+                  disabled={isLimitReached}
                   style={{
                     width: '100%',
                     padding: '12px',
                     fontSize: '0.88rem',
                     fontWeight: 800,
                     letterSpacing: '0.04em',
-                    boxShadow: '0 4px 16px rgba(56, 189, 248, 0.3)',
+                    boxShadow: isLimitReached ? 'none' : '0 4px 16px rgba(56, 189, 248, 0.3)',
+                    opacity: isLimitReached ? 0.5 : 1,
+                    cursor: isLimitReached ? 'not-allowed' : 'pointer',
                   }}
-                  onClick={handleSpawn}
+                  onClick={isLimitReached ? undefined : handleSpawn}
+                  title={isLimitReached ? '5-minute limit reached. Reset simulation to spawn vehicles.' : 'Spawn Vehicle [S]'}
                 >
                   <Car size={18} />
-                  <span>SPAWN VEHICLE NOW [S]</span>
+                  <span>{isLimitReached ? 'LIMIT REACHED (RESET REQUIRED)' : 'SPAWN VEHICLE NOW [S]'}</span>
                 </button>
               </div>
 
@@ -876,8 +888,8 @@ export const Controls: React.FC<ControlsProps> = ({
                 <button
                   className="btn-secondary"
                   onClick={onStep}
-                  disabled={isRunning}
-                  style={{ opacity: isRunning ? 0.5 : 1, display: 'flex', alignItems: 'center', gap: '6px' }}
+                  disabled={isRunning || isLimitReached}
+                  style={{ opacity: (isRunning || isLimitReached) ? 0.5 : 1, display: 'flex', alignItems: 'center', gap: '6px', cursor: (isRunning || isLimitReached) ? 'not-allowed' : 'pointer' }}
                 >
                   <StepForward size={15} />
                   <span>Step 0.05s</span>
@@ -915,9 +927,31 @@ export const Controls: React.FC<ControlsProps> = ({
           border: '1px solid rgba(255, 255, 255, 0.1)',
         }}
       >
-        {/* 1. START / PAUSE SIMULATION BUTTON */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          {isRunning ? (
+        {/* 1. START / PAUSE / RESET BUTTONS */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          {isLimitReached ? (
+            <button
+              id="btn-limit-reached"
+              className="btn-secondary"
+              disabled
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '7px',
+                padding: '9px 16px',
+                fontSize: '0.82rem',
+                fontWeight: 800,
+                backgroundColor: 'rgba(244, 63, 94, 0.15)',
+                borderColor: 'rgba(244, 63, 94, 0.4)',
+                color: '#fb7185',
+                cursor: 'not-allowed',
+              }}
+              title="5-minute simulation limit reached. Click Reset [R] to start a new simulation."
+            >
+              <AlertCircle size={16} color="#f43f5e" />
+              <span>5M LIMIT</span>
+            </button>
+          ) : isRunning ? (
             <button
               id="btn-pause"
               className="btn-primary"
@@ -960,6 +994,30 @@ export const Controls: React.FC<ControlsProps> = ({
               <span>START</span>
             </button>
           )}
+
+          {/* Quick Reset button on main dock */}
+          <button
+            id="btn-quick-reset"
+            className="btn-secondary"
+            onClick={onReset}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '8px 12px',
+              fontSize: '0.8rem',
+              fontWeight: 700,
+              color: isLimitReached ? '#38bdf8' : '#94a3b8',
+              borderColor: isLimitReached ? 'rgba(56, 189, 248, 0.6)' : 'rgba(255, 255, 255, 0.12)',
+              backgroundColor: isLimitReached ? 'rgba(56, 189, 248, 0.16)' : 'rgba(255, 255, 255, 0.04)',
+              boxShadow: isLimitReached ? '0 0 14px rgba(56, 189, 248, 0.35)' : undefined,
+            }}
+            title="Reset simulation [R]"
+          >
+            <RotateCcw size={14} className={isLimitReached ? 'pulse-indicator' : ''} />
+            <span>{isLimitReached ? 'RESET [R]' : 'RESET'}</span>
+          </button>
+        </div>
 
           {/* 2. CHANGE VEHICLE DENSITY SLIDER (Up to 20,000 veh/hr) */}
           <div
@@ -1053,7 +1111,6 @@ export const Controls: React.FC<ControlsProps> = ({
               ))}
             </div>
           </div>
-        </div>
 
         {/* 3. DEFAULT VISUAL TELEMETRY: AVERAGE SPEED & VEHICLES PER HOUR (PCE) */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>

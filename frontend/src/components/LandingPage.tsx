@@ -11,17 +11,14 @@ import {
   Gauge,
   Sliders,
   Sparkles,
-  Maximize2,
   ExternalLink,
   Mail,
   LogOut,
-  Car,
   Lock,
 } from 'lucide-react';
 import type { User } from '../types/auth';
 import { AboutModal } from './AboutModal';
 import { GoogleSignInModal } from './GoogleSignInModal';
-import { ImageLightboxModal, type ScreenshotItem } from './ImageLightboxModal';
 
 interface LandingPageProps {
   user: User | null;
@@ -40,54 +37,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 }) => {
   const [isAboutOpen, setIsAboutOpen] = useState(false);
   const [isGoogleModalOpen, setIsGoogleModalOpen] = useState(false);
-  const [selectedScreenshotIndex, setSelectedScreenshotIndex] = useState<number | null>(null);
-
-  const screenshots: ScreenshotItem[] = [
-    {
-      id: 'highway',
-      title: '1000m Multi-Lane Highway Corridor',
-      subtitle: 'Indian LHT Physics • Dual Carriageway',
-      description:
-        'Continuous 1000-meter straight highway with dual carriageways, Krauss car-following physics, left-hand traffic overtaking dynamics, and dynamic speed zones.',
-      tag: 'Highway Segment',
-      tagColor: '#38bdf8',
-      imageSrc: '/screenshots/highway_simulation.jpg',
-      specs: ['1000m Length', '4 Lanes (2x2)', '120 km/h Limit', 'Krauss Model'],
-    },
-    {
-      id: 'signals',
-      title: 'Urban Traffic Signal Control System',
-      subtitle: 'Adaptive Phases • Dual Stop Lines',
-      description:
-        'Signalized intersection and highway junctions with customizable green, yellow, and red durations, phase countdown timers, and manual phase progression overrides.',
-      tag: 'Signalized Junction',
-      tagColor: '#10b981',
-      imageSrc: '/screenshots/intersection_signals.jpg',
-      specs: ['Dual Stop Lines', 'Phase Timers', 'Emergency Clearance', 'Auto / Manual Mode'],
-    },
-    {
-      id: 'telemetry',
-      title: 'Microscopic Vehicle Telemetry & Follow-Cam',
-      subtitle: 'Real-time Kinematics • Leader Tracking',
-      description:
-        'Inspect individual vehicles with sub-second telemetry: live velocity (km/h), acceleration vectors, headway gap distance to leader, and dedicated follow-camera tracking.',
-      tag: 'Vehicle Telemetry',
-      tagColor: '#f59e0b',
-      imageSrc: '/screenshots/vehicle_telemetry.jpg',
-      specs: ['Follow-Cam HUD', 'Leader Gap (m)', 'Speed Profile', 'Multi-Vehicle Types'],
-    },
-    {
-      id: 'analytics',
-      title: 'Real-time Traffic Flow Analytics & Heatmap',
-      subtitle: 'PCE/Hour • Density • 20Hz TraCI',
-      description:
-        'Comprehensive live analytics calculating passenger car equivalents per hour (PCE/hr), traffic density (veh/km), lane utilization bars, and low-latency WebSocket throughput.',
-      tag: 'Traffic Analytics',
-      tagColor: '#8b5cf6',
-      imageSrc: '/screenshots/traffic_analytics.jpg',
-      specs: ['PCE/hr Inflow', 'Lane Occupancy', 'Density (veh/km)', '20Hz Update Rate'],
-    },
-  ];
 
   const handleLaunchClick = () => {
     if (isAuthenticated) {
@@ -200,24 +149,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             <Info size={16} color="#38bdf8" />
             <span>About</span>
           </button>
-
-          {/* Quick Screenshots Anchor */}
-          <a
-            href="#screenshots-section"
-            style={{
-              color: '#94a3b8',
-              fontSize: '0.85rem',
-              fontWeight: 500,
-              textDecoration: 'none',
-              padding: '8px 12px',
-              borderRadius: '8px',
-              transition: 'all 0.2s ease',
-            }}
-            onMouseEnter={(e) => (e.currentTarget.style.color = '#ffffff')}
-            onMouseLeave={(e) => (e.currentTarget.style.color = '#94a3b8')}
-          >
-            Screenshots
-          </a>
 
           <a
             href="#features-section"
@@ -482,192 +413,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         </div>
       </section>
 
-      {/* 3. FOUR SCREENSHOT SHOWCASE GRID */}
-      <section
-        id="screenshots-section"
-        style={{
-          padding: '80px 28px',
-          maxWidth: '1280px',
-          margin: '0 auto',
-          width: '100%',
-        }}
-      >
-        <div style={{ textAlign: 'center', marginBottom: '48px' }}>
-          <div
-            className="glass-pill"
-            style={{
-              display: 'inline-flex',
-              marginBottom: '12px',
-              borderColor: 'rgba(56, 189, 248, 0.3)',
-            }}
-          >
-            <Car size={14} color="#38bdf8" />
-            <span>High-Fidelity Visual Engine</span>
-          </div>
-          <h2
-            style={{
-              fontSize: '2.2rem',
-              fontWeight: 800,
-              color: '#ffffff',
-              letterSpacing: '-0.02em',
-              marginBottom: '12px',
-            }}
-          >
-            Simulator Screenshots & Live Workspaces
-          </h2>
-          <p style={{ color: '#94a3b8', fontSize: '1rem', maxWidth: '640px', margin: '0 auto' }}>
-            Explore four specialized simulation modes and telemetry views running in real time.
-            Click any screenshot placeholder to view in high resolution with technical specifications.
-          </p>
-        </div>
-
-        {/* 4 Image Grid */}
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
-            gap: '24px',
-          }}
-        >
-          {screenshots.map((item, index) => (
-            <div
-              key={item.id}
-              className="glass-panel"
-              style={{
-                borderRadius: '16px',
-                overflow: 'hidden',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
-                background: 'rgba(15, 23, 42, 0.65)',
-                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                cursor: 'pointer',
-                display: 'flex',
-                flexDirection: 'column',
-              }}
-              onClick={() => setSelectedScreenshotIndex(index)}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'translateY(-6px)';
-                e.currentTarget.style.borderColor = 'rgba(56, 189, 248, 0.4)';
-                e.currentTarget.style.boxShadow = '0 20px 40px rgba(0, 0, 0, 0.5), 0 0 25px rgba(56, 189, 248, 0.2)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
-                e.currentTarget.style.boxShadow = '0 8px 32px rgba(0, 0, 0, 0.4)';
-              }}
-            >
-              {/* Image Preview Container */}
-              <div
-                style={{
-                  position: 'relative',
-                  width: '100%',
-                  height: '210px',
-                  backgroundColor: '#020617',
-                  overflow: 'hidden',
-                }}
-              >
-                <img
-                  src={item.imageSrc}
-                  alt={item.title}
-                  style={{
-                    width: '100%',
-                    height: '100%',
-                    objectFit: 'cover',
-                    transition: 'transform 0.4s ease',
-                  }}
-                  onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.05)')}
-                  onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1.0)')}
-                />
-
-                {/* Tag Pill */}
-                <div
-                  style={{
-                    position: 'absolute',
-                    top: '12px',
-                    left: '12px',
-                    padding: '4px 10px',
-                    borderRadius: '6px',
-                    backgroundColor: 'rgba(8, 12, 22, 0.85)',
-                    backdropFilter: 'blur(8px)',
-                    border: `1px solid ${item.tagColor}55`,
-                    color: item.tagColor,
-                    fontSize: '0.72rem',
-                    fontWeight: 700,
-                  }}
-                >
-                  {item.tag}
-                </div>
-
-                {/* Zoom Icon Hover Overlay */}
-                <div
-                  style={{
-                    position: 'absolute',
-                    bottom: '12px',
-                    right: '12px',
-                    width: '32px',
-                    height: '32px',
-                    borderRadius: '8px',
-                    backgroundColor: 'rgba(15, 23, 42, 0.8)',
-                    backdropFilter: 'blur(8px)',
-                    border: '1px solid rgba(255, 255, 255, 0.15)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: '#ffffff',
-                  }}
-                >
-                  <Maximize2 size={15} />
-                </div>
-              </div>
-
-              {/* Card Body */}
-              <div style={{ padding: '20px', flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#f8fafc' }}>
-                  {item.title}
-                </h3>
-                <p style={{ fontSize: '0.78rem', color: item.tagColor, fontWeight: 600 }}>
-                  {item.subtitle}
-                </p>
-                <p style={{ fontSize: '0.82rem', color: '#94a3b8', lineHeight: '1.45', flex: 1 }}>
-                  {item.description}
-                </p>
-
-                {/* Mini specs */}
-                <div
-                  style={{
-                    display: 'flex',
-                    flexWrap: 'wrap',
-                    gap: '6px',
-                    marginTop: '12px',
-                    paddingTop: '12px',
-                    borderTop: '1px solid rgba(255, 255, 255, 0.06)',
-                  }}
-                >
-                  {item.specs.slice(0, 2).map((s, idx) => (
-                    <span
-                      key={idx}
-                      style={{
-                        fontSize: '0.7rem',
-                        padding: '2px 8px',
-                        borderRadius: '4px',
-                        background: 'rgba(255, 255, 255, 0.05)',
-                        color: '#cbd5e1',
-                        fontFamily: 'var(--font-mono)',
-                      }}
-                    >
-                      • {s}
-                    </span>
-                  ))}
-                  <span style={{ fontSize: '0.7rem', color: '#38bdf8', marginLeft: 'auto', fontWeight: 600 }}>
-                    Click to expand &rarr;
-                  </span>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* 4. CORE FEATURES SECTION */}
+      {/* 3. CORE FEATURES SECTION */}
       <section
         id="features-section"
         style={{
@@ -942,22 +688,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         isOpen={isGoogleModalOpen}
         onClose={() => setIsGoogleModalOpen(false)}
         onSignIn={handleGoogleSuccess}
-      />
-
-      <ImageLightboxModal
-        isOpen={selectedScreenshotIndex !== null}
-        screenshot={selectedScreenshotIndex !== null ? screenshots[selectedScreenshotIndex] : null}
-        onClose={() => setSelectedScreenshotIndex(null)}
-        onPrev={() =>
-          setSelectedScreenshotIndex((prev) =>
-            prev !== null ? (prev - 1 + screenshots.length) % screenshots.length : 0
-          )
-        }
-        onNext={() =>
-          setSelectedScreenshotIndex((prev) =>
-            prev !== null ? (prev + 1) % screenshots.length : 0
-          )
-        }
       />
     </div>
   );

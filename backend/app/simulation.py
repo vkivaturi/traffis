@@ -71,6 +71,10 @@ class SimulationManager:
         # Active scenario (extensible)
         self.scenario: BaseScenario = registry.get_or_default("straight_road")
 
+        # Simulation limit (5 minutes max per run)
+        self.max_sim_time: float = settings.MAX_SIM_TIME_S
+        self.time_limit_reached: bool = False
+
         # Auto-spawn settings (supports up to 20,000+ veh/hr)
         self.auto_spawn = AutoSpawnConfig(enabled=True, rate_per_minute=25.0, rate_per_hour=1500.0)
         self.last_auto_spawn_time = 0.0
@@ -110,6 +114,7 @@ class SimulationManager:
         traci.start(cmd)
         self.step_count = 0
         self.sim_time = 0.0
+        self.time_limit_reached = False
         self.total_spawned = 0
         self.total_arrived = 0
         self.vehicle_counter = 0
@@ -203,8 +208,15 @@ class SimulationManager:
 
     async def play(self):
         """Resume simulation execution."""
+        if self.sim_time >= settings.MAX_SIM_TIME_S or self.time_limit_reached:
+            self.is_running = False
+            self.time_limit_reached = True
+            logger.warning("Cannot resume simulation: 5-minute time limit (%.1fs) reached. Reset required.", settings.MAX_SIM_TIME_S)
+            await self._broadcast_current_state()
+            return False
         self.is_running = True
         logger.info("Simulation resumed (PLAY).")
+        return True
 
     async def pause(self):
         """Pause simulation execution."""
@@ -216,7 +228,12 @@ class SimulationManager:
         async with self.lock:
             if not self.is_initialized:
                 return
-            self._do_step()
+            if self.sim_time >= settings.MAX_SIM_TIME_S or self.time_limit_reached:
+                self.is_running = False
+                self.time_limit_reached = True
+                logger.warning("Cannot step simulation: 5-minute time limit (%.1fs) reached. Reset required.", settings.MAX_SIM_TIME_S)
+            else:
+                self._do_step()
         await self._broadcast_current_state()
 
     async def spawn_vehicle(self, req: SpawnRequest) -> str:
@@ -327,6 +344,13 @@ class SimulationManager:
         for arr_id in arrived:
             self.vehicle_colors.pop(arr_id, None)
 
+        # Enforce hard 5-minute (300.0s) maximum simulation limit
+        if self.sim_time >= settings.MAX_SIM_TIME_S:
+            self.sim_time = settings.MAX_SIM_TIME_S
+            self.is_running = False
+            self.time_limit_reached = True
+            logger.info("Simulation hard limit reached (%.1fs / 5 minutes). Pausing simulation.", self.sim_time)
+
     def _collect_current_state(self) -> SimulationStateMessage:
         """Extract all current vehicle coordinates and metrics in compact format for network efficiency."""
         veh_ids = traci.vehicle.getIDList()
@@ -422,7 +446,9 @@ class SimulationManager:
             vehicles=None,
             stats=stats,
             traffic_light=tl_data,
-            default_speed_kmh=self.default_speed_kmh
+            default_speed_kmh=self.default_speed_kmh,
+            max_sim_time=settings.MAX_SIM_TIME_S,
+            time_limit_reached=self.time_limit_reached or (self.sim_time >= settings.MAX_SIM_TIME_S)
         )
 
     async def _broadcast_current_state(self):
@@ -526,7 +552,7 @@ class SimulationManager:
                         self._do_step()
                         step_counter += 1
 
-                        should_broadcast = (step_counter % broadcast_step_interval == 0)
+                        should_broadcast = (step_counter % broadcast_step_interval == 0) or self.time_limit_reached
                         if should_broadcast and self.active_websockets:
                             state_msg = self._collect_current_state()
                         else:

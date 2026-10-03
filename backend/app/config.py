@@ -57,6 +57,7 @@ class Settings(BaseModel):
     DEFAULT_GREEN_DURATION: float = 30.0
     DEFAULT_YELLOW_DURATION: float = 3.0
     DEFAULT_RED_DURATION: float = 33.0
+    MAX_SIM_TIME_S: float = 300.0  # 5 minutes maximum hard limit per simulation run
     RATE_LIMIT_MB_PER_HOUR: float = float(os.environ.get("RATE_LIMIT_MB_PER_HOUR", "100"))
     
 settings = Settings()

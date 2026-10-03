@@ -34,9 +34,11 @@ const INITIAL_STATE: SimulationState = {
     phase_remaining: 15,
     next_state: 'yellow',
   },
+  max_sim_time: 300,
+  time_limit_reached: false,
 };
 
-export function useSimulationSocket() {
+export function useSimulationSocket(authToken?: string) {
   const [state, setState] = useState<SimulationState>(INITIAL_STATE);
   const [networkInfo, setNetworkInfo] = useState<NetworkInfo | null>(null);
   const [scenarios, setScenarios] = useState<ScenarioMetadata[]>([]);
@@ -54,12 +56,23 @@ export function useSimulationSocket() {
   const rateCalcIntervalRef = useRef<number | null>(null);
   const connectRef = useRef<() => void>(() => {});
 
+  const getToken = useCallback((): string => {
+    if (authToken) return authToken;
+    try {
+      const saved = localStorage.getItem('traffis_auth_user');
+      return saved ? JSON.parse(saved)?.token || '' : '';
+    } catch {
+      return '';
+    }
+  }, [authToken]);
+
   const connect = useCallback(() => {
     if (socketRef.current?.readyState === WebSocket.OPEN) return;
 
     const isSecure = window.location.protocol === 'https:';
     const wsProto = isSecure ? 'wss:' : 'ws:';
-    const targetUrl = `${wsProto}//${window.location.host}/ws`;
+    const token = getToken();
+    const targetUrl = `${wsProto}//${window.location.host}/ws${token ? `?token=${encodeURIComponent(token)}` : ''}`;
 
     const ws = new WebSocket(targetUrl);
     socketRef.current = ws;
@@ -138,7 +151,7 @@ export function useSimulationSocket() {
       console.warn('WebSocket connection error, will retry...', err);
       ws.close();
     };
-  }, []);
+  }, [getToken]);
 
   useEffect(() => {
     connectRef.current = connect;
@@ -186,13 +199,18 @@ export function useSimulationSocket() {
     if (socketRef.current?.readyState === WebSocket.OPEN) {
       socketRef.current.send(raw);
     } else {
+      const token = getToken();
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
       fetch(`/api/${action}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: raw,
       }).catch((e) => console.warn('REST fallback failed:', e));
     }
-  }, []);
+  }, [getToken]);
 
   const selectScenario = useCallback((scenarioId: string) => {
     const raw = JSON.stringify({
@@ -203,18 +221,37 @@ export function useSimulationSocket() {
     if (socketRef.current?.readyState === WebSocket.OPEN) {
       socketRef.current.send(raw);
     } else {
+      const token = getToken();
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
       fetch('/api/scenario/select', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({ scenario_id: scenarioId }),
       }).catch((e) => console.warn('Failed to switch scenario via REST:', e));
     }
-  }, []);
+  }, [getToken]);
 
-  const play = useCallback(() => send('play'), [send]);
+  const play = useCallback(() => {
+    if (state.time_limit_reached || state.sim_time >= (state.max_sim_time ?? 300)) {
+      console.warn('Simulation time limit (5 minutes) reached. Reset required.');
+      return;
+    }
+    send('play');
+  }, [send, state.time_limit_reached, state.sim_time, state.max_sim_time]);
+
   const pause = useCallback(() => send('pause'), [send]);
   const reset = useCallback(() => send('reset'), [send]);
-  const step = useCallback(() => send('step'), [send]);
+
+  const step = useCallback(() => {
+    if (state.time_limit_reached || state.sim_time >= (state.max_sim_time ?? 300)) {
+      console.warn('Simulation time limit (5 minutes) reached. Reset required.');
+      return;
+    }
+    send('step');
+  }, [send, state.time_limit_reached, state.sim_time, state.max_sim_time]);
 
   const spawnVehicle = useCallback((options: SpawnOptions = {}) => {
     send('spawn', options as Record<string, unknown>);
