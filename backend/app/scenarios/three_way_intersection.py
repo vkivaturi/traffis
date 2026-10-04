@@ -17,36 +17,37 @@ from ..schemas import (
 
 logger = logging.getLogger("scenario_three_way_intersection")
 
+# 3-way intersection phase definitions: straight and right green run concurrently with full priority
 PHASE_DEFS = [
     {
         "index": 0,
-        "name": "East-West Green / North Red",
+        "name": "East-West Highway Green (Straight & Protected Right)",
         "state": "green",
-        "raw": "GGgrrrGGG",
+        "raw": "GGGrrrGGG",
         "default_duration": 30.0,
         "active_approaches": ["west", "east"],
     },
     {
         "index": 1,
-        "name": "East-West Yellow",
+        "name": "East-West Highway Yellow",
         "state": "yellow",
-        "raw": "yyyrrrGyy",
+        "raw": "yyyrrryyy",
         "default_duration": 3.0,
         "active_approaches": ["west", "east"],
     },
     {
         "index": 2,
-        "name": "North Green / East-West Red",
+        "name": "North Approach Green (Left & Protected Right)",
         "state": "green",
-        "raw": "rrrGGGGrr",
+        "raw": "rrrGGGrrr",
         "default_duration": 30.0,
         "active_approaches": ["north"],
     },
     {
         "index": 3,
-        "name": "North Yellow",
+        "name": "North Approach Yellow",
         "state": "yellow",
-        "raw": "rrryyyGrr",
+        "raw": "rrryyyrrr",
         "default_duration": 3.0,
         "active_approaches": ["north"],
     },
@@ -70,8 +71,8 @@ class ThreeWayIntersectionScenario(BaseScenario):
         self.current_phase_idx = 0
         self.phase_timer = 0.0
         self.tl_mode = "auto"
-        # Default green to 30s for all directions, amber fixed to 3s
-        self.phase_durations = [30.0, 3.0, 30.0, 3.0]  # EW-Green (30s), EW-Yellow (3s), N-Green (30s), N-Yellow (3s)
+        # Phase durations: EW-Green (30s), EW-Yellow (3s), North-Green (30s), North-Yellow (3s)
+        self.phase_durations = [30.0, 3.0, 30.0, 3.0]
 
     def get_metadata(self) -> ScenarioMetadata:
         origins = [
@@ -237,6 +238,9 @@ class ThreeWayIntersectionScenario(BaseScenario):
         if config.green_durations:
             if "east_west" in config.green_durations:
                 self.phase_durations[0] = float(config.green_durations["east_west"])
+            elif "east_west_thru" in config.green_durations:
+                self.phase_durations[0] = float(config.green_durations["east_west_thru"])
+
             if "north" in config.green_durations:
                 self.phase_durations[2] = float(config.green_durations["north"])
         elif config.green_duration is not None:
@@ -276,14 +280,13 @@ class ThreeWayIntersectionScenario(BaseScenario):
         amber = 3.0
 
         # System calculates red times:
-        # While opposing approach is Green + Amber, this approach is Red
         ew_calc_red = n_green + amber
         n_calc_red = ew_green + amber
 
         signal_groups = [
             SignalGroupTiming(
                 id="east_west",
-                name="East-West Approach (West & East Arms)",
+                name="East-West Highway (Straight & Turns)",
                 green_duration=ew_green,
                 amber_duration=amber,
                 calculated_red_duration=ew_calc_red,
@@ -291,7 +294,7 @@ class ThreeWayIntersectionScenario(BaseScenario):
             ),
             SignalGroupTiming(
                 id="north",
-                name="North Approach",
+                name="North Approach (Left & Right)",
                 green_duration=n_green,
                 amber_duration=amber,
                 calculated_red_duration=n_calc_red,

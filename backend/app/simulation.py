@@ -60,7 +60,7 @@ def rgba_to_hex(rgba: tuple[int, int, int, int]) -> str:
 class SimulationManager:
     def __init__(self):
         self.is_initialized = False
-        self.is_running = True
+        self.is_running = False
         self.step_count = 0
         self.sim_time = 0.0
         self.total_spawned = 0
@@ -148,7 +148,7 @@ class SimulationManager:
             self.scenario = target
             self._start_traci()
             self.is_initialized = True
-            self.is_running = True
+            self.is_running = False
             self.last_auto_spawn_time = 0.0
 
         # Broadcast scenario switch, new network info, and state
@@ -200,7 +200,7 @@ class SimulationManager:
             
             # Restart TraCI with current scenario
             self._start_traci()
-            self.is_running = True
+            self.is_running = False
             self.last_auto_spawn_time = 0.0
         
         # Broadcast initial empty state immediately

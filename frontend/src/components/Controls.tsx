@@ -17,6 +17,7 @@ import {
   AlertCircle,
   Cpu,
   Zap,
+  Square,
 } from 'lucide-react';
 import type {
   SpawnOptions,
@@ -1017,48 +1018,123 @@ export const Controls: React.FC<ControlsProps> = ({
               <AlertCircle size={16} color="#f43f5e" />
               <span>5M LIMIT</span>
             </button>
-          ) : isRunning ? (
-            <button
-              id="btn-pause"
-              className="btn-primary"
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                padding: '9px 18px',
-                fontSize: '0.85rem',
-                fontWeight: 800,
-                background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
-                borderColor: 'rgba(245, 158, 11, 0.5)',
-                boxShadow: '0 0 16px rgba(245, 158, 11, 0.3)',
-              }}
-              onClick={onPause}
-              title="Pause Simulation [Space]"
-            >
-              <Pause size={17} />
-              <span>PAUSE</span>
-            </button>
           ) : (
-            <button
-              id="btn-play"
-              className="btn-primary"
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                padding: '9px 18px',
-                fontSize: '0.85rem',
-                fontWeight: 800,
-                background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                borderColor: 'rgba(16, 185, 129, 0.5)',
-                boxShadow: '0 0 16px rgba(16, 185, 129, 0.3)',
-              }}
-              onClick={onPlay}
-              title="Start Simulation [Space]"
-            >
-              <Play size={17} />
-              <span>START</span>
-            </button>
+            <>
+              {/* BUTTON 1: START / STOP */}
+              {isRunning ? (
+                <button
+                  id="btn-stop"
+                  className="btn-primary"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '7px',
+                    padding: '9px 16px',
+                    fontSize: '0.85rem',
+                    fontWeight: 800,
+                    background: 'linear-gradient(135deg, #f43f5e 0%, #be123c 100%)',
+                    borderColor: 'rgba(244, 63, 94, 0.5)',
+                    boxShadow: '0 0 16px rgba(244, 63, 94, 0.3)',
+                    cursor: 'pointer',
+                  }}
+                  onClick={onPause}
+                  title="Stop Simulation"
+                >
+                  <Square size={15} fill="currentColor" />
+                  <span>STOP</span>
+                </button>
+              ) : (
+                <button
+                  id="btn-start"
+                  className="btn-primary"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '7px',
+                    padding: '9px 16px',
+                    fontSize: '0.85rem',
+                    fontWeight: 800,
+                    background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                    borderColor: 'rgba(16, 185, 129, 0.5)',
+                    boxShadow: '0 0 16px rgba(16, 185, 129, 0.3)',
+                    cursor: 'pointer',
+                  }}
+                  onClick={onPlay}
+                  title="Start Simulation [Space]"
+                >
+                  <Play size={16} fill="currentColor" />
+                  <span>START</span>
+                </button>
+              )}
+
+              {/* BUTTON 2: PAUSE / RESUME */}
+              {isRunning ? (
+                <button
+                  id="btn-pause"
+                  className="btn-secondary"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '7px',
+                    padding: '9px 16px',
+                    fontSize: '0.85rem',
+                    fontWeight: 700,
+                    backgroundColor: 'rgba(245, 158, 11, 0.16)',
+                    borderColor: 'rgba(245, 158, 11, 0.5)',
+                    color: '#fbbf24',
+                    boxShadow: '0 0 12px rgba(245, 158, 11, 0.2)',
+                    cursor: 'pointer',
+                  }}
+                  onClick={onPause}
+                  title="Pause Simulation [Space]"
+                >
+                  <Pause size={16} />
+                  <span>PAUSE</span>
+                </button>
+              ) : simTime > 0 ? (
+                <button
+                  id="btn-resume"
+                  className="btn-secondary"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '7px',
+                    padding: '9px 16px',
+                    fontSize: '0.85rem',
+                    fontWeight: 700,
+                    backgroundColor: 'rgba(56, 189, 248, 0.16)',
+                    borderColor: 'rgba(56, 189, 248, 0.45)',
+                    color: '#38bdf8',
+                    cursor: 'pointer',
+                  }}
+                  onClick={onPlay}
+                  title="Resume Simulation [Space]"
+                >
+                  <Play size={16} />
+                  <span>RESUME</span>
+                </button>
+              ) : (
+                <button
+                  id="btn-pause-disabled"
+                  className="btn-secondary"
+                  disabled
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '7px',
+                    padding: '9px 16px',
+                    fontSize: '0.85rem',
+                    fontWeight: 700,
+                    opacity: 0.45,
+                    cursor: 'not-allowed',
+                  }}
+                  title="Simulation not started yet. Click START to begin."
+                >
+                  <Pause size={16} />
+                  <span>PAUSE</span>
+                </button>
+              )}
+            </>
           )}
 
           {/* Quick Reset button on main dock */}

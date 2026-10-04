@@ -11,7 +11,7 @@ import type {
 const INITIAL_STATE: SimulationState = {
   sim_time: 0,
   step: 0,
-  is_running: true,
+  is_running: false,
   scenario_id: 'straight_road',
   vehicles: [],
   stats: {

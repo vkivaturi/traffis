@@ -26,7 +26,13 @@ async def test_full_flow():
         # 1. Receive initial messages
         net_info = await recv_type("network_info")
         print("Received network info:", net_info.get("type"), "TL X:", net_info.get("data", {}).get("traffic_light_x"))
-        
+        init_state = await recv_type("state")
+        print("Initial state: time=", init_state.get("sim_time"), "is_running=", init_state.get("is_running"))
+
+        # Start simulation
+        print("Sending play action to start simulation...")
+        await ws.send(json.dumps({"action": "play"}))
+
         # 2. Test receiving 5 state packets
         for i in range(5):
             state = await recv_type("state")

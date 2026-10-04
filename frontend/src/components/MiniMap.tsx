@@ -34,7 +34,118 @@ export const MiniMap: React.FC<MiniMapProps> = ({
     ctx.fillStyle = '#0b101b';
     ctx.fillRect(0, 0, width, height);
 
-    if (isIntersection) {
+    if (scenario?.id === 'four_way_intersection') {
+      // ----------------------------------------------------
+      // 4-WAY CROSSROADS RADAR
+      // ----------------------------------------------------
+      const cx = width / 2;
+      const cy = height / 2;
+      const armLengthPx = Math.min((width - 60) / 2, (height - 10) / 2);
+      const roadThickness = 10;
+
+      // Draw horizontal arms (West to East)
+      ctx.fillStyle = '#1e2430';
+      ctx.fillRect(cx - armLengthPx, cy - roadThickness / 2, armLengthPx * 2, roadThickness);
+
+      // Draw vertical arms (North to South)
+      ctx.fillRect(cx - roadThickness / 2, cy - armLengthPx, roadThickness, armLengthPx * 2);
+
+      // Medians
+      ctx.strokeStyle = '#f59e0b';
+      ctx.lineWidth = 1;
+      // West median
+      ctx.beginPath();
+      ctx.moveTo(cx - armLengthPx, cy);
+      ctx.lineTo(cx, cy);
+      ctx.stroke();
+
+      // East median
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.lineTo(cx + armLengthPx, cy);
+      ctx.stroke();
+
+      // North median
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.lineTo(cx, cy - armLengthPx);
+      ctx.stroke();
+
+      // South median
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.lineTo(cx, cy + armLengthPx);
+      ctx.stroke();
+
+      // Outer borders
+      ctx.strokeStyle = '#334155';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(cx - armLengthPx, cy - roadThickness / 2, armLengthPx * 2, roadThickness);
+      ctx.strokeRect(cx - roadThickness / 2, cy - armLengthPx, roadThickness, armLengthPx * 2);
+
+      // Arm labels
+      ctx.fillStyle = '#64748b';
+      ctx.font = '700 8px JetBrains Mono, monospace';
+      ctx.textAlign = 'left';
+      ctx.fillText('WEST [-250m]', cx - armLengthPx + 4, cy - 7);
+      ctx.textAlign = 'right';
+      ctx.fillText('[+250m] EAST', cx + armLengthPx - 4, cy - 7);
+      ctx.textAlign = 'center';
+      ctx.fillText('NORTH [+250m]', cx, cy - armLengthPx + 8);
+      ctx.fillText('SOUTH [-250m]', cx, cy + armLengthPx - 2);
+
+      // Traffic Signal dot
+      const tlColor =
+        trafficLight?.state === 'green' ? '#10b981' : trafficLight?.state === 'yellow' ? '#f59e0b' : '#ef4444';
+      ctx.shadowColor = tlColor;
+      ctx.shadowBlur = 8;
+      ctx.fillStyle = tlColor;
+      ctx.beginPath();
+      ctx.arc(cx, cy, 3.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+
+      // Vehicles as glowing dots
+      for (const v of vehicles) {
+        let dotX = cx;
+        let dotY = cy;
+
+        if (Math.abs(v.x) > Math.abs(v.y)) {
+          // Primarily horizontal (West or East arm)
+          const ratioX = Math.max(-1, Math.min(1, v.x / 250));
+          dotX = cx + ratioX * armLengthPx;
+          dotY = cy + (v.y > 0 ? -2 : 2);
+        } else {
+          // Primarily vertical (North or South arm)
+          const ratioY = Math.max(-1, Math.min(1, v.y / 250));
+          dotX = cx + (v.x > 0 ? 2 : -2);
+          dotY = cy - ratioY * armLengthPx;
+        }
+
+        ctx.shadowColor = v.color || '#38bdf8';
+        ctx.shadowBlur = 5;
+        ctx.fillStyle = v.color || '#38bdf8';
+        ctx.beginPath();
+        ctx.arc(dotX, dotY, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.shadowBlur = 0;
+
+      // Camera Viewport Box
+      const camRatioX = Math.max(-1, Math.min(1, camera.x / 250));
+      const camRatioY = Math.max(-1, Math.min(1, camera.y / 250));
+      const camDotX = cx + camRatioX * armLengthPx;
+      const camDotY = cy - camRatioY * armLengthPx;
+
+      const boxW = Math.max(16, (viewportWidthMeters / 500) * (armLengthPx * 2));
+      const boxH = Math.max(12, boxW * 0.4);
+
+      ctx.fillStyle = 'rgba(56, 189, 248, 0.15)';
+      ctx.fillRect(camDotX - boxW / 2, camDotY - boxH / 2, boxW, boxH);
+      ctx.strokeStyle = '#38bdf8';
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(camDotX - boxW / 2, camDotY - boxH / 2, boxW, boxH);
+    } else if (isIntersection) {
       // ----------------------------------------------------
       // 3-WAY INTERSECTION RADAR
       // ----------------------------------------------------
@@ -272,7 +383,7 @@ export const MiniMap: React.FC<MiniMapProps> = ({
       ctx.lineTo(camPx, roadY + roadH + 4);
       ctx.stroke();
     }
-  }, [vehicles, camera, viewportWidthMeters, trafficLight, isIntersection]);
+  }, [vehicles, camera, viewportWidthMeters, trafficLight, isIntersection, scenario]);
 
   const handleClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
@@ -281,7 +392,24 @@ export const MiniMap: React.FC<MiniMapProps> = ({
     const clickX = e.clientX - rect.left;
     const clickY = e.clientY - rect.top;
 
-    if (isIntersection) {
+    if (scenario?.id === 'four_way_intersection') {
+      const cx = rect.width / 2;
+      const cy = rect.height / 2;
+      const armLengthPx = Math.min((rect.width - 60) / 2, (rect.height - 10) / 2);
+
+      const dx = clickX - cx;
+      const dy = clickY - cy;
+
+      if (Math.abs(dx) > Math.abs(dy)) {
+        // West or East arm
+        const worldX = (dx / armLengthPx) * 250;
+        onJumpToX(Math.max(-250, Math.min(250, worldX)), 0);
+      } else {
+        // North or South arm
+        const worldY = (-dy / armLengthPx) * 250;
+        onJumpToX(0, Math.max(-250, Math.min(250, worldY)));
+      }
+    } else if (isIntersection) {
       const cx = rect.width / 2;
       const cy = rect.height - 14;
       const armLengthPx = Math.min((rect.width - 60) / 2, rect.height - 20);
@@ -305,6 +433,13 @@ export const MiniMap: React.FC<MiniMapProps> = ({
       onJumpToX(ratio * 1000, 0);
     }
   };
+
+  const radarLabel =
+    scenario?.id === 'four_way_intersection'
+      ? '4-Way Crossroads Radar Overview'
+      : isIntersection
+      ? '3-Way T-Junction Radar Overview'
+      : 'Radar Overview [0m - 1000m]';
 
   return (
     <div
@@ -333,7 +468,7 @@ export const MiniMap: React.FC<MiniMapProps> = ({
           pointerEvents: 'none',
         }}
       >
-        {isIntersection ? '3-Way Radar Overview' : 'Radar Overview [0m - 1000m]'}
+        {radarLabel}
       </div>
       <canvas
         ref={canvasRef}

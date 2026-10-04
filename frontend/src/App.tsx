@@ -144,6 +144,27 @@ export const App: React.FC = () => {
 
   const selectedVehicle = state.vehicles.find((v) => v.id === selectedVehicleId) || null;
 
+  // Pause/stop ongoing simulation whenever user navigates back to landing page
+  useEffect(() => {
+    if (activeView === 'landing' && state.is_running) {
+      pause();
+    }
+  }, [activeView, state.is_running, pause]);
+
+  const handleNavigateHome = useCallback(() => {
+    if (state.is_running) {
+      pause();
+    }
+    setCurrentView('landing');
+  }, [state.is_running, pause]);
+
+  const handleSignOut = useCallback(() => {
+    if (state.is_running) {
+      pause();
+    }
+    signOut();
+  }, [state.is_running, pause, signOut]);
+
   // Keyboard Shortcuts (only active in simulator view)
   useEffect(() => {
     if (activeView !== 'simulator') return;
@@ -184,7 +205,7 @@ export const App: React.FC = () => {
           }
         }}
         onSignInWithGoogle={signInWithGoogle}
-        onSignOut={signOut}
+        onSignOut={handleSignOut}
       />
     );
   }
@@ -214,9 +235,9 @@ export const App: React.FC = () => {
         activeScenarioId={currentScenarioId}
         onSelectScenario={handleSelectScenario}
         user={user}
-        onNavigateHome={() => setCurrentView('landing')}
+        onNavigateHome={handleNavigateHome}
         onOpenAbout={() => setIsAboutOpen(true)}
-        onSignOut={signOut}
+        onSignOut={handleSignOut}
       />
 
       {/* 2. Scenario-aware Radar Bar */}
