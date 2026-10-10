@@ -7,10 +7,9 @@ import { MiniMap } from './components/MiniMap';
 import { CanvasView } from './components/CanvasView';
 import { Controls } from './components/Controls';
 import { VehicleInspector } from './components/VehicleInspector';
-import { TrafficSignalPanel } from './components/TrafficSignalPanel';
 import { LandingPage } from './components/LandingPage';
 import { AboutModal } from './components/AboutModal';
-import type { CameraState, SpawnOptions, AutoSpawnSettings } from './types/simulation';
+import type { CameraState } from './types/simulation';
 import { soundSystem } from './utils/audio';
 
 export const App: React.FC = () => {
@@ -34,18 +33,11 @@ export const App: React.FC = () => {
     activeScenario,
     selectScenario,
     connected,
-    latencyMs,
     updateRateHz,
     dataExchangedMB,
     play,
     pause,
     reset,
-    step,
-    spawnVehicle,
-    setAutoSpawn,
-    setTrafficLight,
-    nextTrafficLightPhase,
-    setDefaultSpeed,
   } = useSimulationSocket(user?.token);
 
   const currentScenarioId = activeScenario?.id || state.scenario_id || 'straight_road';
@@ -61,12 +53,6 @@ export const App: React.FC = () => {
   const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null);
   const [viewportWidthMeters, setViewportWidthMeters] = useState<number>(100);
   const [soundEnabled, setSoundEnabled] = useState<boolean>(false);
-  const [isSignalPanelOpen, setIsSignalPanelOpen] = useState<boolean>(false);
-  const [autoSpawnSettings, setAutoSpawnSettings] = useState<AutoSpawnSettings>({
-    enabled: true,
-    rate_per_minute: 25,
-    rate_per_hour: 1500,
-  });
 
   // Sound effect when traffic signal changes
   const prevSignalStateRef = useRef<string | undefined>(undefined);
@@ -109,11 +95,6 @@ export const App: React.FC = () => {
     }
   };
 
-  const handleSpawn = useCallback((options: SpawnOptions) => {
-    spawnVehicle(options);
-    soundSystem.playSpawnSound();
-  }, [spawnVehicle]);
-
   const handleReset = useCallback(() => {
     reset();
     soundSystem.playResetSound();
@@ -126,21 +107,6 @@ export const App: React.FC = () => {
       zoom: activeScenario?.default_camera?.zoom ?? (isIntersection ? 3.2 : 12),
     }));
   }, [reset, isIntersection, activeScenario?.default_camera]);
-
-  const handleUpdateAutoSpawn = (settings: AutoSpawnSettings) => {
-    setAutoSpawnSettings(settings);
-    setAutoSpawn(settings);
-  };
-
-  const handleFocusSignal = () => {
-    setCamera((c) => ({
-      ...c,
-      x: isIntersection ? 0 : 500,
-      y: 0,
-      zoom: isIntersection ? 12 : 14,
-      followingId: null,
-    }));
-  };
 
   const selectedVehicle = state.vehicles.find((v) => v.id === selectedVehicleId) || null;
 
@@ -183,15 +149,12 @@ export const App: React.FC = () => {
       } else if (e.code === 'KeyR') {
         e.preventDefault();
         handleReset();
-      } else if (e.code === 'KeyS') {
-        e.preventDefault();
-        if (!isLimitReached) handleSpawn({});
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [activeView, state.is_running, state.sim_time, state.max_sim_time, state.time_limit_reached, pause, play, handleReset, handleSpawn]);
+  }, [activeView, state.is_running, state.sim_time, state.max_sim_time, state.time_limit_reached, pause, play, handleReset]);
 
   // If user is on landing page or not authenticated, display Landing Page
   if (activeView === 'landing') {
@@ -268,18 +231,7 @@ export const App: React.FC = () => {
           onSelectVehicle={setSelectedVehicleId}
           onViewportMetersChange={setViewportWidthMeters}
           trafficLight={state.traffic_light}
-          onTrafficLightClick={() => setIsSignalPanelOpen(true)}
           scenario={activeScenario}
-        />
-
-        {/* Interactive Traffic Signal Control HUD */}
-        <TrafficSignalPanel
-          trafficLight={state.traffic_light}
-          onUpdateSettings={setTrafficLight}
-          onNextPhase={nextTrafficLightPhase}
-          onFocusSignal={handleFocusSignal}
-          isOpen={isSignalPanelOpen}
-          onToggleOpen={() => setIsSignalPanelOpen((v) => !v)}
         />
 
         {/* Selected Vehicle Floating HUD */}
@@ -298,29 +250,13 @@ export const App: React.FC = () => {
         )}
       </div>
 
-      {/* 4. Controls Dock with Visible Section & Expandable Advanced Tools */}
+      {/* 4. Transport Dock: Start / Pause / Stop (all parameters come from scenario.xml) */}
       <Controls
         isRunning={state.is_running}
-        step={state.step}
         onPlay={play}
         onPause={pause}
-        onReset={handleReset}
-        onStep={step}
-        onSpawnVehicle={handleSpawn}
-        autoSpawnSettings={autoSpawnSettings}
-        onUpdateAutoSpawn={handleUpdateAutoSpawn}
-        trafficLight={state.traffic_light}
-        onUpdateTrafficLight={setTrafficLight}
-        onNextTrafficLightPhase={nextTrafficLightPhase}
-        onFocusTrafficSignal={handleFocusSignal}
-        activeScenarioId={currentScenarioId}
+        onStop={handleReset}
         stats={state.stats}
-        vehicles={state.vehicles}
-        latencyMs={latencyMs}
-        updateRateHz={updateRateHz}
-        dataExchangedMB={dataExchangedMB}
-        defaultSpeedKmh={state.default_speed_kmh ?? 50}
-        onUpdateDefaultSpeed={setDefaultSpeed}
         simTime={state.sim_time}
         maxSimTime={state.max_sim_time ?? 300}
         timeLimitReached={state.time_limit_reached}

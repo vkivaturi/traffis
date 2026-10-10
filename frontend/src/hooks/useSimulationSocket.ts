@@ -3,9 +3,6 @@ import type {
   SimulationState,
   NetworkInfo,
   ScenarioMetadata,
-  SpawnOptions,
-  AutoSpawnSettings,
-  TrafficLightSettings,
 } from '../types/simulation';
 
 const INITIAL_STATE: SimulationState = {
@@ -245,34 +242,6 @@ export function useSimulationSocket(authToken?: string) {
   const pause = useCallback(() => send('pause'), [send]);
   const reset = useCallback(() => send('reset'), [send]);
 
-  const step = useCallback(() => {
-    if (state.time_limit_reached || state.sim_time >= (state.max_sim_time ?? 300)) {
-      console.warn('Simulation time limit (5 minutes) reached. Reset required.');
-      return;
-    }
-    send('step');
-  }, [send, state.time_limit_reached, state.sim_time, state.max_sim_time]);
-
-  const spawnVehicle = useCallback((options: SpawnOptions = {}) => {
-    send('spawn', options as Record<string, unknown>);
-  }, [send]);
-
-  const setAutoSpawn = useCallback((settings: AutoSpawnSettings) => {
-    send('set_auto_spawn', settings as unknown as Record<string, unknown>);
-  }, [send]);
-
-  const setTrafficLight = useCallback((settings: TrafficLightSettings) => {
-    send('set_traffic_light', settings as unknown as Record<string, unknown>);
-  }, [send]);
-
-  const nextTrafficLightPhase = useCallback(() => {
-    send('next_traffic_light_phase');
-  }, [send]);
-
-  const setDefaultSpeed = useCallback((speedKmh: number) => {
-    send('set_default_speed', { speed_kmh: speedKmh });
-  }, [send]);
-
   return {
     state,
     networkInfo,
@@ -286,11 +255,5 @@ export function useSimulationSocket(authToken?: string) {
     play,
     pause,
     reset,
-    step,
-    spawnVehicle,
-    setAutoSpawn,
-    setTrafficLight,
-    nextTrafficLightPhase,
-    setDefaultSpeed,
   };
 }

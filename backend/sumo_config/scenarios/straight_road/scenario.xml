@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Traffis scenario settings: Straight Road (Highway).
+  Edit values here and reset the simulation (or restart the backend) to apply.
+-->
+<scenarioSettings>
+    <!-- Hard limit on simulated time per run (seconds) -->
+    <simulation maxSimTime="300"/>
+
+    <!-- Demand: default cruising speed (km/h) and total inflow (vehicles/hour) -->
+    <traffic defaultSpeedKmh="50" vehiclesPerHour="1500">
+        <vehicleMix>
+            <vehicle type="car" weight="0.60"/>
+            <vehicle type="sports" weight="0.15"/>
+            <vehicle type="van" weight="0.15"/>
+            <vehicle type="truck" weight="0.10"/>
+        </vehicleMix>
+        <!-- Relative share of inflow per approach -->
+        <origins>
+            <origin id="east" weight="1"/>
+            <origin id="west" weight="1"/>
+        </origins>
+    </traffic>
+
+    <!-- Fixed-time signal plan. Phases run in document order: green -> amber -> red. -->
+    <trafficLight amberDuration="3">
+        <signalGroup id="main" name="Main Highway"
+                     greenState="GGGG" greenDuration="30"
+                     amberState="yyyy" amberDuration="3"
+                     redState="rrrr" redDuration="33"/>
+    </trafficLight>
+</scenarioSettings>

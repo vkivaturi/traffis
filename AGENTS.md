@@ -38,7 +38,7 @@ flowchart TD
         SOCK --> APP["App.tsx State Root"]
         APP --> CV["CanvasView.tsx<br/>(60 FPS Lerp Renderer)"]
         APP --> MM["MiniMap.tsx<br/>(1000m Highway Radar)"]
-        APP --> CTRL["Controls.tsx<br/>(Play/Pause/Spawn/Auto)"]
+        APP --> CTRL["Controls.tsx<br/>(Start/Pause/Stop)"]
         APP --> STATS["StatsPanel.tsx<br/>(Flow & Density Metrics)"]
         APP --> INSP["VehicleInspector.tsx<br/>(Telemetry & Follow Cam)"]
     end
@@ -98,10 +98,10 @@ flowchart TD
         │   ├── Header.tsx        # Top status bar, connection health, audio toggle, reset & profile
         │   ├── CanvasView.tsx    # HTML5 Canvas viewport: camera pan/zoom/follow, traffic gantry & 60fps lerp
         │   ├── MiniMap.tsx       # 1000m radar bar, vehicle dots, traffic signal marker, viewport bounding box
-        │   ├── Controls.tsx      # Transport controls, vehicle spawner, vehicle inflow rate slider, signal quick pill
+        │   ├── Controls.tsx      # Transport dock: Start / Pause / Stop + read-only clock & telemetry
         │   ├── StatsPanel.tsx    # Telemetry metrics (active count, speed, lane distribution)
         │   ├── VehicleInspector.tsx # Floating inspector card for individual vehicle telemetry
-        │   └── TrafficSignalPanel.tsx # Interactive Traffic Signal HUD: timings sliders, phase countdown, manual overrides
+        │   └── (no runtime tuning UI — all parameters live in sumo_config/scenarios/<id>/scenario.xml)
         └── utils/
             └── audio.ts          # Web Audio API procedural sound synthesizer (tones for spawns, resets & signal changes)
 ```
@@ -116,11 +116,11 @@ flowchart TD
 | :--- | :--- | :--- |
 | [`app/config.py`](file:///Users/vijay/Projects/traffis/backend/app/config.py) | Configuration management and path auto-detection. Discovers `SUMO_HOME` and `sumo` binaries on macOS (Framework / Homebrew) and Linux. | `resolve_sumo_home()`, `resolve_sumo_binary()`, `Settings` class (`settings` singleton). |
 | [`app/schemas.py`](file:///Users/vijay/Projects/traffis/backend/app/schemas.py) | Data exchange contracts validated via Pydantic v2. | `VehicleData`, `SimulationStats`, `SimulationStateMessage`, `SpawnRequest`, `AutoSpawnConfig`, `NetworkInfo`. |
-| [`app/simulation.py`](file:///Users/vijay/Projects/traffis/backend/app/simulation.py) | **Core orchestrator**. Owns TraCI process lifecycle, runs the 20 Hz simulation background task, manages auto-spawning, coordinates thread locks, and extracts vehicle kinematics. | `SimulationManager`, `start()`, `stop()`, `reset()`, `play()`, `pause()`, `step_once()`, `spawn_vehicle()`, `_simulation_loop()`, `_collect_current_state()`. |
-| [`app/main.py`](file:///Users/vijay/Projects/traffis/backend/app/main.py) | FastAPI application with ASGI lifespan handler. Exposes REST endpoints for simulation control and bidirectional WebSocket at `/ws`. | `lifespan(app)`, `websocket_endpoint()`, `/api/health`, `/api/network-info`, `/api/spawn`, etc. |
+| [`app/simulation.py`](file:///Users/vijay/Projects/traffis/backend/app/simulation.py) | **Core orchestrator**. Owns TraCI process lifecycle, runs the 20 Hz simulation background task, manages auto-spawning, coordinates thread locks, and extracts vehicle kinematics. | `SimulationManager`, `start()`, `stop()`, `reset()`, `play()`, `pause()`, `_simulation_loop()`, `_collect_current_state()`. |
+| [`app/main.py`](file:///Users/vijay/Projects/traffis/backend/app/main.py) | FastAPI application with ASGI lifespan handler. Exposes REST endpoints for simulation control and bidirectional WebSocket at `/ws`. | `lifespan(app)`, `websocket_endpoint()`, `/api/health`, `/api/network-info`, `/api/play`, `/api/pause`, `/api/reset`, `/api/scenario/select`. |
 | [`sumo_config/build_network.py`](file:///Users/vijay/Projects/traffis/backend/sumo_config/build_network.py) | Generates SUMO XML files (`.nod.xml`, `.edg.xml`, `.rou.xml`, `.sumocfg`) and executes `netconvert` to compile [`road.net.xml`](file:///Users/vijay/Projects/traffis/backend/sumo_config/road.net.xml). | `build()`, `find_sumo_binary()`. |
 | [`run.py`](file:///Users/vijay/Projects/traffis/backend/run.py) | CLI entrypoint. Verifies network compilation before starting `uvicorn`. | Direct execution: `python run.py`. |
-| [`test_ws.py`](file:///Users/vijay/Projects/traffis/backend/test_ws.py) | Integration test script connecting to `ws://127.0.0.1:8000/ws`, tests state reception, spawning, pausing, and resetting. | Direct execution: `python test_ws.py`. |
+| [`test_ws.py`](file:///Users/vijay/Projects/traffis/backend/test_ws.py) | Integration test script connecting to `ws://127.0.0.1:8000/ws`, tests state reception, start/pause/stop per scenario with XML-driven inflow. | Direct execution: `python test_ws.py`. |
 
 ### 4.2 Frontend ([`frontend/`](file:///Users/vijay/Projects/traffis/frontend))
 
@@ -128,10 +128,10 @@ flowchart TD
 | :--- | :--- |
 | [`src/types/simulation.ts`](file:///Users/vijay/Projects/traffis/frontend/src/types/simulation.ts) | TypeScript type definitions mirroring backend schemas (`Vehicle`, `SimulationStats`, `CameraState`, `SpawnOptions`, etc.). |
 | [`src/hooks/useSimulationSocket.ts`](file:///Users/vijay/Projects/traffis/frontend/src/hooks/useSimulationSocket.ts) | Manages WebSocket lifecycle, auto-reconnect backoff (1.5s), message dispatch, packet rate (Hz) calculation, and REST fallbacks. |
-| [`src/App.tsx`](file:///Users/vijay/Projects/traffis/frontend/src/App.tsx) | Root application state: camera coordinates, selected vehicle ID, audio preferences, keyboard listeners (`Space` = toggle, `R` = reset, `S` = spawn). |
+| [`src/App.tsx`](file:///Users/vijay/Projects/traffis/frontend/src/App.tsx) | Root application state: camera coordinates, selected vehicle ID, audio preferences, keyboard listeners (`Space` = toggle, `R` = reset). |
 | [`src/components/CanvasView.tsx`](file:///Users/vijay/Projects/traffis/frontend/src/components/CanvasView.tsx) | HTML5 Canvas renderer with `requestAnimationFrame` loop. Computes world-to-screen transforms, interpolates vehicle positions between 20Hz ticks, renders road markings, vehicles, wheels, headlights, brake glow, and leader indicators. |
 | [`src/components/MiniMap.tsx`](file:///Users/vijay/Projects/traffis/frontend/src/components/MiniMap.tsx) | 1000m overview radar bar. Shows road lines, glowing vehicle dots color-coded to actual cars, and camera viewport bounding box. Supports click/drag to jump camera position. |
-| [`src/components/Controls.tsx`](file:///Users/vijay/Projects/traffis/frontend/src/components/Controls.tsx) | Bottom toolbar for Play/Pause, Step, Reset, custom Vehicle Spawner modal (lane, speed, vehicle type, color), and Auto-Spawn rate slider. |
+| [`src/components/Controls.tsx`](file:///Users/vijay/Projects/traffis/frontend/src/components/Controls.tsx) | Bottom dock with Start/Resume, Pause, Stop (reset to t=0), simulation clock progress, and read-only Avg Speed / PCE/h. |
 | [`src/components/StatsPanel.tsx`](file:///Users/vijay/Projects/traffis/frontend/src/components/StatsPanel.tsx) | Real-time analytics bar: Active Vehicles, Average Speed (km/h), Traffic Density (veh/km), Total Departed/Arrived, and Lane Utilization bars. |
 | [`src/components/VehicleInspector.tsx`](file:///Users/vijay/Projects/traffis/frontend/src/components/VehicleInspector.tsx) | Floating HUD displayed when clicking a vehicle. Displays speed, acceleration/braking state, distance to leader vehicle, lane index, and camera "Follow" toggle. |
 | [`src/components/Header.tsx`](file:///Users/vijay/Projects/traffis/frontend/src/components/Header.tsx) | Top navbar with live WebSocket status badge (Connected/Connecting), tick rate indicator (~20 Hz), round-trip jitter, audio toggle, and documentation link. |
@@ -226,23 +226,15 @@ Defined in [`backend/sumo_config/road.rou.xml`](file:///Users/vijay/Projects/tra
      "time_limit_reached": false
    }
    ```
-3. **Acknowledgments**:
-   - `{"type": "spawn_ack", "vehicle_id": "veh_9"}`
-   - `{"type": "auto_spawn_ack", "auto_spawn": {"enabled": true, "rate_per_minute": 45.0, "rate_per_hour": 2700.0}}`
-   - `{"type": "traffic_light_ack", "traffic_light": {...}}`
-   - `{"type": "default_speed_ack", "default_speed_kmh": 50.0}`
 
 #### Client to Server Commands
 Sent as JSON text over the WebSocket:
 - `{"action": "play"}`
 - `{"action": "pause"}`
-- `{"action": "step"}`
 - `{"action": "reset"}`
-- `{"action": "spawn", "payload": {"lane": 1, "speed": 13.9, "type": "sports", "color": "#f43f5e"}}`
-- `{"action": "set_auto_spawn", "payload": {"enabled": true, "rate_per_minute": 45.0}}`
-- `{"action": "set_default_speed", "payload": {"speed_kmh": 50.0}}`
-- `{"action": "set_traffic_light", "payload": {"green_duration": 20.0, "yellow_duration": 4.0, "red_duration": 15.0, "mode": "auto"}}`
-- `{"action": "next_traffic_light_phase"}`
+- `{"action": "select_scenario", "payload": {"scenario_id": "four_way_intersection"}}`
+
+> Inflow (veh/h), default speed, vehicle mix, origin weights, signal phases/green times and max sim time are **not** runtime-tunable. They are defined per scenario in `backend/sumo_config/scenarios/<id>/scenario.xml` (parsed by `app/scenarios/settings_loader.py`) and re-read on every reset/scenario switch.
 
 ### 6.2 REST Endpoints
 
@@ -252,13 +244,9 @@ Sent as JSON text over the WebSocket:
 | `GET` | `/api/network-info` | Road dimensions, traffic light position, and lane specifications. |
 | `POST` | `/api/play` | Resume simulation loop. |
 | `POST` | `/api/pause` | Pause simulation loop. |
-| `POST` | `/api/step` | Advance simulation by one step ($0.05\text{s}$). |
 | `POST` | `/api/reset` | Close and restart SUMO, reset clock to $0.0\text{s}$. |
-| `POST` | `/api/spawn` | Insert vehicle (`SpawnRequest` body). Returns vehicle ID. |
-| `POST` | `/api/auto-spawn` | Configure inflow rate spawner (`AutoSpawnConfig` body). |
-| `POST` | `/api/default-speed` | Configure default vehicle cruising speed limit (`{"speed_kmh": 50}`). |
-| `POST` | `/api/traffic-light` | Configure signal timings and mode (`TrafficLightConfig` body). |
-| `POST` | `/api/traffic-light/next`| Advance traffic signal to the next phase immediately. |
+| `GET` | `/api/scenarios` | List available scenarios. |
+| `POST` | `/api/scenario/select` | Switch scenario (`{"scenario_id": "..."}`). |
 
 ---
 

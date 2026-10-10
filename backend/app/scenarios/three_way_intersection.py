@@ -10,48 +10,9 @@ from ..schemas import (
     NetworkInfo,
     RoadArmInfo,
     SpawnRequest,
-    TrafficLightState,
-    TrafficLightConfig,
-    SignalGroupTiming,
 )
 
 logger = logging.getLogger("scenario_three_way_intersection")
-
-# 3-way intersection phase definitions: straight and right green run concurrently with full priority
-PHASE_DEFS = [
-    {
-        "index": 0,
-        "name": "East-West Highway Green (Straight & Protected Right)",
-        "state": "green",
-        "raw": "GGGrrrGGG",
-        "default_duration": 30.0,
-        "active_approaches": ["west", "east"],
-    },
-    {
-        "index": 1,
-        "name": "East-West Highway Yellow",
-        "state": "yellow",
-        "raw": "yyyrrryyy",
-        "default_duration": 3.0,
-        "active_approaches": ["west", "east"],
-    },
-    {
-        "index": 2,
-        "name": "North Approach Green (Left & Protected Right)",
-        "state": "green",
-        "raw": "rrrGGGrrr",
-        "default_duration": 30.0,
-        "active_approaches": ["north"],
-    },
-    {
-        "index": 3,
-        "name": "North Approach Yellow",
-        "state": "yellow",
-        "raw": "rrryyyrrr",
-        "default_duration": 3.0,
-        "active_approaches": ["north"],
-    },
-]
 
 class ThreeWayIntersectionScenario(BaseScenario):
     id = "three_way_intersection"
@@ -62,17 +23,10 @@ class ThreeWayIntersectionScenario(BaseScenario):
     default_camera = {"x": 0.0, "y": 70.0, "zoom": 3.8}
 
     def __init__(self, sumocfg_file: str):
-        self.sumocfg_file = sumocfg_file
         self.tl_id = "center"
         self.tl_x = 0.0
         self.tl_y = 0.0
-        
-        # Traffic light phases
-        self.current_phase_idx = 0
-        self.phase_timer = 0.0
-        self.tl_mode = "auto"
-        # Phase durations: EW-Green (30s), EW-Yellow (3s), North-Green (30s), North-Yellow (3s)
-        self.phase_durations = [30.0, 3.0, 30.0, 3.0]
+        super().__init__(sumocfg_file)
 
     def get_metadata(self) -> ScenarioMetadata:
         origins = [
@@ -202,124 +156,6 @@ class ThreeWayIntersectionScenario(BaseScenario):
             else:
                 return random.choice(["route_north_west", "route_north_east"])
 
-    def get_auto_spawn_request(self) -> SpawnRequest:
-        v_type = random.choices(["car", "sports", "van", "truck"], weights=[0.6, 0.15, 0.15, 0.1])[0]
-        origin = random.choice(["west", "east", "north"])
-        return SpawnRequest(
-            origin=origin,
-            direction=origin,
-            lane=random.randint(0, 1),
-            type=v_type
-        )
-
-    def get_tl_raw_state(self, state: str) -> str:
-        phase = PHASE_DEFS[self.current_phase_idx]
-        return phase["raw"]
-
-    def apply_traffic_light_state(self, state: str) -> None:
-        try:
-            raw = PHASE_DEFS[self.current_phase_idx]["raw"]
-            traci.trafficlight.setRedYellowGreenState(self.tl_id, raw)
-        except Exception as e:
-            logger.warning("Could not set traffic light phase %d: %s", self.current_phase_idx, e)
-
-    def update_traffic_light(self, dt: float) -> None:
-        if self.tl_mode != "auto":
-            return
-
-        self.phase_timer += dt
-        curr_dur = self.phase_durations[self.current_phase_idx]
-        if self.phase_timer >= curr_dur:
-            self.phase_timer = 0.0
-            self.current_phase_idx = (self.current_phase_idx + 1) % len(PHASE_DEFS)
-            self.apply_traffic_light_state("")
-
-    def set_traffic_light_config(self, config: TrafficLightConfig) -> None:
-        if config.green_durations:
-            if "east_west" in config.green_durations:
-                self.phase_durations[0] = float(config.green_durations["east_west"])
-            elif "east_west_thru" in config.green_durations:
-                self.phase_durations[0] = float(config.green_durations["east_west_thru"])
-
-            if "north" in config.green_durations:
-                self.phase_durations[2] = float(config.green_durations["north"])
-        elif config.green_duration is not None:
-            self.phase_durations[0] = float(config.green_duration)
-            self.phase_durations[2] = float(config.green_duration)
-
-        # Fixed amber/yellow duration of 3.0s
-        self.phase_durations[1] = 3.0
-        self.phase_durations[3] = 3.0
-
-        if config.mode is not None:
-            self.tl_mode = config.mode
-        if config.state is not None:
-            if config.state == "green":
-                self.current_phase_idx = 0
-            elif config.state == "yellow":
-                self.current_phase_idx = 1
-            elif config.state == "red":
-                self.current_phase_idx = 2
-            self.phase_timer = 0.0
-            self.apply_traffic_light_state("")
-
-    def next_traffic_light_phase(self) -> None:
-        self.current_phase_idx = (self.current_phase_idx + 1) % len(PHASE_DEFS)
-        self.phase_timer = 0.0
-        self.apply_traffic_light_state("")
-
-    def get_traffic_light_data(self) -> TrafficLightState:
-        curr = PHASE_DEFS[self.current_phase_idx]
-        dur = self.phase_durations[self.current_phase_idx]
-        rem = max(0.0, round(dur - self.phase_timer, 1))
-        next_idx = (self.current_phase_idx + 1) % len(PHASE_DEFS)
-        next_phase = PHASE_DEFS[next_idx]
-
-        ew_green = self.phase_durations[0]
-        n_green = self.phase_durations[2]
-        amber = 3.0
-
-        # System calculates red times:
-        ew_calc_red = n_green + amber
-        n_calc_red = ew_green + amber
-
-        signal_groups = [
-            SignalGroupTiming(
-                id="east_west",
-                name="East-West Highway (Straight & Turns)",
-                green_duration=ew_green,
-                amber_duration=amber,
-                calculated_red_duration=ew_calc_red,
-                is_active_green=(self.current_phase_idx == 0)
-            ),
-            SignalGroupTiming(
-                id="north",
-                name="North Approach (Left & Right)",
-                green_duration=n_green,
-                amber_duration=amber,
-                calculated_red_duration=n_calc_red,
-                is_active_green=(self.current_phase_idx == 2)
-            ),
-        ]
-
-        return TrafficLightState(
-            id=self.tl_id,
-            x=self.tl_x,
-            y=self.tl_y,
-            state=curr["state"],
-            raw_state=curr["raw"],
-            mode=self.tl_mode,
-            green_duration=ew_green,
-            yellow_duration=amber,
-            red_duration=ew_calc_red,
-            phase_timer=round(self.phase_timer, 2),
-            phase_remaining=rem,
-            next_state=next_phase["state"],
-            phase_index=self.current_phase_idx,
-            phase_name=curr["name"],
-            signal_groups=signal_groups
-        )
-
     def enrich_vehicle_direction(self, lane_id: str, angle: float, x: float, y: float) -> str:
         if "west_in" in lane_id:
             return "east"
@@ -343,8 +179,3 @@ class ThreeWayIntersectionScenario(BaseScenario):
                 return "west"
             else:
                 return "north"
-
-    def reset_state(self) -> None:
-        self.current_phase_idx = 0
-        self.phase_timer = 0.0
-        self.apply_traffic_light_state("")

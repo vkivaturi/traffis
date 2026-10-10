@@ -9,7 +9,7 @@ from starlette.requests import Request
 from starlette.responses import Response
 
 from .config import settings, bandwidth_limiter
-from .schemas import SpawnRequest, AutoSpawnConfig, NetworkInfo, TrafficLightConfig
+from .schemas import NetworkInfo
 from .simulation import sim_manager
 from .auth import get_current_user, verify_ws_token
 
@@ -96,7 +96,7 @@ async def health_check():
         "sumo_initialized": sim_manager.is_initialized,
         "is_running": sim_manager.is_running,
         "sim_time": sim_manager.sim_time,
-        "max_sim_time": settings.MAX_SIM_TIME_S,
+        "max_sim_time": sim_manager.max_sim_time,
         "time_limit_reached": sim_manager.time_limit_reached,
         "active_clients": len(sim_manager.active_websockets),
         "bandwidth": bandwidth_limiter.get_usage()
@@ -131,25 +131,6 @@ async def reset_simulation(user: dict = Depends(get_current_user)):
     await sim_manager.reset()
     return {"status": "ok", "action": "reset", "sim_time": 0.0, "time_limit_reached": False}
 
-@app.post("/api/step")
-async def step_simulation(user: dict = Depends(get_current_user)):
-    await sim_manager.step_once()
-    return {
-        "status": "ok",
-        "action": "step",
-        "step": sim_manager.step_count,
-        "is_running": sim_manager.is_running,
-        "time_limit_reached": sim_manager.time_limit_reached
-    }
-
-@app.post("/api/spawn")
-async def spawn_vehicle(req: SpawnRequest, user: dict = Depends(get_current_user)):
-    try:
-        veh_id = await sim_manager.spawn_vehicle(req)
-        return {"status": "ok", "vehicle_id": veh_id}
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
-
 @app.get("/api/scenarios")
 async def list_scenarios():
     from .scenarios.registry import registry
@@ -170,27 +151,6 @@ async def select_scenario(req: dict, user: dict = Depends(get_current_user)):
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-@app.post("/api/auto-spawn")
-async def configure_auto_spawn(config: AutoSpawnConfig, user: dict = Depends(get_current_user)):
-    sim_manager.set_auto_spawn(config)
-    return {"status": "ok", "auto_spawn": config.model_dump()}
-
-@app.post("/api/traffic-light")
-async def configure_traffic_light(config: TrafficLightConfig, user: dict = Depends(get_current_user)):
-    await sim_manager.set_traffic_light(config)
-    return {"status": "ok", "traffic_light": sim_manager._get_traffic_light_data().model_dump()}
-
-@app.post("/api/traffic-light/next")
-async def next_traffic_light_phase(user: dict = Depends(get_current_user)):
-    await sim_manager.next_traffic_light_phase()
-    return {"status": "ok", "traffic_light": sim_manager._get_traffic_light_data().model_dump()}
-
-@app.post("/api/default-speed")
-async def set_default_speed(payload: dict, user: dict = Depends(get_current_user)):
-    speed_kmh = float(payload.get("speed_kmh", 50.0))
-    await sim_manager.set_default_speed(speed_kmh)
-    return {"status": "ok", "default_speed_kmh": sim_manager.default_speed_kmh}
-
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     user = verify_ws_token(websocket)
@@ -200,12 +160,6 @@ async def websocket_endpoint(websocket: WebSocket):
         return
 
     await sim_manager.register_websocket(websocket)
-
-    async def _ws_send(data: dict) -> None:
-        """Send a JSON message over the WebSocket and record bytes transferred."""
-        payload = json.dumps(data)
-        bandwidth_limiter.record(len(payload.encode("utf-8")))
-        await websocket.send_text(payload)
 
     try:
         while True:
@@ -221,46 +175,10 @@ async def websocket_endpoint(websocket: WebSocket):
                     await sim_manager.pause()
                 elif action == "reset":
                     await sim_manager.reset()
-                elif action == "step":
-                    await sim_manager.step_once()
                 elif action == "select_scenario":
                     scenario_id = payload.get("scenario_id")
                     if scenario_id:
                         await sim_manager.select_scenario(scenario_id)
-                elif action == "set_default_speed":
-                    speed_kmh = float(payload.get("speed_kmh", 50.0))
-                    await sim_manager.set_default_speed(speed_kmh)
-                    await _ws_send({
-                        "type": "default_speed_ack",
-                        "default_speed_kmh": sim_manager.default_speed_kmh
-                    })
-                elif action == "spawn":
-                    spawn_req = SpawnRequest(**payload)
-                    veh_id = await sim_manager.spawn_vehicle(spawn_req)
-                    await _ws_send({
-                        "type": "spawn_ack",
-                        "vehicle_id": veh_id
-                    })
-                elif action == "set_auto_spawn":
-                    auto_cfg = AutoSpawnConfig(**payload)
-                    sim_manager.set_auto_spawn(auto_cfg)
-                    await _ws_send({
-                        "type": "auto_spawn_ack",
-                        "auto_spawn": auto_cfg.model_dump()
-                    })
-                elif action == "set_traffic_light":
-                    tl_cfg = TrafficLightConfig(**payload)
-                    await sim_manager.set_traffic_light(tl_cfg)
-                    await _ws_send({
-                        "type": "traffic_light_ack",
-                        "traffic_light": sim_manager._get_traffic_light_data().model_dump()
-                    })
-                elif action == "next_traffic_light_phase":
-                    await sim_manager.next_traffic_light_phase()
-                    await _ws_send({
-                        "type": "traffic_light_ack",
-                        "traffic_light": sim_manager._get_traffic_light_data().model_dump()
-                    })
             except json.JSONDecodeError:
                 logger.warning("Invalid JSON received over WebSocket: %s", text)
             except Exception as e:

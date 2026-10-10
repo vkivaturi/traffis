@@ -10,7 +10,6 @@ interface CanvasViewProps {
   onSelectVehicle: (id: string | null) => void;
   onViewportMetersChange: (meters: number) => void;
   trafficLight?: TrafficLightData;
-  onTrafficLightClick?: () => void;
   scenario?: ScenarioMetadata | null;
 }
 
@@ -1113,7 +1112,6 @@ export const CanvasView: React.FC<CanvasViewProps> = ({
   onSelectVehicle,
   onViewportMetersChange,
   trafficLight,
-  onTrafficLightClick,
   scenario,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -1490,16 +1488,6 @@ export const CanvasView: React.FC<CanvasViewProps> = ({
     const cy = rect.height / 2;
     const worldX = camera.x + (mouseX - cx) / camera.zoom;
     const worldY = camera.y - (mouseY - cy) / camera.zoom;
-
-    // Check if clicked near traffic signal center
-    const tlWorldX = trafficLight?.x ?? (isIntersection ? 0 : 500);
-    const tlWorldY = trafficLight?.y ?? 0;
-    if (Math.hypot(worldX - tlWorldX, worldY - tlWorldY) < 18) {
-      if (onTrafficLightClick) {
-        onTrafficLightClick();
-        return;
-      }
-    }
 
     let clickedId: string | null = null;
     interpVehiclesRef.current.forEach((v, vid) => {

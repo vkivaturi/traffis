@@ -56,15 +56,6 @@ export interface TrafficLightData {
   signal_groups?: SignalGroupTiming[];
 }
 
-export interface TrafficLightSettings {
-  mode?: TrafficSignalMode;
-  state?: TrafficSignalColor;
-  green_duration?: number;
-  yellow_duration?: number;
-  red_duration?: number;
-  green_durations?: Record<string, number>;
-}
-
 export interface SimulationState {
   sim_time: number;
   step: number;
@@ -137,22 +128,6 @@ export interface NetworkInfo {
   traffic_light_y?: number;
   lanes: LaneInfo[];
   arms?: RoadArmInfo[];
-}
-
-export interface SpawnOptions {
-  direction?: string;
-  origin?: string;
-  turn?: 'straight' | 'left' | 'right' | 'random';
-  lane?: number | null;
-  speed?: number | null;
-  type?: 'car' | 'sports' | 'truck' | 'van';
-  color?: string | null;
-}
-
-export interface AutoSpawnSettings {
-  enabled: boolean;
-  rate_per_minute: number;
-  rate_per_hour?: number;
 }
 
 export interface CameraState {

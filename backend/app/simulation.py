@@ -9,14 +9,11 @@ from fastapi import WebSocket
 
 from .config import settings, bandwidth_limiter
 from .schemas import (
-    VehicleData,
     SimulationStats,
     SimulationStateMessage,
     SpawnRequest,
-    AutoSpawnConfig,
     NetworkInfo,
     TrafficLightState,
-    TrafficLightConfig,
 )
 from .scenarios.registry import registry
 from .scenarios.base import BaseScenario
@@ -71,15 +68,11 @@ class SimulationManager:
         # Active scenario (extensible)
         self.scenario: BaseScenario = registry.get_or_default("straight_road")
 
-        # Simulation limit (5 minutes max per run)
-        self.max_sim_time: float = settings.MAX_SIM_TIME_S
+        # Simulation limit (from scenario.xml)
         self.time_limit_reached: bool = False
 
-        # Auto-spawn settings (supports up to 20,000+ veh/hr)
-        self.auto_spawn = AutoSpawnConfig(enabled=True, rate_per_minute=25.0, rate_per_hour=1500.0)
-        self.last_auto_spawn_time = 0.0
+        # Demand generation accumulator (rate comes from scenario.xml)
         self.auto_spawn_accumulator = 0.0
-        self.default_speed_kmh: float = settings.DEFAULT_SPEED_KMH
 
         # Concurrency & WebSockets
         self.lock = asyncio.Lock()
@@ -111,6 +104,7 @@ class SimulationManager:
             "--no-warnings", "true"
         ]
         logger.info("Starting SUMO TraCI for scenario '%s' with command: %s", self.scenario.id, " ".join(cmd))
+        self.scenario.reload_settings()
         traci.start(cmd)
         self.step_count = 0
         self.sim_time = 0.0
@@ -149,24 +143,19 @@ class SimulationManager:
             self._start_traci()
             self.is_initialized = True
             self.is_running = False
-            self.last_auto_spawn_time = 0.0
 
         # Broadcast scenario switch, new network info, and state
         await self._broadcast_scenario_switched()
         await self._broadcast_network_info()
         await self._broadcast_current_state()
 
-    async def set_traffic_light(self, config: TrafficLightConfig):
-        async with self.lock:
-            self.scenario.set_traffic_light_config(config)
-            logger.info("Traffic light updated for scenario '%s'", self.scenario.id)
-        await self._broadcast_current_state()
+    @property
+    def default_speed_kmh(self) -> float:
+        return self.scenario.settings.default_speed_kmh
 
-    async def next_traffic_light_phase(self):
-        async with self.lock:
-            self.scenario.next_traffic_light_phase()
-            logger.info("Traffic light manual step next for scenario '%s'", self.scenario.id)
-        await self._broadcast_current_state()
+    @property
+    def max_sim_time(self) -> float:
+        return self.scenario.settings.max_sim_time
 
     def _get_traffic_light_data(self) -> TrafficLightState:
         return self.scenario.get_traffic_light_data()
@@ -201,17 +190,16 @@ class SimulationManager:
             # Restart TraCI with current scenario
             self._start_traci()
             self.is_running = False
-            self.last_auto_spawn_time = 0.0
         
         # Broadcast initial empty state immediately
         await self._broadcast_current_state()
 
     async def play(self):
         """Resume simulation execution."""
-        if self.sim_time >= settings.MAX_SIM_TIME_S or self.time_limit_reached:
+        if self.sim_time >= self.max_sim_time or self.time_limit_reached:
             self.is_running = False
             self.time_limit_reached = True
-            logger.warning("Cannot resume simulation: 5-minute time limit (%.1fs) reached. Reset required.", settings.MAX_SIM_TIME_S)
+            logger.warning("Cannot resume simulation: time limit (%.1fs) reached. Reset required.", self.max_sim_time)
             await self._broadcast_current_state()
             return False
         self.is_running = True
@@ -222,26 +210,6 @@ class SimulationManager:
         """Pause simulation execution."""
         self.is_running = False
         logger.info("Simulation paused (PAUSE).")
-
-    async def step_once(self):
-        """Execute a single simulation step."""
-        async with self.lock:
-            if not self.is_initialized:
-                return
-            if self.sim_time >= settings.MAX_SIM_TIME_S or self.time_limit_reached:
-                self.is_running = False
-                self.time_limit_reached = True
-                logger.warning("Cannot step simulation: 5-minute time limit (%.1fs) reached. Reset required.", settings.MAX_SIM_TIME_S)
-            else:
-                self._do_step()
-        await self._broadcast_current_state()
-
-    async def spawn_vehicle(self, req: SpawnRequest) -> str:
-        """Dynamically insert a vehicle into the simulation."""
-        async with self.lock:
-            if not self.is_initialized:
-                raise RuntimeError("Simulation is not initialized.")
-            return self._insert_vehicle(req)
 
     def _insert_vehicle(self, req: SpawnRequest) -> str:
         self.vehicle_counter += 1
@@ -304,31 +272,6 @@ class SimulationManager:
                 logger.debug("Entry temporarily saturated on %s: %s", route_id, e2)
                 return ""
 
-    async def set_default_speed(self, speed_kmh: float):
-        """Update default cruising speed and adjust existing vehicles and lanes."""
-        async with self.lock:
-            self.default_speed_kmh = max(10.0, min(150.0, round(speed_kmh, 1)))
-            speed_m_s = self.default_speed_kmh / 3.6
-            if self.is_initialized:
-                try:
-                    for lane_id in traci.lane.getIDList():
-                        traci.lane.setMaxSpeed(lane_id, speed_m_s)
-                    for vid in traci.vehicle.getIDList():
-                        traci.vehicle.setMaxSpeed(vid, speed_m_s)
-                except Exception as e:
-                    logger.warning("Error updating max speed on lanes/vehicles: %s", e)
-        logger.info("Default vehicle speed updated to %.1f km/h (%.2f m/s)", self.default_speed_kmh, self.default_speed_kmh / 3.6)
-        await self._broadcast_current_state()
-
-    def set_auto_spawn(self, config: AutoSpawnConfig):
-        if config.rate_per_hour is not None and config.rate_per_hour >= 0:
-            config.rate_per_minute = round(config.rate_per_hour / 60.0, 2)
-        elif config.rate_per_minute is not None:
-            config.rate_per_hour = round(config.rate_per_minute * 60.0, 1)
-        self.auto_spawn = config
-        logger.info("Auto-spawn updated: enabled=%s, rate=%.1f/min (%.0f veh/hr)",
-                    config.enabled, config.rate_per_minute, config.rate_per_minute * 60.0)
-
     def get_network_info(self) -> NetworkInfo:
         return self.scenario.get_network_info()
 
@@ -344,12 +287,12 @@ class SimulationManager:
         for arr_id in arrived:
             self.vehicle_colors.pop(arr_id, None)
 
-        # Enforce hard 5-minute (300.0s) maximum simulation limit
-        if self.sim_time >= settings.MAX_SIM_TIME_S:
-            self.sim_time = settings.MAX_SIM_TIME_S
+        # Enforce maximum simulation time configured in scenario.xml
+        if self.sim_time >= self.max_sim_time:
+            self.sim_time = self.max_sim_time
             self.is_running = False
             self.time_limit_reached = True
-            logger.info("Simulation hard limit reached (%.1fs / 5 minutes). Pausing simulation.", self.sim_time)
+            logger.info("Simulation time limit reached (%.1fs). Pausing simulation.", self.sim_time)
 
     def _collect_current_state(self) -> SimulationStateMessage:
         """Extract all current vehicle coordinates and metrics in compact format for network efficiency."""
@@ -420,9 +363,9 @@ class SimulationManager:
         # Flow rate q = k * v (in PCE / hour)
         if active_count > 0 and avg_speed > 0:
             pce_per_hour = round(density_pce_km * avg_speed, 1)
-        elif self.auto_spawn.enabled and self.auto_spawn.rate_per_minute > 0:
+        elif self.scenario.settings.vehicles_per_hour > 0:
             avg_pce_factor = 1.3
-            pce_per_hour = round(self.auto_spawn.rate_per_minute * 60.0 * avg_pce_factor, 1)
+            pce_per_hour = round(self.scenario.settings.vehicles_per_hour * avg_pce_factor, 1)
         else:
             pce_per_hour = 0.0
 
@@ -447,8 +390,8 @@ class SimulationManager:
             stats=stats,
             traffic_light=tl_data,
             default_speed_kmh=self.default_speed_kmh,
-            max_sim_time=settings.MAX_SIM_TIME_S,
-            time_limit_reached=self.time_limit_reached or (self.sim_time >= settings.MAX_SIM_TIME_S)
+            max_sim_time=self.max_sim_time,
+            time_limit_reached=self.time_limit_reached or (self.sim_time >= self.max_sim_time)
         )
 
     async def _broadcast_current_state(self):
@@ -537,9 +480,10 @@ class SimulationManager:
             try:
                 if self.is_running and self.is_initialized:
                     async with self.lock:
-                        # High-capacity auto-spawning logic (supports up to 20,000+ veh/hr)
-                        if self.auto_spawn.enabled and self.auto_spawn.rate_per_minute > 0:
-                            rate_per_sec = self.auto_spawn.rate_per_minute / 60.0
+                        # Demand generation at the scenario.xml inflow rate (veh/hr)
+                        vph = self.scenario.settings.vehicles_per_hour
+                        if vph > 0:
+                            rate_per_sec = vph / 3600.0
                             self.auto_spawn_accumulator += rate_per_sec * settings.STEP_LENGTH
                             spawn_count = int(self.auto_spawn_accumulator)
                             if spawn_count > 0:

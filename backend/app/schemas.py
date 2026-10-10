@@ -41,7 +41,7 @@ class TrafficLightState(BaseModel):
     y: float = 0.0
     state: str = "green"  # "green" | "yellow" | "red"
     raw_state: str = "GGGG"
-    mode: str = "auto"    # "auto" | "manual"
+    mode: str = "auto"    # fixed-time plan from scenario.xml
     green_duration: float = 30.0
     yellow_duration: float = 3.0
     red_duration: float = 33.0
@@ -51,14 +51,6 @@ class TrafficLightState(BaseModel):
     phase_index: int = 0
     phase_name: Optional[str] = None
     signal_groups: Optional[List[SignalGroupTiming]] = None
-
-class TrafficLightConfig(BaseModel):
-    mode: Optional[str] = Field(None, description="'auto' or 'manual'")
-    state: Optional[str] = Field(None, description="'green', 'yellow', or 'red'")
-    green_duration: Optional[float] = Field(None, ge=1.0, le=180.0, description="Default / Global Green light duration in seconds")
-    yellow_duration: Optional[float] = Field(3.0, ge=1.0, le=10.0, description="Fixed yellow/amber duration (3.0s)")
-    red_duration: Optional[float] = Field(None, ge=1.0, le=180.0, description="Red light duration")
-    green_durations: Optional[Dict[str, float]] = Field(None, description="Map of signal group ID to custom green duration in seconds, e.g. {'east_west': 30, 'north': 40}")
 
 class SimulationStateMessage(BaseModel):
     type: str = "state"
@@ -82,11 +74,6 @@ class SpawnRequest(BaseModel):
     speed: Optional[float] = Field(None, ge=1.0, le=50.0, description="Initial speed in m/s")
     type: Optional[str] = Field("car", description="Vehicle type: car, sports, truck, van")
     color: Optional[str] = Field(None, description="Hex color e.g. #38bdf8")
-
-class AutoSpawnConfig(BaseModel):
-    enabled: bool = True
-    rate_per_minute: float = Field(25.0, ge=0.0, le=1000.0, description="Vehicles spawned per minute (e.g. 333.33 for 20,000 veh/hr)")
-    rate_per_hour: Optional[float] = Field(None, ge=0.0, le=60000.0, description="Vehicles spawned per hour (up to 20,000+ veh/hr)")
 
 class SpawnOriginInfo(BaseModel):
     id: str
