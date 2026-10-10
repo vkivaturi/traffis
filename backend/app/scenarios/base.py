@@ -86,7 +86,14 @@ class BaseScenario(ABC):
         origins = self.get_origin_ids()
         weights = [self.settings.origin_weights.get(o, 1.0) for o in origins]
         origin = random.choices(origins, weights=weights)[0] if sum(weights) > 0 else random.choice(origins)
-        return SpawnRequest(origin=origin, direction=origin, lane=random.randint(0, 1), type=v_type)
+
+        # Resolve destination / turn intention if configured in scenario.xml
+        turn = None
+        dest_weights = self.settings.destination_weights.get(origin)
+        if dest_weights:
+            turn = random.choices(list(dest_weights.keys()), weights=list(dest_weights.values()))[0]
+
+        return SpawnRequest(origin=origin, direction=origin, turn=turn, lane=random.randint(0, 1), type=v_type)
 
     # ------------------------------------------------------------------ #
     # Fixed-time traffic signal controller (driven by scenario.xml)

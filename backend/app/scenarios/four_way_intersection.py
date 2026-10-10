@@ -156,41 +156,41 @@ class FourWayIntersectionScenario(BaseScenario):
         turn = req.turn or "random"
 
         if origin == "west":
-            if turn == "straight":
+            if turn in ["east", "straight"]:
                 return "route_west_east"
-            elif turn in ["left", "turn_left"]:
+            elif turn in ["south", "left", "turn_left"]:
                 return "route_west_south"
-            elif turn in ["right", "turn_right"]:
+            elif turn in ["north", "right", "turn_right"]:
                 return "route_west_north"
             else:
                 return random.choice(["route_west_east", "route_west_north", "route_west_south"])
 
         elif origin == "east":
-            if turn == "straight":
+            if turn in ["west", "straight"]:
                 return "route_east_west"
-            elif turn in ["left", "turn_left"]:
+            elif turn in ["north", "left", "turn_left"]:
                 return "route_east_north"
-            elif turn in ["right", "turn_right"]:
+            elif turn in ["south", "right", "turn_right"]:
                 return "route_east_south"
             else:
                 return random.choice(["route_east_west", "route_east_north", "route_east_south"])
 
         elif origin == "north":
-            if turn == "straight":
+            if turn in ["south", "straight"]:
                 return "route_north_south"
-            elif turn in ["left", "turn_left"]:
+            elif turn in ["east", "left", "turn_left"]:
                 return "route_north_east"
-            elif turn in ["right", "turn_right"]:
+            elif turn in ["west", "right", "turn_right"]:
                 return "route_north_west"
             else:
                 return random.choice(["route_north_south", "route_north_west", "route_north_east"])
 
         else:  # south
-            if turn == "straight":
+            if turn in ["north", "straight"]:
                 return "route_south_north"
-            elif turn in ["left", "turn_left"]:
+            elif turn in ["west", "left", "turn_left"]:
                 return "route_south_west"
-            elif turn in ["right", "turn_right"]:
+            elif turn in ["east", "right", "turn_right"]:
                 return "route_south_east"
             else:
                 return random.choice(["route_south_north", "route_south_west", "route_south_east"])

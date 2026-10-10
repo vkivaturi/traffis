@@ -6,27 +6,45 @@
 <scenarioSettings>
     <simulation maxSimTime="300"/>
 
-    <traffic defaultSpeedKmh="50" vehiclesPerHour="1500">
+    <traffic defaultSpeedKmh="50" vehiclesPerHour="5000">
         <vehicleMix>
-            <vehicle type="car" weight="0.60"/>
+            <vehicle type="car" weight="0.65"/>
             <vehicle type="sports" weight="0.15"/>
             <vehicle type="van" weight="0.15"/>
-            <vehicle type="truck" weight="0.10"/>
+            <vehicle type="truck" weight="0.05"/>
         </vehicleMix>
         <origins>
-            <origin id="west" weight="1"/>
-            <origin id="east" weight="1"/>
-            <origin id="north" weight="1"/>
+            <origin id="west" weight="4">
+                <destination id="east" weight="0.90"/>
+                <destination id="north" weight="0.10"/>
+            </origin>
+            <origin id="east" weight="4">
+                <destination id="west" weight="0.90"/>
+                <destination id="north" weight="0.10"/>
+            </origin>
+            <origin id="north" weight="1">
+                <destination id="west" weight="0.50"/>
+                <destination id="east" weight="0.50"/>
+            </origin>
         </origins>
     </traffic>
 
-    <!-- Signal groups cycle in document order: each gets green, then amber. -->
+    <!-- Signal groups cycle in document order: each gets green, then amber.
+         Links: [0: EB->WB s, 1: EB->WB s, 2: EB->NB r, 3: NB->EB l, 4: NB->EB l, 5: NB->WB r, 6: WB->NB l, 7: WB->EB s, 8: WB->EB s] -->
     <trafficLight amberDuration="3">
-        <signalGroup id="east_west" name="East-West Highway"
-                     greenState="GGGrrrGGG" greenDuration="30"
-                     amberState="yyyrrryyy" amberDuration="3"/>
+        <!-- Phase 1: East-West Highway Through (East right-turn holds on RED while West->East flows) -->
+        <signalGroup id="east_west_thru" name="East-West Highway Thru"
+                     greenState="GGrrrrGGG" greenDuration="30"
+                     amberState="yyrrrryyy" amberDuration="3"/>
+
+        <!-- Phase 2: Dedicated East Inbound Right Turn to North (West is held on RED so East right-turn proceeds with full priority) -->
+        <signalGroup id="east_right" name="East Right Turn (to North)"
+                     greenState="GGGrrrrrr" greenDuration="15"
+                     amberState="yyyrrrrrr" amberDuration="3"/>
+
+        <!-- Phase 3: North Approach -->
         <signalGroup id="north" name="North Approach"
-                     greenState="rrrGGGrrr" greenDuration="30"
+                     greenState="rrrGGGrrr" greenDuration="15"
                      amberState="rrryyyrrr" amberDuration="3"/>
     </trafficLight>
 </scenarioSettings>

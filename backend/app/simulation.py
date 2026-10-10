@@ -65,6 +65,10 @@ class SimulationManager:
         self.vehicle_counter = 0
         self.vehicle_colors: Dict[str, str] = {}
         
+        # Cumulative run-wide speed tracking across all entered, exited, and active vehicles
+        self.cumulative_speed_sum_kmh: float = 0.0
+        self.cumulative_speed_samples: int = 0
+        
         # Active scenario (extensible)
         self.scenario: BaseScenario = registry.get_or_default("straight_road")
 
@@ -114,6 +118,8 @@ class SimulationManager:
         self.vehicle_counter = 0
         self.auto_spawn_accumulator = 0.0
         self.vehicle_colors.clear()
+        self.cumulative_speed_sum_kmh = 0.0
+        self.cumulative_speed_samples = 0
         self.scenario.reset_state()
 
         # Apply default speed limit to all lanes
@@ -282,6 +288,15 @@ class SimulationManager:
         self.step_count += 1
         self.sim_time = round(self.step_count * settings.STEP_LENGTH, 2)
         
+        # Accumulate vehicle speed samples across all active vehicles in this step
+        # This guarantees vehicles that entered and later exited remain included in the run-wide average speed
+        for vid in traci.vehicle.getIDList():
+            try:
+                self.cumulative_speed_sum_kmh += traci.vehicle.getSpeed(vid) * 3.6
+                self.cumulative_speed_samples += 1
+            except traci.TraCIException:
+                pass
+
         arrived = traci.simulation.getArrivedIDList()
         self.total_arrived += len(arrived)
         for arr_id in arrived:
@@ -355,7 +370,14 @@ class SimulationManager:
                 continue
 
         active_count = len(compact_list)
-        avg_speed = round(total_speed_kmh / active_count, 1) if active_count > 0 else 0.0
+        # Run-wide cumulative average speed across all vehicles that entered, ran, and exited during the simulation run
+        if self.cumulative_speed_samples > 0:
+            avg_speed = round(self.cumulative_speed_sum_kmh / self.cumulative_speed_samples, 1)
+        elif active_count > 0:
+            avg_speed = round(total_speed_kmh / active_count, 1)
+        else:
+            avg_speed = 0.0
+
         density = round(active_count / max(0.2, road_km), 1)
 
         # Indian Traffic Engineering: Passenger Car Equivalent (PCE/PCU) calculation

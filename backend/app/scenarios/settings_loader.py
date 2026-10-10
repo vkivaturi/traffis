@@ -30,6 +30,7 @@ class ScenarioSettings:
     vehicles_per_hour: float = 1500.0
     vehicle_mix: Dict[str, float] = field(default_factory=lambda: {"car": 0.6, "sports": 0.15, "van": 0.15, "truck": 0.1})
     origin_weights: Dict[str, float] = field(default_factory=dict)
+    destination_weights: Dict[str, Dict[str, float]] = field(default_factory=dict)
     signal_group_names: Dict[str, str] = field(default_factory=dict)
     phases: List[PhaseSettings] = field(default_factory=list)
 
@@ -61,9 +62,26 @@ def load_scenario_settings(path: Path) -> ScenarioSettings:
         mix = {v.get("type"): _f(v, "weight", 0.0) for v in traffic.findall("vehicleMix/vehicle") if v.get("type")}
         if mix:
             s.vehicle_mix = mix
-        origins = {o.get("id"): _f(o, "weight", 1.0) for o in traffic.findall("origins/origin") if o.get("id")}
+
+        origins = {}
+        destinations = {}
+        for o in traffic.findall("origins/origin"):
+            oid = o.get("id")
+            if not oid:
+                continue
+            origins[oid] = _f(o, "weight", 1.0)
+            dests = {}
+            for d in o.findall("destination"):
+                did = d.get("id")
+                if did:
+                    dests[did] = _f(d, "weight", 1.0)
+            if dests:
+                destinations[oid] = dests
+
         if origins:
             s.origin_weights = origins
+        if destinations:
+            s.destination_weights = destinations
 
     tl = root.find("trafficLight")
     if tl is not None:

@@ -540,13 +540,21 @@ const renderThreeWayIntersection = (
   const tlState = trafficLight?.state ?? 'green';
   const phaseIdx = trafficLight?.phase_index ?? 0;
 
-  // 3-way phases: 0=EW-Green (Straight + Protected Right), 1=EW-Yellow, 2=North-Green (Left + Protected Right), 3=North-Yellow
-  const isWestGreen = phaseIdx === 0;
-  const isWestYellow = phaseIdx === 1;
-  const isEastGreen = phaseIdx === 0;
-  const isEastYellow = phaseIdx === 1;
-  const isNorthGreen = phaseIdx === 2;
-  const isNorthYellow = phaseIdx === 3;
+  const raw = trafficLight?.raw_state ?? '';
+
+  // 3-way link indices:
+  // [0: EB->WB s, 1: EB->WB s, 2: EB->NB r (Right Turn), 3: NB->EB l, 4: NB->EB l, 5: NB->WB r, 6: WB->NB l, 7: WB->EB s, 8: WB->EB s]
+  const isWestGreen = raw ? (raw[7] === 'G' || raw[7] === 'g') : (phaseIdx === 0);
+  const isWestYellow = raw ? (raw[7] === 'y' || raw[7] === 'Y') : (phaseIdx === 1);
+
+  const isEastThruGreen = raw ? (raw[0] === 'G' || raw[0] === 'g') : (phaseIdx === 0 || phaseIdx === 2);
+  const isEastThruYellow = raw ? (raw[0] === 'y' || raw[0] === 'Y') : (phaseIdx === 1 || phaseIdx === 3);
+
+  const isEastRightGreen = raw ? (raw[2] === 'G' || raw[2] === 'g') : (phaseIdx === 2);
+  const isEastRightYellow = raw ? (raw[2] === 'y' || raw[2] === 'Y') : (phaseIdx === 3);
+
+  const isNorthGreen = raw ? (raw[3] === 'G' || raw[3] === 'g') : (phaseIdx === 4);
+  const isNorthYellow = raw ? (raw[3] === 'y' || raw[3] === 'Y') : (phaseIdx === 5);
 
   const renderSignalHead = (x: number, y: number, r: boolean, yl: boolean, g: boolean, label: string) => {
     const sw = 14;
@@ -598,6 +606,7 @@ const renderThreeWayIntersection = (
     }
   };
 
+  // West Inbound Signal
   renderSignalHead(
     sxWestStop - 14,
     syRoadTop + 14,
@@ -607,15 +616,27 @@ const renderThreeWayIntersection = (
     'WEST'
   );
 
+  // East Inbound Straight (Thru) Signal (outer lane)
   renderSignalHead(
     sxEastStop + 14,
-    syRoadBottom - 14,
-    !isEastGreen && !isEastYellow,
-    isEastYellow,
-    isEastGreen,
-    'EAST'
+    syRoadBottom - 10,
+    !isEastThruGreen && !isEastThruYellow,
+    isEastThruYellow,
+    isEastThruGreen,
+    'EAST THRU'
   );
 
+  // East Inbound Dedicated Right Turn Signal (median lane, turning North)
+  renderSignalHead(
+    sxEastStop + 14,
+    syCenter + 16,
+    !isEastRightGreen && !isEastRightYellow,
+    isEastRightYellow,
+    isEastRightGreen,
+    'EAST ↱'
+  );
+
+  // North Inbound Signal
   renderSignalHead(
     sxNorthRight + 14,
     syNorthStop + 14,
@@ -627,7 +648,11 @@ const renderThreeWayIntersection = (
 
   // Intersection Center Glow
   const activeColor =
-    isWestGreen || isEastGreen || isNorthGreen ? '#10b981' : isWestYellow || isEastYellow || isNorthYellow ? '#f59e0b' : '#ef4444';
+    isWestGreen || isEastThruGreen || isEastRightGreen || isNorthGreen
+      ? '#10b981'
+      : isWestYellow || isEastThruYellow || isEastRightYellow || isNorthYellow
+      ? '#f59e0b'
+      : '#ef4444';
   if (zoom > 2) {
     const juncGlow = ctx.createRadialGradient(sxCenter, syCenter, 5, sxCenter, syCenter, 40 * zoom);
     juncGlow.addColorStop(0, `${activeColor}33`);
