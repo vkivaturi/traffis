@@ -35,11 +35,13 @@
     <edge id="stem_sb_b" from="stem_merge" to="stem_S"     numLanes="3" speed="13.89" priority="3" width="3.2"/>
     <edge id="stem_nb"   from="stem_S"     to="rb_S"       numLanes="3" speed="13.89" priority="3" width="3.2"/>
 
-    <!-- Bottom road -->
-    <edge id="bot_wb_b" from="stem_S"  to="uturn_W" numLanes="3" speed="13.89" priority="3" width="3.2"/>
+    <!-- Bottom road: curved sweeping bend connecting horizontal FL road and vertical stem -->
+    <edge id="bot_wb_b" from="stem_S"  to="uturn_W" numLanes="3" speed="13.89" priority="3" width="3.2"
+          shape="0.00,-80.00 -0.46,-85.21 -1.81,-90.26 -4.02,-95.00 -7.02,-99.28 -10.72,-102.98 -15.00,-105.98 -19.74,-108.19 -24.79,-109.54 -30.00,-110.00 -110.00,-110.00"/>
     <edge id="FL_out"   from="uturn_W" to="FL_end"  numLanes="3" speed="13.89" priority="3" width="3.2"/>
     <edge id="FL_in"    from="FL_end"  to="uturn_W" numLanes="3" speed="13.89" priority="3" width="3.2"/>
-    <edge id="bot_eb"   from="uturn_W" to="stem_S"  numLanes="3" speed="13.89" priority="3" width="3.2"/>
+    <edge id="bot_eb"   from="uturn_W" to="stem_S"  numLanes="3" speed="13.89" priority="3" width="3.2"
+          shape="-110.00,-110.00 -30.00,-110.00 -24.79,-109.54 -19.74,-108.19 -15.00,-105.98 -10.72,-102.98 -7.02,-99.28 -4.02,-95.00 -1.81,-90.26 -0.46,-85.21 0.00,-80.00"/>
 
     <roundabout nodes="rb_W rb_N rb_E rb_S" edges="rb_W_N rb_N_E rb_E_S rb_S_W"/>
 </edges>

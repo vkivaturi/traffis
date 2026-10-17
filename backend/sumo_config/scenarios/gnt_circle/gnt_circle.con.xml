@@ -19,14 +19,14 @@
     <connection from="TL_free_left" to="stem_sb_b" fromLane="0" toLane="0" pass="true"/>
 
     <!-- stem_S: stem SB turns right (west) onto the bottom road -->
-    <connection from="stem_sb_b" to="bot_wb_b" fromLane="0" toLane="0"/>
-    <connection from="stem_sb_b" to="bot_wb_b" fromLane="1" toLane="1"/>
-    <connection from="stem_sb_b" to="bot_wb_b" fromLane="2" toLane="2"/>
+    <connection from="stem_sb_b" to="bot_wb_b" fromLane="0" toLane="0" speed="13.89"/>
+    <connection from="stem_sb_b" to="bot_wb_b" fromLane="1" toLane="1" speed="13.89"/>
+    <connection from="stem_sb_b" to="bot_wb_b" fromLane="2" toLane="2" speed="13.89"/>
 
     <!-- stem_S: eastbound turns left (north) into stem -->
-    <connection from="bot_eb" to="stem_nb" fromLane="0" toLane="0"/>
-    <connection from="bot_eb" to="stem_nb" fromLane="1" toLane="1"/>
-    <connection from="bot_eb" to="stem_nb" fromLane="2" toLane="2"/>
+    <connection from="bot_eb" to="stem_nb" fromLane="0" toLane="0" speed="13.89"/>
+    <connection from="bot_eb" to="stem_nb" fromLane="1" toLane="1" speed="13.89"/>
+    <connection from="bot_eb" to="stem_nb" fromLane="2" toLane="2" speed="13.89"/>
 
     <!-- uturn_W: through movements -->
     <connection from="bot_wb_b" to="FL_out" fromLane="0" toLane="0"/>

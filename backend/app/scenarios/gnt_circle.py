@@ -110,9 +110,13 @@ EDGE_NAMES = {
 CENTRE_LINES = [
     CentreLine(id="centre_NG", edges=["NG_in", "NG_out"], shape=[[-160.0, 0.0], [-19.2, 0.0]]),
     CentreLine(id="centre_TL", edges=["TL_in", "TL_out"], shape=[[20.4, 0.0], [160.0, 0.0]]),
-    CentreLine(id="centre_stem", edges=["stem_sb_a", "stem_sb_b", "stem_nb"], shape=[[0.0, -17.1], [0.0, -100.4]]),
+    CentreLine(id="centre_stem", edges=["stem_sb_a", "stem_sb_b", "stem_nb"], shape=[[0.0, -17.1], [0.0, -80.0]]),
     CentreLine(id="centre_bottom_W", edges=["FL_in", "FL_out"], shape=[[-150.0, -110.0], [-116.0, -110.0]]),
-    CentreLine(id="centre_bottom_E", edges=["bot_eb", "bot_wb_b"], shape=[[-104.0, -110.0], [-12.0, -110.0]]),
+    CentreLine(id="centre_bottom_E", edges=["bot_eb", "bot_wb_b"], shape=[
+        [-104.0, -110.0], [-30.0, -110.0], [-24.79, -109.54], [-19.74, -108.19],
+        [-15.0, -105.98], [-10.72, -102.98], [-7.02, -99.28], [-4.02, -95.0],
+        [-1.81, -90.26], [-0.46, -85.21], [0.0, -80.0]
+    ]),
 ]
 
 LABELS = [
@@ -384,6 +388,8 @@ class GntCircleScenario(BaseScenario):
         for vid in traci.simulation.getArrivedIDList():
             key = _od_key(vid)
             self.uturn_seen.discard(vid)
+            self.aggressive_ids.discard(vid)
+            self.forcing_ids.discard(vid)
             if not key:
                 continue
             self.od_arrived[key] += 1
@@ -414,6 +420,11 @@ class GntCircleScenario(BaseScenario):
 
     def _update_force_mode(self) -> None:
         """Disable right-of-way checks only while an aggressive vehicle is on a conflict edge."""
+        if not self.aggressive_ids:
+            return
+        active_ids = set(traci.vehicle.getIDList())
+        self.aggressive_ids.intersection_update(active_ids)
+        self.forcing_ids.intersection_update(active_ids)
         for vid in list(self.aggressive_ids):
             try:
                 road = traci.vehicle.getRoadID(vid)

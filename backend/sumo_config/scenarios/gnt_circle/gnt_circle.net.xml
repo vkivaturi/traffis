@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<!-- generated on 2026-10-17T21:12:09.826439+05:30 by Eclipse SUMO netconvert 1.27.1
+<!-- generated on 2026-10-17T21:15:38.809225+05:30 by Eclipse SUMO netconvert 1.27.1
 <netconvertConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/netconvertConfiguration.xsd">
 
     <input>
@@ -98,14 +98,14 @@
         <lane id=":rb_W_4_1" index="1" speed="10.42" length="12.71" width="3.50" shape="-18.56,2.60 -15.01,3.07 -12.81,4.34 -10.81,6.27 -7.84,8.66"/>
     </edge>
     <edge id=":stem_S_0" function="internal">
-        <lane id=":stem_S_0_0" index="0" speed="11.12" length="28.38" width="3.20" shape="8.00,-100.40 6.90,-108.10 3.60,-113.60 -1.90,-116.90 -9.60,-118.00"/>
-        <lane id=":stem_S_0_1" index="1" speed="10.10" length="23.22" width="3.20" shape="4.80,-100.40 3.90,-106.70 1.20,-111.20 -3.30,-113.90 -9.60,-114.80"/>
-        <lane id=":stem_S_0_2" index="2" speed="8.96" length="18.06" width="3.20" shape="1.60,-100.40 0.90,-105.30 -1.20,-108.80 -4.70,-110.90 -9.60,-111.60"/>
+        <lane id=":stem_S_0_0" index="0" speed="13.89" length="1.27" width="3.20" shape="8.00,-79.58 8.00,-80.04 7.99,-80.35 7.97,-80.67 7.93,-81.12"/>
+        <lane id=":stem_S_0_1" index="1" speed="13.89" length="1.27" width="3.20" shape="4.80,-79.58 4.80,-79.95 4.79,-80.21 4.78,-80.47 4.74,-80.84"/>
+        <lane id=":stem_S_0_2" index="2" speed="13.89" length="1.27" width="3.20" shape="1.60,-79.58 1.60,-79.87 1.59,-80.07 1.58,-80.27 1.56,-80.56"/>
     </edge>
     <edge id=":stem_S_3" function="internal">
-        <lane id=":stem_S_3_0" index="0" speed="3.90" length="2.58" width="3.20" shape="-9.60,-102.00 -8.90,-101.90 -8.40,-101.60 -8.10,-101.10 -8.00,-100.40"/>
-        <lane id=":stem_S_3_1" index="1" speed="6.08" length="7.74" width="3.20" shape="-9.60,-105.20 -7.50,-104.90 -6.00,-104.00 -5.10,-102.50 -4.80,-100.40"/>
-        <lane id=":stem_S_3_2" index="2" speed="7.66" length="12.90" width="3.20" shape="-9.60,-108.40 -6.10,-107.90 -3.60,-106.40 -2.10,-103.90 -1.60,-100.40"/>
+        <lane id=":stem_S_3_0" index="0" speed="13.89" length="0.42" width="3.20" shape="-8.01,-79.72 -8.00,-79.68 -8.00,-79.65 -8.00,-79.62 -8.00,-79.58"/>
+        <lane id=":stem_S_3_1" index="1" speed="13.89" length="0.42" width="3.20" shape="-4.82,-80.00 -4.81,-79.87 -4.80,-79.79 -4.80,-79.70 -4.80,-79.58"/>
+        <lane id=":stem_S_3_2" index="2" speed="13.89" length="0.42" width="3.20" shape="-1.63,-80.28 -1.61,-80.07 -1.60,-79.93 -1.60,-79.79 -1.60,-79.58"/>
     </edge>
     <edge id=":stem_merge_0" function="internal">
         <lane id=":stem_merge_0_0" index="0" speed="9.72" length="41.74" width="3.20" shape="11.94,-24.17 11.10,-30.64 9.77,-41.17 8.54,-53.58 8.00,-65.69"/>
@@ -165,15 +165,15 @@
         <lane id="TL_out_0" index="0" speed="13.89" length="139.58" width="3.20" shape="20.42,4.80 160.00,4.80"/>
         <lane id="TL_out_1" index="1" speed="13.89" length="139.58" width="3.20" shape="20.42,1.60 160.00,1.60"/>
     </edge>
-    <edge id="bot_eb" from="uturn_W" to="stem_S" priority="3">
-        <lane id="bot_eb_0" index="0" speed="13.89" length="100.40" width="3.20" shape="-110.00,-102.00 -9.60,-102.00"/>
-        <lane id="bot_eb_1" index="1" speed="13.89" length="100.40" width="3.20" shape="-110.00,-105.20 -9.60,-105.20"/>
-        <lane id="bot_eb_2" index="2" speed="13.89" length="100.40" width="3.20" shape="-110.00,-108.40 -9.60,-108.40"/>
+    <edge id="bot_eb" from="uturn_W" to="stem_S" priority="3" shape="-110.00,-110.00 -30.00,-110.00 -24.79,-109.54 -19.74,-108.19 -15.00,-105.98 -10.72,-102.98 -7.02,-99.28 -4.02,-95.00 -1.81,-90.26 -0.46,-85.21 0.00,-80.00">
+        <lane id="bot_eb_0" index="0" speed="13.89" length="119.50" width="3.20" shape="-110.00,-102.00 -30.35,-102.00 -26.19,-101.63 -22.48,-100.64 -19.02,-99.03 -15.88,-96.83 -13.17,-94.12 -10.97,-90.98 -9.36,-87.52 -8.37,-83.81 -8.01,-79.72"/>
+        <lane id="bot_eb_1" index="1" speed="13.89" length="119.50" width="3.20" shape="-110.00,-105.20 -30.21,-105.20 -25.63,-104.80 -21.39,-103.66 -17.41,-101.81 -13.82,-99.29 -10.71,-96.18 -8.19,-92.59 -6.34,-88.61 -5.20,-84.37 -4.82,-80.00"/>
+        <lane id="bot_eb_2" index="2" speed="13.89" length="119.50" width="3.20" shape="-110.00,-108.40 -30.07,-108.40 -25.07,-107.96 -20.29,-106.68 -15.80,-104.59 -11.75,-101.75 -8.25,-98.25 -5.41,-94.20 -3.32,-89.71 -2.04,-84.93 -1.63,-80.28"/>
     </edge>
-    <edge id="bot_wb_b" from="stem_S" to="uturn_W" priority="3">
-        <lane id="bot_wb_b_0" index="0" speed="13.89" length="100.40" width="3.20" shape="-9.60,-118.00 -110.00,-118.00"/>
-        <lane id="bot_wb_b_1" index="1" speed="13.89" length="100.40" width="3.20" shape="-9.60,-114.80 -110.00,-114.80"/>
-        <lane id="bot_wb_b_2" index="2" speed="13.89" length="100.40" width="3.20" shape="-9.60,-111.60 -110.00,-111.60"/>
+    <edge id="bot_wb_b" from="stem_S" to="uturn_W" priority="3" shape="0.00,-80.00 -0.46,-85.21 -1.81,-90.26 -4.02,-95.00 -7.02,-99.28 -10.72,-102.98 -15.00,-105.98 -19.74,-108.19 -24.79,-109.54 -30.00,-110.00 -110.00,-110.00">
+        <lane id="bot_wb_b_0" index="0" speed="13.89" length="133.77" width="3.20" shape="7.93,-81.12 7.45,-86.61 5.74,-93.00 2.93,-99.02 -0.87,-104.44 -5.56,-109.13 -10.98,-112.93 -17.00,-115.74 -23.39,-117.45 -29.65,-118.00 -110.00,-118.00"/>
+        <lane id="bot_wb_b_1" index="1" speed="13.89" length="133.77" width="3.20" shape="4.74,-80.84 4.28,-86.05 2.72,-91.91 0.15,-97.41 -3.33,-102.38 -7.62,-106.67 -12.59,-110.15 -18.09,-112.72 -23.95,-114.28 -29.79,-114.80 -110.00,-114.80"/>
+        <lane id="bot_wb_b_2" index="2" speed="13.89" length="133.77" width="3.20" shape="1.56,-80.56 1.12,-85.49 -0.30,-90.81 -2.63,-95.80 -5.79,-100.31 -9.69,-104.21 -14.20,-107.37 -19.19,-109.70 -24.51,-111.12 -29.93,-111.60 -110.00,-111.60"/>
     </edge>
     <edge id="rb_E_S" from="rb_E" to="rb_S" priority="4" shape="10.00,0.00 9.24,-3.83 7.07,-7.07 3.83,-9.24 0.00,-10.00">
         <lane id="rb_E_S_0" index="0" speed="6.94" length="4.36" width="3.50" shape="14.51,-4.24 14.19,-5.88 11.55,-9.81"/>
@@ -192,9 +192,9 @@
         <lane id="rb_W_N_1" index="1" speed="6.94" length="10.32" width="3.50" shape="-7.84,8.66 -4.51,10.89 -0.34,11.72"/>
     </edge>
     <edge id="stem_nb" from="stem_S" to="rb_S" priority="3">
-        <lane id="stem_nb_0" index="0" speed="13.89" length="83.32" width="3.20" shape="-8.00,-100.40 -8.00,-17.08"/>
-        <lane id="stem_nb_1" index="1" speed="13.89" length="83.32" width="3.20" shape="-4.80,-100.40 -4.80,-17.08"/>
-        <lane id="stem_nb_2" index="2" speed="13.89" length="83.32" width="3.20" shape="-1.60,-100.40 -1.60,-17.08"/>
+        <lane id="stem_nb_0" index="0" speed="13.89" length="62.49" width="3.20" shape="-8.00,-79.58 -8.00,-17.08"/>
+        <lane id="stem_nb_1" index="1" speed="13.89" length="62.49" width="3.20" shape="-4.80,-79.58 -4.80,-17.08"/>
+        <lane id="stem_nb_2" index="2" speed="13.89" length="62.49" width="3.20" shape="-1.60,-79.58 -1.60,-17.08"/>
     </edge>
     <edge id="stem_sb_a" from="rb_S" to="stem_merge" priority="3">
         <lane id="stem_sb_a_0" index="0" speed="13.89" length="10.04" width="3.20" shape="8.00,-17.08 8.00,-27.12"/>
@@ -202,9 +202,9 @@
         <lane id="stem_sb_a_2" index="2" speed="13.89" length="10.04" width="3.20" shape="1.60,-17.08 1.60,-27.12"/>
     </edge>
     <edge id="stem_sb_b" from="stem_merge" to="stem_S" priority="3">
-        <lane id="stem_sb_b_0" index="0" speed="13.89" length="34.71" width="3.20" shape="8.00,-65.69 8.00,-100.40"/>
-        <lane id="stem_sb_b_1" index="1" speed="13.89" length="34.71" width="3.20" shape="4.80,-65.69 4.80,-100.40"/>
-        <lane id="stem_sb_b_2" index="2" speed="13.89" length="34.71" width="3.20" shape="1.60,-65.69 1.60,-100.40"/>
+        <lane id="stem_sb_b_0" index="0" speed="13.89" length="13.88" width="3.20" shape="8.00,-65.69 8.00,-79.58"/>
+        <lane id="stem_sb_b_1" index="1" speed="13.89" length="13.88" width="3.20" shape="4.80,-65.69 4.80,-79.58"/>
+        <lane id="stem_sb_b_2" index="2" speed="13.89" length="13.88" width="3.20" shape="1.60,-65.69 1.60,-79.58"/>
     </edge>
 
     <junction id="FL_end" type="dead_end" x="-150.00" y="-110.00" incLanes="FL_out_0 FL_out_1 FL_out_2" intLanes="" shape="-150.00,-110.00 -150.00,-119.60 -150.00,-110.00"/>
@@ -238,7 +238,7 @@
         <request index="4" response="000010" foes="000010" cont="0"/>
         <request index="5" response="001010" foes="001010" cont="0"/>
     </junction>
-    <junction id="stem_S" type="priority" x="0.00" y="-110.00" incLanes="stem_sb_b_0 stem_sb_b_1 stem_sb_b_2 bot_eb_0 bot_eb_1 bot_eb_2" intLanes=":stem_S_0_0 :stem_S_0_1 :stem_S_0_2 :stem_S_3_0 :stem_S_3_1 :stem_S_3_2" shape="9.60,-100.40 -9.60,-100.40 -9.60,-119.60 -3.73,-119.07 1.07,-117.47 4.80,-114.80 7.47,-111.07 9.07,-106.27">
+    <junction id="stem_S" type="priority" x="0.00" y="-80.00" incLanes="stem_sb_b_0 stem_sb_b_1 stem_sb_b_2 bot_eb_0 bot_eb_1 bot_eb_2" intLanes=":stem_S_0_0 :stem_S_0_1 :stem_S_0_2 :stem_S_3_0 :stem_S_3_1 :stem_S_3_2" shape="9.60,-79.58 -9.60,-79.58 9.53,-81.27 9.58,-80.64 9.59,-80.42 9.60,-80.20 9.60,-79.94">
         <request index="0" response="000000" foes="000000" cont="0"/>
         <request index="1" response="000000" foes="000000" cont="0"/>
         <request index="2" response="000000" foes="000000" cont="0"/>
@@ -279,9 +279,9 @@
     <connection from="TL_free_left" to="stem_sb_b" fromLane="0" toLane="0" pass="1" via=":stem_merge_0_0" dir="s" state="M"/>
     <connection from="TL_in" to="TL_free_left" fromLane="0" toLane="0" via=":tl_fl_0_0" dir="s" state="m"/>
     <connection from="TL_in" to="TL_free_left" fromLane="1" toLane="0" keepClear="0" via=":tl_fl_0_1" dir="s" state="M"/>
-    <connection from="bot_eb" to="stem_nb" fromLane="0" toLane="0" via=":stem_S_3_0" dir="l" state="M"/>
-    <connection from="bot_eb" to="stem_nb" fromLane="1" toLane="1" via=":stem_S_3_1" dir="l" state="M"/>
-    <connection from="bot_eb" to="stem_nb" fromLane="2" toLane="2" via=":stem_S_3_2" dir="l" state="M"/>
+    <connection from="bot_eb" to="stem_nb" fromLane="0" toLane="0" speed="13.89" via=":stem_S_3_0" dir="s" state="M"/>
+    <connection from="bot_eb" to="stem_nb" fromLane="1" toLane="1" speed="13.89" via=":stem_S_3_1" dir="s" state="M"/>
+    <connection from="bot_eb" to="stem_nb" fromLane="2" toLane="2" speed="13.89" via=":stem_S_3_2" dir="s" state="M"/>
     <connection from="bot_wb_b" to="FL_out" fromLane="0" toLane="0" via=":uturn_W_0_0" dir="s" state="M"/>
     <connection from="bot_wb_b" to="FL_out" fromLane="1" toLane="1" via=":uturn_W_0_1" dir="s" state="M"/>
     <connection from="bot_wb_b" to="FL_out" fromLane="2" toLane="2" via=":uturn_W_0_2" dir="s" state="M"/>
@@ -307,9 +307,9 @@
     <connection from="stem_sb_a" to="stem_sb_b" fromLane="0" toLane="0" via=":stem_merge_1_0" dir="s" state="M"/>
     <connection from="stem_sb_a" to="stem_sb_b" fromLane="1" toLane="1" via=":stem_merge_1_1" dir="s" state="M"/>
     <connection from="stem_sb_a" to="stem_sb_b" fromLane="2" toLane="2" via=":stem_merge_1_2" dir="s" state="M"/>
-    <connection from="stem_sb_b" to="bot_wb_b" fromLane="0" toLane="0" via=":stem_S_0_0" dir="r" state="M"/>
-    <connection from="stem_sb_b" to="bot_wb_b" fromLane="1" toLane="1" via=":stem_S_0_1" dir="r" state="M"/>
-    <connection from="stem_sb_b" to="bot_wb_b" fromLane="2" toLane="2" via=":stem_S_0_2" dir="r" state="M"/>
+    <connection from="stem_sb_b" to="bot_wb_b" fromLane="0" toLane="0" speed="13.89" via=":stem_S_0_0" dir="s" state="M"/>
+    <connection from="stem_sb_b" to="bot_wb_b" fromLane="1" toLane="1" speed="13.89" via=":stem_S_0_1" dir="s" state="M"/>
+    <connection from="stem_sb_b" to="bot_wb_b" fromLane="2" toLane="2" speed="13.89" via=":stem_S_0_2" dir="s" state="M"/>
 
     <connection from=":rb_E_0" to="TL_out" fromLane="0" toLane="0" dir="l" state="M"/>
     <connection from=":rb_E_1" to="rb_E_S" fromLane="0" toLane="0" dir="s" state="M"/>
@@ -334,12 +334,12 @@
     <connection from=":rb_W_3" to="rb_W_N" fromLane="0" toLane="1" dir="s" state="M"/>
     <connection from=":rb_W_4" to="rb_W_N" fromLane="0" toLane="0" dir="l" state="M"/>
     <connection from=":rb_W_4" to="rb_W_N" fromLane="1" toLane="1" dir="l" state="M"/>
-    <connection from=":stem_S_0" to="bot_wb_b" fromLane="0" toLane="0" dir="r" state="M"/>
-    <connection from=":stem_S_0" to="bot_wb_b" fromLane="1" toLane="1" dir="r" state="M"/>
-    <connection from=":stem_S_0" to="bot_wb_b" fromLane="2" toLane="2" dir="r" state="M"/>
-    <connection from=":stem_S_3" to="stem_nb" fromLane="0" toLane="0" dir="l" state="M"/>
-    <connection from=":stem_S_3" to="stem_nb" fromLane="1" toLane="1" dir="l" state="M"/>
-    <connection from=":stem_S_3" to="stem_nb" fromLane="2" toLane="2" dir="l" state="M"/>
+    <connection from=":stem_S_0" to="bot_wb_b" fromLane="0" toLane="0" dir="s" state="M"/>
+    <connection from=":stem_S_0" to="bot_wb_b" fromLane="1" toLane="1" dir="s" state="M"/>
+    <connection from=":stem_S_0" to="bot_wb_b" fromLane="2" toLane="2" dir="s" state="M"/>
+    <connection from=":stem_S_3" to="stem_nb" fromLane="0" toLane="0" dir="s" state="M"/>
+    <connection from=":stem_S_3" to="stem_nb" fromLane="1" toLane="1" dir="s" state="M"/>
+    <connection from=":stem_S_3" to="stem_nb" fromLane="2" toLane="2" dir="s" state="M"/>
     <connection from=":stem_merge_0" to="stem_sb_b" fromLane="0" toLane="0" dir="s" state="M"/>
     <connection from=":stem_merge_1" to="stem_sb_b" fromLane="0" toLane="0" dir="s" state="M"/>
     <connection from=":stem_merge_1" to="stem_sb_b" fromLane="1" toLane="1" dir="s" state="M"/>

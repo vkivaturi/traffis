@@ -81,10 +81,10 @@ Same conventions as other scenarios: metres, X → right, Y → up (sketch top =
 | Main road (TL arm) length | 150 m (X: +10 → +160, ring node) | D-9 |
 | Main road carriageway | NG: 2 lanes / direction (4-lane road); TL: 2 lanes / direction (4-lane road); 3.2 m | D-2 |
 | Centre lines | Double solid yellow lines, no raised medians | like the 3-way intersection UI |
-| Stem length | 100 m (Y: −10 → −110) | D-9 |
+| Stem length | 100 m (Y: −10 → −80, connects to bottom road via R=30m sweeping curve) | D-9 |
 | Stem carriageway | 3 lanes / direction, 3.2 m | D-2 |
 | TL free left | 1 lane (TL_in 2 → 1 at X = +45), short quarter-ellipse arc round the circle's south-east side, merges into stem SB lane 0 at Y = −24 (14 m below the ring) | All TL traffic |
-| Bottom road length | 150 m, FL end → stem junction (X: −150 → 0), Y = −110 | |
+| Bottom road length | 150 m, FL end → stem junction (X: −150 → 0), curves smoothly into the stem | |
 | Bottom road carriageway | 3 lanes / direction | D-2 |
 | U-turn gap | X = −110 m (40 m from FL end, 110 m from stem junction), gap width 12 m | Westbound → eastbound only |
 | Speed limit (main/bottom) | 50 km/h (13.89 m/s) | urban, D-3 |
@@ -108,7 +108,7 @@ Same conventions as other scenarios: metres, X → right, Y → up (sketch top =
 | `rb_S` | `priority` | Roundabout south node (stem entry/exit) |
 | `tl_fl` | `priority` | End of TL_in (X = +45): 2 lanes merge into the single free-left lane. **All** TL traffic goes here — no ring entry |
 | `stem_merge` | `priority` | Free left merges into stem SB kerb lane (Y = −24); free left yields |
-| `stem_S` | `priority` | Stem meets bottom road (merge SB, diverge NB) |
+| `stem_S` | `priority` | Top tangent of the sweeping curve into the stem (x = 0, y = −80) |
 | `uturn_W` | `priority` | U-turn opening (westbound → eastbound) |
 
 Declare the ring in `<roundabout nodes="rb_W rb_N rb_E rb_S" edges="..."/>` so SUMO applies yield-on-entry.
@@ -126,10 +126,10 @@ Declare the ring in `<roundabout nodes="rb_W rb_N rb_E rb_S" edges="..."/>` so S
 | `stem_sb_b` | stem_merge → stem_S | 2 | Stem SB after the merge (ring exit + TL free left) |
 | `stem_nb` | stem_S → rb_S | 2 | Bottom road up to roundabout |
 | `TL_free_left` | tl_fl → stem_merge | 1 | Free left at the circle; carries TL→FL **and** TL→NG/TL→TL (U-turn bound) |
-| `bot_wb_b` | stem_S → uturn_W | 3 | Westbound (all stem SB traffic) |
+| `bot_wb_b` | stem_S → uturn_W | 3 | Westbound: sweeping curve + straight road to U-turn and FL |
 | `FL_out` | uturn_W → FL_end | 3 | To flyover |
 | `FL_in` | FL_end → uturn_W | 3 | From flyover |
-| `bot_eb` | uturn_W → stem_S | 3 | Eastbound, feeds stem NB |
+| `bot_eb` | uturn_W → stem_S | 3 | Eastbound straight road + sweeping curve (50 km/h), feeds stem NB |
 | `uturn` | (connection at uturn_W) | 1 | `bot_wb_b` rightmost (median) lane → `bot_eb` |
 
 > In left-hand traffic the median-side lane is the **highest lane index**. The U-turn connects from the median lane of `bot_wb_b` to the median lane of `bot_eb`.
