@@ -16,6 +16,17 @@ GNT Circle is an **unsignalised** junction with:
 
 There are **no traffic signals** anywhere. All conflicts are resolved by priority rules (§6).
 
+> [!IMPORTANT]
+> **TL → NG traffic CANNOT go straight through GNT Circle.**
+> There is **no entry into the roundabout from the TL arm** (`rb_E` is exit-only for TL).
+> TL → NG vehicles must:
+> 1. Flow **south** via the TL free-left slip down to the bottom road (westbound).
+> 2. Take the **U-turn** in the bottom-road median (`uturn_W`).
+> 3. Travel back east and **north up the stem** to GNT Circle.
+> 4. **Take a left** at GNT Circle (first exit, clockwise from `rb_S` to `rb_W`) onto `NG_out`.
+>
+> Any route using `TL_in → rb_E → ring → NG_out` is **invalid** and must fail validation.
+
 ### 1.1 Traffic convention
 - **Left-hand traffic (India)**. Vehicles keep left; roundabout circulation is **clockwise**.
 - SUMO: build with `netconvert --lefthand true` (or `<processing><lefthand value="true"/>`).
@@ -39,10 +50,10 @@ Direction suffixes used in IDs: `_in` = traffic entering the model from that arm
   NG_in  ══▶══════╮   ╭─────╮   ╭══════════════▶══  TL_out
                   ╰──▶│ GNT │──▶╯
   NG_out ══◀══════╮   │Circle│  ╭══════════════◀══  TL_in
-                  ╰──◀│(cw) │◀─╯ │
-                      ╰┬───┬╯    │  free-left slip (TL → FL)
-                 stem ▲│   │▼    │
-                  NB  ││   ││ SB │
+                  ╰──◀│(cw) │  │  (NO entry into circle from TL)
+                      ╰┬───┬╯  │
+                 stem ▲│   │▼  │  free-left slip: ALL TL traffic
+                  NB  ││   ││SB│  (TL→FL, and TL→NG via U-turn)
                        │   │     │
   FL_in  ══▶═══════════╯   │     │
   ─ ─ ─ ─ ─ U ─ ─ ─ ─ ─ ─ ─│─ ─ ─│─   (median, U-turn gap at "U")
@@ -92,9 +103,9 @@ Same conventions as other scenarios: metres, X → right, Y → up (sketch top =
 | `FL_end` | `dead_end` | West terminal of bottom road |
 | `rb_W` | `priority` | Roundabout west node (NG entry/exit) |
 | `rb_N` | `priority` | Roundabout north node (shape only, no arm) |
-| `rb_E` | `priority` | Roundabout east node (TL entry/exit) |
+| `rb_E` | `priority` | Roundabout east node — **exit-only** to TL (no TL entry) |
 | `rb_S` | `priority` | Roundabout south node (stem entry/exit) |
-| `slip_div` | `priority` | TL westbound diverge to slip (≈ X +60, before roundabout) |
+| `slip_div` | `priority` | TL westbound turns south into slip (≈ X +60). **All** TL traffic goes here — no continuation to roundabout |
 | `stem_S` | `priority` | Stem meets bottom road (merge SB, diverge NB) |
 | `slip_merge` | `priority` | Slip merges into bottom road westbound |
 | `uturn_W` | `priority` | U-turn opening (westbound → eastbound) |
@@ -106,13 +117,13 @@ Declare the ring in `<roundabout nodes="rb_W rb_N rb_E rb_S" edges="..."/>` so S
 | :--- | :--- | :--- | :--- |
 | `NG_in` | NG_end → rb_W | 3 | From NG towards roundabout |
 | `NG_out` | rb_W → NG_end | 3 | Roundabout to NG |
-| `TL_in_a` | TL_end → slip_div | 3 | From TL |
-| `TL_in_b` | slip_div → rb_E | 2–3 | TL continuing to roundabout |
+| `TL_in` | TL_end → slip_div | 3 | From TL (only connects to slip) |
+| ~~`TL_in_b`~~ | — | — | **Does not exist.** No TL entry into the ring |
 | `TL_out` | rb_E → TL_end | 3 | Roundabout to TL |
 | `rb_W_N`, `rb_N_E`, `rb_E_S`, `rb_S_W` | ring | 2 | **Clockwise** ring segments (W→N→E→S→W) |
 | `stem_sb` | rb_S → stem_S | 2 | Roundabout down to bottom road |
 | `stem_nb` | stem_S → rb_S | 2 | Bottom road up to roundabout |
-| `slip_TL_FL` | slip_div → slip_merge | 1–2 | Free left TL → FL |
+| `slip_TL_FL` | slip_div → slip_merge | 2 | Free left TL → south; carries TL→FL **and** TL→NG/TL→TL (U-turn bound) |
 | `bot_wb_a` | slip_merge → stem_S | 2 | Slip traffic westbound |
 | `bot_wb_b` | stem_S → uturn_W | 3 | Westbound (stem SB + slip) |
 | `FL_out` | uturn_W → FL_end | 3 | To flyover |
@@ -133,15 +144,15 @@ All O-D pairs and the path each takes:
 | `r_NG_TL` | NG → TL | NG_in → rb_W_N → rb_N_E → TL_out |
 | `r_NG_FL` | NG → FL | NG_in → rb_W_N → rb_N_E → rb_E_S → stem_sb → bot_wb_b → FL_out |
 | `r_NG_NG` | NG → NG (U) | NG_in → full ring → NG_out *(optional, low share)* |
-| `r_TL_NG` | TL → NG | TL_in_a → TL_in_b → rb_E_S → rb_S_W → NG_out |
-| `r_TL_FL` | TL → FL | TL_in_a → slip_TL_FL → bot_wb_a → bot_wb_b → FL_out *(free left, no roundabout)* |
-| `r_TL_TL` | TL → TL (U) | TL_in_a → TL_in_b → ring ×¾ → TL_out *(optional)* |
+| `r_TL_NG` | TL → NG | TL_in → slip_TL_FL → bot_wb_a → bot_wb_b → **uturn** → bot_eb → stem_nb → rb_S_W *(left at circle)* → NG_out |
+| `r_TL_FL` | TL → FL | TL_in → slip_TL_FL → bot_wb_a → bot_wb_b → FL_out *(free left, no roundabout)* |
+| `r_TL_TL` | TL → TL (U) | TL_in → slip_TL_FL → bot_wb_a → bot_wb_b → uturn → bot_eb → stem_nb → rb_S_W → rb_W_N → rb_N_E → TL_out *(optional)* |
 | `r_FL_NG` | FL → NG | FL_in → bot_eb → stem_nb → rb_S_W → NG_out |
 | `r_FL_TL` | FL → TL | FL_in → bot_eb → stem_nb → rb_S_W → rb_W_N → rb_N_E → TL_out |
 | `r_FL_FL` | FL → FL (U) | FL_in → bot_eb → stem_nb → ring → stem_sb → … → FL_out *(rare)* |
 | `r_Uturn_*` | via U-turn | …→ bot_wb_b → **uturn** → bot_eb → stem_nb → rb_S → NG/TL |
 
-U-turn use case (per sketch label "To Nallagandla, Tellapur"): westbound traffic on the bottom road that wants NG/TL turns back at the gap and goes up the stem. **[OPEN-4]**: who generates this traffic? (see §11).
+U-turn use case (per sketch label "To Nallagandla, Tellapur"): the U-turn is the **mandatory path for all TL → NG traffic** (and TL → TL). It is not optional demand; U-turn volume = TL inflow × (NG + TL share).
 
 ### 5.1 Default demand (to be put in `scenario.xml`)
 | Origin | Inflow (veh/h) | Destination split |
@@ -149,7 +160,7 @@ U-turn use case (per sketch label "To Nallagandla, Tellapur"): westbound traffic
 | NG | 1200 | TL 70%, FL 25%, NG 5% |
 | TL | 1200 | NG 60%, FL 35%, TL 5% |
 | FL | 900 | NG 50%, TL 50% |
-| U-turn | 150 | NG 50%, TL 50% (origin = TL slip/stem traffic re-routing) |
+| *(U-turn)* | — | Not a separate origin; carries TL→NG and TL→TL routes |
 
 Vehicle mix: car 70%, van 12%, truck 8%, sports 10% (reuse existing vTypes). **[OPEN-5]**: add `motorcycle` / `auto_rickshaw` for Indian mix?
 
@@ -205,6 +216,9 @@ Vehicle mix: car 70%, van 12%, truck 8%, sports 10% (reuse existing vTypes). **[
 - [ ] No traffic lights in `.net.xml` (`<tlLogic>` absent).
 - [ ] Entering vehicles yield to circulating vehicles.
 - [ ] TL→FL vehicles never enter ring edges.
+- [ ] **No connection exists from `TL_in` to any ring edge** (`rb_E` has no incoming edge from TL).
+- [ ] **Every TL→NG vehicle traverses `slip_TL_FL` → `uturn` → `stem_nb` → `rb_S_W` → `NG_out`.**
+- [ ] TL→NG vehicles enter the ring only at `rb_S` and leave at the first exit (`rb_W`).
 - [ ] U-turn only allowed westbound → eastbound at `uturn_W`.
 - [ ] No teleports in a 600 s run at default demand.
 - [ ] Frontend renders curves and vehicle headings correctly around the ring.
@@ -219,9 +233,10 @@ Vehicle mix: car 70%, van 12%, truck 8%, sports 10% (reuse existing vTypes). **[
 | OPEN-1 | Lanes on roundabout ring? | 2 |
 | OPEN-2 | Lanes per direction on main road, stem, bottom road? | 3 / 2 / 3 |
 | OPEN-3 | Speed limits? | 50 km/h roads, 25 km/h ring |
-| OPEN-4 | Does the bottom road's eastbound side (`FL_in`) carry traffic **from** the flyover, or is it only fed by the U-turn? | Both: FL is a real origin, U-turn adds to it |
+| OPEN-4 | Does the bottom road's eastbound side (`FL_in`) carry traffic **from** the flyover, in addition to U-turn traffic? | Yes. U-turn source resolved: TL→NG/TL→TL traffic |
 | OPEN-5 | Add Indian vehicle types (2-wheeler, auto)? | No (reuse existing) |
 | OPEN-6 | Merge priority at bottom road: stem SB vs TL slip? | Slip yields to stem SB |
 | OPEN-7 | Does NG → TL traffic go round the northern arc of the circle (as drawn) — no bypass lane? | Yes, all via ring |
-| OPEN-8 | Is the middle-left "To Nallagandla" road the same as `NG_out` (i.e., TL→NG exits the ring at its SW side)? | Yes |
+| OPEN-8 | Is the middle-left "To Nallagandla" road the same as `NG_out` (exited by left turn from the stem at `rb_W`)? | Yes |
+| ~~OPEN-10~~ | TL→NG path | **Resolved:** south → U-turn → left at GNT Circle (no straight movement) |
 | OPEN-9 | Real-world dimensions (arm lengths, island diameter) — use satellite measurements? | Values in §3 |
