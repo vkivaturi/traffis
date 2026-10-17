@@ -1,15 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
   GNT Circle – nodes (SPEC.md §4.1). Origin = roundabout centre. Left-hand traffic.
-  Lengths (from the ring nodes): NG, TL and bottom road (stem_S -> FL) 200 m each; stem 100 m.
+  Lengths: NG and TL arms 150 m (from the ring nodes); FL arm 150 m (FL_end -> stem junction); stem 100 m.
   TL inbound never enters the ring (D-10): it ends at tl_fl, where all TL traffic takes the
   single-lane free left that merges into the stem southbound at stem_merge.
 -->
 <nodes xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/nodes_file.xsd">
     <!-- Terminals -->
-    <node id="NG_end" x="-210.0" y="0.0"    type="dead_end"/>
-    <node id="TL_end" x="210.0"  y="0.0"    type="dead_end"/>
-    <node id="FL_end" x="-200.0" y="-110.0" type="dead_end"/>
+    <node id="NG_end" x="-160.0" y="0.0"    type="dead_end"/>
+    <node id="TL_end" x="160.0"  y="0.0"    type="dead_end"/>
+    <node id="FL_end" x="-150.0" y="-110.0" type="dead_end"/>
 
     <!-- Roundabout ring: nodes on the island edge (r = 10 m); 2 x 3.5 m lanes lie outside it (10..17 m) -->
     <node id="rb_W" x="-10.0" y="0.0"   type="priority"/>
@@ -19,7 +19,7 @@
 
     <!-- TL free left at the roundabout: 3 -> 1 lane, merges into stem SB kerb lane -->
     <node id="tl_fl"      x="45.0" y="0.0"   type="priority"/>
-    <node id="stem_merge" x="0.0"  y="-55.0" type="priority"/>
+    <node id="stem_merge" x="0.0"  y="-24.0" type="priority"/>
 
     <!-- Bottom road -->
     <node id="stem_S"  x="0.0"    y="-110.0" type="priority"/>

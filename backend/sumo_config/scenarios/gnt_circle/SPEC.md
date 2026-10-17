@@ -77,16 +77,16 @@ Same conventions as other scenarios: metres, X → right, Y → up (sketch top =
 | Central island radius | 10 m (inner edge of the ring) | D-9 |
 | Circulating carriageway | 2 lanes, 7.0 m wide | D-1 |
 | Outer radius | ~17 m | |
-| Main road (NG arm) length | 200 m (X: −210 → −10, ring node) | D-9 |
-| Main road (TL arm) length | 200 m (X: +10 → +210, ring node) | D-9 |
+| Main road (NG arm) length | 150 m (X: −160 → −10, ring node) | D-9 |
+| Main road (TL arm) length | 150 m (X: +10 → +160, ring node) | D-9 |
 | Main road carriageway | NG: 2 lanes / direction (4-lane road); TL: 3 lanes / direction; 3.2 m | D-2 |
 | Centre lines | Double solid yellow lines, no raised medians | like the 3-way intersection UI |
 | Stem length | 100 m (Y: −10 → −110) | D-9 |
 | Stem carriageway | 3 lanes / direction, 3.2 m | D-2 |
-| TL free left | 1 lane (TL_in 3 → 1 at X = +45), curve radius 25 m round the circle, merges into stem SB lane 0 at Y = −55 | All TL traffic |
-| Bottom road length | 200 m stem junction → FL (X: 0 → −200), Y = −110 | |
+| TL free left | 1 lane (TL_in 3 → 1 at X = +45), short quarter-ellipse arc round the circle's south-east side, merges into stem SB lane 0 at Y = −24 (14 m below the ring) | All TL traffic |
+| Bottom road length | 150 m, FL end → stem junction (X: −150 → 0), Y = −110 | |
 | Bottom road carriageway | 3 lanes / direction | D-2 |
-| U-turn gap | X = −110 m (90 m from FL end), gap width 12 m | Westbound → eastbound only |
+| U-turn gap | X = −110 m (40 m from FL end, 110 m from stem junction), gap width 12 m | Westbound → eastbound only |
 | Speed limit (main/bottom) | 50 km/h (13.89 m/s) | urban, D-3 |
 | Speed limit (roundabout) | 25 km/h (6.94 m/s) | |
 | Speed limit (free left, U-turn) | 20 km/h (5.56 m/s) | |
@@ -106,7 +106,7 @@ Same conventions as other scenarios: metres, X → right, Y → up (sketch top =
 | `rb_E` | `priority` | Roundabout east node — **exit-only** to TL (no TL entry) |
 | `rb_S` | `priority` | Roundabout south node (stem entry/exit) |
 | `tl_fl` | `priority` | End of TL_in (X = +40): 3 lanes merge into the single free-left lane. **All** TL traffic goes here — no ring entry |
-| `stem_merge` | `priority` | Free left merges into stem SB kerb lane (Y = −55); free left yields |
+| `stem_merge` | `priority` | Free left merges into stem SB kerb lane (Y = −24); free left yields |
 | `stem_S` | `priority` | Stem meets bottom road (merge SB, diverge NB) |
 | `uturn_W` | `priority` | U-turn opening (westbound → eastbound) |
 
@@ -331,7 +331,7 @@ Rules for the loader (`settings_loader.py`):
 | D-6 | Merge priority at `stem_merge` | TL free left yields to ring-exit stem SB traffic; joins the kerb lane |
 | D-7 | NG → TL | All via ring northern arc, no bypass |
 | D-8 | Mid-left "To Nallagandla" road | Is `NG_out` (left exit from stem at `rb_W`) |
-| D-9 | Dimensions | Design defaults in §3 (no survey); NG, TL and bottom road 200 m each, stem 100 m; island radius 10 m |
+| D-9 | Dimensions | Design defaults in §3 (no survey); NG, TL and FL arms 150 m each, stem 100 m; island radius 10 m |
 | D-10 | TL → NG | South → U-turn → left at GNT Circle; no straight movement |
 | D-11 | Demand config | Per-OD veh/h for 6 directions (§5.1) |
 | D-12 | Behaviour config | Global, simulation-level SUMO vType params (§5.2) |

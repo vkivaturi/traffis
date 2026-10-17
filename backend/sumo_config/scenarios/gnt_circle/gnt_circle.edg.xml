@@ -7,8 +7,10 @@
 -->
 <edges xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/edges_file.xsd">
     <!-- Main corridor: NG arm (4-lane road, 2 + 2) -->
-    <edge id="NG_in"  from="NG_end" to="rb_W"   numLanes="2" speed="13.89" priority="3" width="3.2"/>
-    <edge id="NG_out" from="rb_W"   to="NG_end" numLanes="2" speed="13.89" priority="3" width="3.2"/>
+    <edge id="NG_in"  from="NG_end" to="rb_W"   numLanes="2" speed="13.89" priority="3" width="3.2"
+          shape="-160.00,1.00 -10.00,1.00"/>
+    <edge id="NG_out" from="rb_W"   to="NG_end" numLanes="2" speed="13.89" priority="3" width="3.2"
+          shape="-10.00,-1.00 -160.00,-1.00"/>
 
     <!-- Main corridor: TL arm -->
     <edge id="TL_out" from="rb_E"   to="TL_end" numLanes="3" speed="13.89" priority="3" width="3.2"/>
@@ -16,7 +18,7 @@
 
     <!-- TL free left (single lane): carries TL->FL and TL->NG (via U-turn); yields at stem_merge (D-6) -->
     <edge id="TL_free_left" from="tl_fl" to="stem_merge" numLanes="1" speed="5.56" priority="2" width="3.2"
-          shape="45.00,-6.40 35.35,-6.40 30.47,-6.88 25.78,-8.30 21.46,-10.61 17.67,-13.72 14.56,-17.51 12.25,-21.83 10.83,-26.52 10.35,-31.40 10.35,-55.00"/>
+          shape="45.00,-6.40 35.35,-6.40 31.01,-6.67 26.80,-7.46 22.85,-8.76 19.28,-10.52 16.20,-12.69 13.70,-15.20 11.86,-17.98 10.73,-20.94 10.35,-24.00"/>
 
     <!-- Roundabout ring (2 lanes, clockwise) -->
     <edge id="rb_W_N" from="rb_W" to="rb_N" numLanes="2" speed="6.94" priority="4" width="3.5"

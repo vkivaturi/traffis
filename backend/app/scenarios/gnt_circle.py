@@ -96,25 +96,25 @@ EDGE_NAMES = {
 # Undivided carriageways: double solid centre lines (as on the 3-way intersection).
 # Broken for 12 m at X = -110 where the U-turn crosses.
 CENTRE_LINES = [
-    CentreLine(id="centre_NG", edges=["NG_in", "NG_out"], shape=[[-210.0, 0.0], [-19.2, 0.0]]),
-    CentreLine(id="centre_TL", edges=["TL_in", "TL_out"], shape=[[20.4, 0.0], [210.0, 0.0]]),
+    CentreLine(id="centre_NG", edges=["NG_in", "NG_out"], shape=[[-160.0, 0.0], [-19.2, 0.0]]),
+    CentreLine(id="centre_TL", edges=["TL_in", "TL_out"], shape=[[20.4, 0.0], [160.0, 0.0]]),
     CentreLine(id="centre_stem", edges=["stem_sb_a", "stem_sb_b", "stem_nb"], shape=[[0.0, -17.1], [0.0, -100.4]]),
-    CentreLine(id="centre_bottom_W", edges=["FL_in", "FL_out"], shape=[[-200.0, -110.0], [-116.0, -110.0]]),
+    CentreLine(id="centre_bottom_W", edges=["FL_in", "FL_out"], shape=[[-150.0, -110.0], [-116.0, -110.0]]),
     CentreLine(id="centre_bottom_E", edges=["bot_eb", "bot_wb_b"], shape=[[-104.0, -110.0], [-12.0, -110.0]]),
 ]
 
 LABELS = [
-    ArmLabel(id="NG", name=ARM_NAMES["NG"], x=-185.0, y=20.0,
+    ArmLabel(id="NG", name=ARM_NAMES["NG"], x=-135.0, y=20.0,
              description="Main road west (2 + 2 lanes): NG_in → GNT Circle, NG_out ← GNT Circle"),
-    ArmLabel(id="TL", name=ARM_NAMES["TL"], x=185.0, y=28.0,
+    ArmLabel(id="TL", name=ARM_NAMES["TL"], x=135.0, y=28.0,
              description="Main road east: TL_out ← GNT Circle; TL_in → single-lane free left into the stem (no ring entry)"),
-    ArmLabel(id="FL", name=ARM_NAMES["FL"], x=-180.0, y=-86.0,
+    ArmLabel(id="FL", name=ARM_NAMES["FL"], x=-130.0, y=-86.0,
              description="Bottom road west: FL_in → stem → GNT Circle; FL_out ← stem (incl. TL free left)"),
 ]
 
 CALLOUTS = [
     MapCallout(text="↶ U-TURN", x=-110.0, y=-124.0),
-    MapCallout(text="FREE LEFT", x=24.0, y=-42.0, align="left"),
+    MapCallout(text="FREE LEFT", x=28.0, y=-34.0, align="left"),
 ]
 
 # Downstream ends that give way: ring entries, free-left merge into stem SB (D-6)
@@ -134,7 +134,7 @@ class GntCircleScenario(BaseScenario):
                    "stem to the Flyover road, a TL single-lane free left at the circle and a U-turn "
                    "(left-hand traffic, Indian mixed traffic)")
     type = "roundabout"
-    default_camera = {"x": -40.0, "y": -45.0, "zoom": 2.5}
+    default_camera = {"x": -30.0, "y": -45.0, "zoom": 2.7}
     demand_from_route_file = True
     apply_default_speed_limit = False
 
@@ -260,13 +260,13 @@ class GntCircleScenario(BaseScenario):
         ]
         arms = [
             RoadArmInfo(id="NG", name=ARM_NAMES["NG"], direction="west",
-                        x_start=-210.0, y_start=0.0, x_end=-10.0, y_end=0.0,
+                        x_start=-160.0, y_start=0.0, x_end=-10.0, y_end=0.0,
                         num_lanes_inbound=2, num_lanes_outbound=2),
             RoadArmInfo(id="TL", name=ARM_NAMES["TL"], direction="east",
-                        x_start=10.0, y_start=0.0, x_end=210.0, y_end=0.0,
+                        x_start=10.0, y_start=0.0, x_end=160.0, y_end=0.0,
                         num_lanes_inbound=3, num_lanes_outbound=3),
             RoadArmInfo(id="FL", name=ARM_NAMES["FL"], direction="west",
-                        x_start=-200.0, y_start=-110.0, x_end=0.0, y_end=-110.0,
+                        x_start=-150.0, y_start=-110.0, x_end=0.0, y_end=-110.0,
                         num_lanes_inbound=3, num_lanes_outbound=3),
         ]
         self._network_info = NetworkInfo(
