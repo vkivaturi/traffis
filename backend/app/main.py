@@ -156,6 +156,9 @@ async def websocket_endpoint(websocket: WebSocket):
     user = verify_ws_token(websocket)
     if not user:
         logger.warning("Rejecting unauthenticated WebSocket handshake from %s", websocket.client)
+        # Accept first so the client receives a close code (1008) it can act on, instead of an opaque
+        # handshake failure (1006). The frontend uses this to show the sign-in-again prompt.
+        await websocket.accept()
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason="Unauthorized: Google sign-in required")
         return
 

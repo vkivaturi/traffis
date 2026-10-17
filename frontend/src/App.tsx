@@ -9,7 +9,9 @@ import { VehicleInspector } from './components/VehicleInspector';
 import { LandingPage } from './components/LandingPage';
 import { AboutModal } from './components/AboutModal';
 import { JunctionMetricsPanel } from './components/JunctionMetricsPanel';
+import { SessionExpiredModal } from './components/SessionExpiredModal';
 import type { CameraState } from './types/simulation';
+import type { User } from './types/auth';
 import { soundSystem } from './utils/audio';
 
 export const App: React.FC = () => {
@@ -29,6 +31,7 @@ export const App: React.FC = () => {
 
   const {
     state,
+    authExpired,
     networkInfo,
     scenarios,
     activeScenario,
@@ -156,20 +159,31 @@ export const App: React.FC = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [activeView, state.is_running, state.sim_time, state.max_sim_time, state.time_limit_reached, pause, play, handleReset]);
 
+  // After the user signs in again, return to the landing page (per requirement)
+  const handleReauthenticated = (userData?: Partial<User>) => {
+    signInWithGoogle(userData);
+    setCurrentView('landing');
+  };
+
+  const sessionExpiredPrompt = authExpired ? <SessionExpiredModal onSignIn={handleReauthenticated} /> : null;
+
   // If user is on landing page or not authenticated, display Landing Page
   if (activeView === 'landing') {
     return (
-      <LandingPage
-        user={user}
-        isAuthenticated={isAuthenticated}
-        onLaunchSimulator={() => {
-          if (isAuthenticated) {
-            setCurrentView('simulator');
-          }
-        }}
-        onSignInWithGoogle={signInWithGoogle}
-        onSignOut={handleSignOut}
-      />
+      <>
+        <LandingPage
+          user={user}
+          isAuthenticated={isAuthenticated}
+          onLaunchSimulator={() => {
+            if (isAuthenticated) {
+              setCurrentView('simulator');
+            }
+          }}
+          onSignInWithGoogle={signInWithGoogle}
+          onSignOut={handleSignOut}
+        />
+        {sessionExpiredPrompt}
+      </>
     );
   }
 
@@ -315,6 +329,8 @@ export const App: React.FC = () => {
 
       {/* Global About Modal */}
       <AboutModal isOpen={isAboutOpen} onClose={() => setIsAboutOpen(false)} />
+
+      {sessionExpiredPrompt}
     </div>
   );
 };

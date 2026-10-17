@@ -35,8 +35,26 @@ const INITIAL_STATE: SimulationState = {
   time_limit_reached: false,
 };
 
+// Matches the backend's 5-minute clock-skew tolerance for Google ID tokens (auth.py)
+const TOKEN_CLOCK_SKEW_MS = 5 * 60 * 1000;
+
+/** True when a Google ID token (JWT) is past its expiry. Non-JWT tokens are never treated as expired here. */
+export function isTokenExpired(token: string): boolean {
+  const parts = token.split('.');
+  if (parts.length !== 3) return false;
+  try {
+    const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/').padEnd(Math.ceil(parts[1].length / 4) * 4, '=');
+    const payload = JSON.parse(atob(base64));
+    return typeof payload.exp === 'number' && payload.exp * 1000 < Date.now() - TOKEN_CLOCK_SKEW_MS;
+  } catch {
+    return false;
+  }
+}
+
 export function useSimulationSocket(authToken?: string) {
   const [state, setState] = useState<SimulationState>(INITIAL_STATE);
+  // Token the server rejected or that is already expired. Derived below, so it clears when the user signs in again.
+  const [expiredToken, setExpiredToken] = useState<string | null>(null);
   const [networkInfo, setNetworkInfo] = useState<NetworkInfo | null>(null);
   const [scenarios, setScenarios] = useState<ScenarioMetadata[]>([]);
   const [activeScenario, setActiveScenario] = useState<ScenarioMetadata | null>(null);
@@ -69,12 +87,16 @@ export function useSimulationSocket(authToken?: string) {
     const isSecure = window.location.protocol === 'https:';
     const wsProto = isSecure ? 'wss:' : 'ws:';
     const token = getToken();
+    // An already-expired token is caught by `authExpired` below, so there is no point connecting with it
+    if (token && isTokenExpired(token)) return;
     const targetUrl = `${wsProto}//${window.location.host}/ws${token ? `?token=${encodeURIComponent(token)}` : ''}`;
 
     const ws = new WebSocket(targetUrl);
     socketRef.current = ws;
+    let opened = false;
 
     ws.onopen = () => {
+      opened = true;
       setConnected(true);
       console.log('WebSocket connected to SUMO simulation:', targetUrl);
     };
@@ -141,9 +163,16 @@ export function useSimulationSocket(authToken?: string) {
       }
     };
 
-    ws.onclose = () => {
+    ws.onclose = (event) => {
+      // Ignore sockets already replaced or torn down by the effect cleanup
+      if (socketRef.current !== ws) return;
       setConnected(false);
       socketRef.current = null;
+      // 1008 = server rejected the credentials (or the token expired before connecting). Retrying cannot succeed.
+      if (event.code === 1008 || (!opened && token && isTokenExpired(token))) {
+        setExpiredToken(token || null);
+        return;
+      }
       reconnectTimeoutRef.current = window.setTimeout(() => {
         connectRef.current();
       }, 1500);
@@ -247,8 +276,11 @@ export function useSimulationSocket(authToken?: string) {
   const pause = useCallback(() => send('pause'), [send]);
   const reset = useCallback(() => send('reset'), [send]);
 
+  const authExpired = !!authToken && (expiredToken === authToken || isTokenExpired(authToken));
+
   return {
     state,
+    authExpired,
     networkInfo,
     scenarios,
     activeScenario,
