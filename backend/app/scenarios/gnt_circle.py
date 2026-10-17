@@ -90,8 +90,8 @@ AGGRESSIVE_IMPATIENCE = 1.0
 AGGRESSIVE_MIN_GAP = 0.3   # m  - tiny bumper gaps so aggressive vehicles squeeze into any opening
 AGGRESSIVE_TAU = 0.3       # s  - tiny following headway
 # While on these edges vehicles disregard right-of-way at the junction ahead
-# (NG entry at rb_W, merge at stem_merge, U-turn at uturn_W). SUMO speed mode 23 = default 31 minus bit 3.
-FORCE_EDGES = {"TL_free_left", "bot_wb_b", "NG_in"}
+# (NG entry & ring continuation at rb_W, merge at stem_merge, U-turn at uturn_W). SUMO speed mode 23 = default 31 minus bit 3.
+FORCE_EDGES = {"TL_free_left", "bot_wb_b", "NG_in", "rb_S_W"}
 SPEED_MODE_DEFAULT = 31
 SPEED_MODE_FORCE = 23
 
@@ -384,8 +384,7 @@ class GntCircleScenario(BaseScenario):
             if key:
                 self.inflow[key[:2]] += 1
                 self.depart_time[vid] = now
-                if key.startswith(("TL_", "NG_")):
-                    self._make_aggressive(vid)
+                self._make_aggressive(vid)
         for vid in traci.simulation.getArrivedIDList():
             key = _od_key(vid)
             self.uturn_seen.discard(vid)

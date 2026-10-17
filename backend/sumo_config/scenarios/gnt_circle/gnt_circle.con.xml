@@ -58,8 +58,7 @@
 
     <connection from="rb_S_W" to="NG_out" fromLane="0" toLane="0"/>
     <connection from="rb_S_W" to="NG_out" fromLane="1" toLane="1"/>
-    <connection from="rb_S_W" to="rb_W_N" fromLane="0" toLane="0"/>
-    <connection from="rb_S_W" to="rb_W_N" fromLane="1" toLane="1"/>
+    <connection from="rb_S_W" to="rb_W_N" fromLane="1" toLane="1" pass="true"/>
 
     <!-- uturn_W: aggressive median U-turn (westbound -> eastbound), 30 km/h, yields to FL_in -->
     <connection from="bot_wb_b" to="bot_eb" fromLane="2" toLane="2" speed="8.33" pass="true"/>

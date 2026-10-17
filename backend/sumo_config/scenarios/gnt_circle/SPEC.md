@@ -252,22 +252,24 @@ Rules for the loader (`settings_loader.py`):
 - Generated `gnt_circle.rou.xml` contains the resolved vTypes, the `vTypeDistribution`, and one `<flow>` per non-zero OD key.
 - Invalid values (shares ≠ 1.0 ± 0.01, negative veh/h, unknown OD key) → fail scenario load with a clear error.
 
-#### 5.2.5 Aggressive TL- and NG-origin behaviour (free-left merge, median U-turn, NG roundabout entry)
-Vehicles from TL (flows `TL_FL`, `TL_NG`, `TL_TL`) and NG (flows `NG_TL`, `NG_FL`) force their way through conflict points:
-1. NG entry into the roundabout at `rb_W` (`NG_in → rb_W_N`) without yielding right-of-way.
-2. The TL free-left merge into the stem SB kerb lane at `stem_merge`.
-3. The TL median U-turn at `uturn_W` heading towards FL (`TL_NG`).
+#### 5.2.5 Aggressive driver behaviour & deadlock prevention at GNT Circle
+Vehicles force their way through conflict points without deadlock:
+1. NG entry into the roundabout at `rb_W` (`NG_in → rb_W_N`).
+2. Roundabout circulating traffic continuing from `rb_S_W → rb_W_N` (e.g. `FL_TL`) has priority and `pass="true"` so it never gets blocked or starved by entering `NG_in` traffic.
+3. The TL free-left merge into the stem SB kerb lane at `stem_merge`.
+4. The TL median U-turn at `uturn_W` heading towards FL (`TL_NG`).
 
-This is applied per vehicle on departure by `GntCircleScenario._make_aggressive()` in `backend/app/scenarios/gnt_circle.py` (`on_step`, for OD keys starting `TL_` or `NG_`).
+Applied per vehicle on departure by `GntCircleScenario._make_aggressive()` in `backend/app/scenarios/gnt_circle.py`:
 
 | Knob | Where | Current value | Effect |
 | :--- | :--- | :--- | :--- |
 | `impatience` | `AGGRESSIVE_IMPATIENCE` → `setImpatience` | `1.0` | Maximum willingness to push into gaps |
 | `minGap` | `AGGRESSIVE_MIN_GAP` → `setMinGap` | `0.3` m | Tiny bumper-to-bumper gap |
 | `tau` | `AGGRESSIVE_TAU` → `setTau` | `0.3` s | Tiny following headway |
-| Right-of-way bypass | `FORCE_EDGES`, `SPEED_MODE_FORCE` → `setSpeedMode` | `{TL_free_left, bot_wb_b, NG_in}`, mode `23` | While on these edges the vehicle ignores right-of-way at the junction ahead (NG entry / merge / U-turn), so it never queues for a gap; reset to `31` afterwards |
-| Connection `pass` | `gnt_circle.con.xml` | `true` on `NG_in→rb_W_N`, `TL_free_left→stem_sb_b`, and U-turn | Vehicles may enter the junction even if foes occupy it |
-| U-turn connection `speed` | `gnt_circle.con.xml` (`bot_wb_b`→`bot_eb`) | `8.33` m/s (30 km/h) | Speed through the U-turn (was 5.56) |
+| Right-of-way bypass | `FORCE_EDGES`, `SPEED_MODE_FORCE` → `setSpeedMode` | `{TL_free_left, bot_wb_b, NG_in, rb_S_W}`, mode `23` | While on these edges vehicles ignore right-of-way at the junction ahead (NG entry, ring continuation, merge, U-turn), preventing polite deadlocks; reset to `31` afterwards |
+| Connection `pass` | `gnt_circle.con.xml` | `true` on `NG_in→rb_W_N`, `rb_S_W→rb_W_N`, `TL_free_left→stem_sb_b`, and U-turn | Vehicles may enter without yielding |
+| Lane separation | `gnt_circle.con.xml` | `rb_S_W_0 → NG_out_0`, `rb_S_W_1 → NG_out_1 & rb_W_N_1` | Eliminates internal X-crossings at junction `rb_W` |
+| U-turn connection `speed` | `gnt_circle.con.xml` (`bot_wb_b`→`bot_eb`) | `8.33` m/s (30 km/h) | Speed through the U-turn |
 
 Note: SUMO rejects `junctionModel.*` via `traci.vehicle.setParameter`, and per-OD vType ids would break frontend rendering (type id drives colour/shape), hence the speed-mode approach.
 
