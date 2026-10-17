@@ -3,27 +3,31 @@
   GNT Circle – explicit connections (SPEC.md §4.2, §6, §10).
   Left-hand net: lane 0 = kerb side, highest index = median side.
   Explicit connections for an incoming edge replace netconvert's guessed ones, which enforces:
-    * slip/westbound traffic can NOT turn north into the stem at stem_S (must use the U-turn)
+    * all TL traffic squeezes into the single free-left lane (no ring entry from TL)
+    * westbound traffic can NOT turn north into the stem at stem_S (must use the U-turn)
     * the only U-turn is bot_wb_b (median lane) -> bot_eb at uturn_W
 -->
 <connections xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/connections_file.xsd">
-    <!-- slip_div / slip_merge -->
-    <connection from="TL_in" to="slip_TL_FL" fromLane="0" toLane="0"/>
-    <connection from="TL_in" to="slip_TL_FL" fromLane="1" toLane="1"/>
-    <connection from="TL_in" to="slip_TL_FL" fromLane="2" toLane="1"/>
-    <connection from="slip_TL_FL" to="bot_wb_a" fromLane="0" toLane="0"/>
-    <connection from="slip_TL_FL" to="bot_wb_a" fromLane="1" toLane="1"/>
+    <!-- tl_fl: TL's 3 lanes merge into the single free-left lane -->
+    <connection from="TL_in" to="TL_free_left" fromLane="0" toLane="0"/>
+    <connection from="TL_in" to="TL_free_left" fromLane="1" toLane="0"/>
+    <connection from="TL_in" to="TL_free_left" fromLane="2" toLane="0"/>
 
-    <!-- stem_S: westbound merge (slip yields to stem SB, D-6) -->
-    <connection from="bot_wb_a" to="bot_wb_b" fromLane="0" toLane="0"/>
-    <connection from="bot_wb_a" to="bot_wb_b" fromLane="1" toLane="1"/>
-    <connection from="stem_sb"  to="bot_wb_b" fromLane="0" toLane="1"/>
-    <connection from="stem_sb"  to="bot_wb_b" fromLane="1" toLane="2"/>
+    <!-- stem_merge: free left joins the stem SB kerb (left-most) lane, yielding to ring exit traffic (D-6) -->
+    <connection from="stem_sb_a"    to="stem_sb_b" fromLane="0" toLane="0"/>
+    <connection from="stem_sb_a"    to="stem_sb_b" fromLane="1" toLane="1"/>
+    <connection from="stem_sb_a"    to="stem_sb_b" fromLane="2" toLane="2"/>
+    <connection from="TL_free_left" to="stem_sb_b" fromLane="0" toLane="0" pass="false"/>
+
+    <!-- stem_S: stem SB turns right (west) onto the bottom road -->
+    <connection from="stem_sb_b" to="bot_wb_b" fromLane="0" toLane="0"/>
+    <connection from="stem_sb_b" to="bot_wb_b" fromLane="1" toLane="1"/>
+    <connection from="stem_sb_b" to="bot_wb_b" fromLane="2" toLane="2"/>
 
     <!-- stem_S: eastbound turns left (north) into stem -->
     <connection from="bot_eb" to="stem_nb" fromLane="0" toLane="0"/>
     <connection from="bot_eb" to="stem_nb" fromLane="1" toLane="1"/>
-    <connection from="bot_eb" to="stem_nb" fromLane="2" toLane="1"/>
+    <connection from="bot_eb" to="stem_nb" fromLane="2" toLane="2"/>
 
     <!-- uturn_W: through movements -->
     <connection from="bot_wb_b" to="FL_out" fromLane="0" toLane="0"/>
@@ -35,9 +39,12 @@
 
     <!-- Roundabout: both ring lanes may exit (D-1); every approach lane feeds the ring.
          Ring lane 0 = outer (kerb), lane 1 = inner (island side). -->
+    <connection from="stem_nb" to="rb_S_W" fromLane="0" toLane="0"/>
+    <connection from="stem_nb" to="rb_S_W" fromLane="1" toLane="1"/>
+    <connection from="stem_nb" to="rb_S_W" fromLane="2" toLane="1"/>
+
     <connection from="NG_in" to="rb_W_N" fromLane="0" toLane="0"/>
     <connection from="NG_in" to="rb_W_N" fromLane="1" toLane="1"/>
-    <connection from="NG_in" to="rb_W_N" fromLane="2" toLane="1"/>
 
     <connection from="rb_N_E" to="TL_out" fromLane="0" toLane="0"/>
     <connection from="rb_N_E" to="TL_out" fromLane="0" toLane="1"/>
@@ -45,14 +52,14 @@
     <connection from="rb_N_E" to="rb_E_S" fromLane="0" toLane="0"/>
     <connection from="rb_N_E" to="rb_E_S" fromLane="1" toLane="1"/>
 
-    <connection from="rb_E_S" to="stem_sb" fromLane="0" toLane="0"/>
-    <connection from="rb_E_S" to="stem_sb" fromLane="1" toLane="1"/>
+    <connection from="rb_E_S" to="stem_sb_a" fromLane="0" toLane="0"/>
+    <connection from="rb_E_S" to="stem_sb_a" fromLane="0" toLane="1"/>
+    <connection from="rb_E_S" to="stem_sb_a" fromLane="1" toLane="2"/>
     <connection from="rb_E_S" to="rb_S_W" fromLane="0" toLane="0"/>
     <connection from="rb_E_S" to="rb_S_W" fromLane="1" toLane="1"/>
 
     <connection from="rb_S_W" to="NG_out" fromLane="0" toLane="0"/>
-    <connection from="rb_S_W" to="NG_out" fromLane="0" toLane="1"/>
-    <connection from="rb_S_W" to="NG_out" fromLane="1" toLane="2"/>
+    <connection from="rb_S_W" to="NG_out" fromLane="1" toLane="1"/>
     <connection from="rb_S_W" to="rb_W_N" fromLane="0" toLane="0"/>
     <connection from="rb_S_W" to="rb_W_N" fromLane="1" toLane="1"/>
 

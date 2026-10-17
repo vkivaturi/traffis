@@ -9,7 +9,7 @@ export interface Vehicle {
   speed_kmh: number;    // km/h
   acceleration: number; // m/s^2
   angle: number;        // heading angle in degrees (90 = East, 270 = West, 180 = South, 0/360 = North)
-  type: string;         // 'car' | 'sports' | 'truck' | 'van' | 'motorcycle' | 'auto_rickshaw' | 'bus'
+  type: string;         // 'car' | 'sports' | 'truck' | 'van' | 'motorcycle' | 'auto_rickshaw'
   color: string;        // Hex color
   length: number;       // meters
   width: number;        // meters
@@ -148,9 +148,9 @@ export interface JunctionShape {
   shape: Point[];
 }
 
-export interface MedianShape {
+export interface CentreLine {
   id: string;
-  width: number;
+  edges: string[]; // edges whose median-side edge line this double line replaces
   shape: Point[];
 }
 
@@ -160,6 +160,13 @@ export interface ArmLabel {
   x: number;
   y: number;
   description?: string;
+}
+
+export interface MapCallout {
+  text: string;
+  x: number;
+  y: number;
+  align?: CanvasTextAlign;
 }
 
 export interface RoundaboutInfo {
@@ -173,9 +180,9 @@ export interface NetworkGeometry {
   lanes: LaneShape[];
   connectors?: LaneShape[]; // internal junction lanes (turn paths), asphalt only
   junctions: JunctionShape[];
-  paved_areas?: JunctionShape[]; // extra asphalt polygons (e.g. median U-turn opening)
-  medians: MedianShape[];
+  centre_lines: CentreLine[];
   labels: ArmLabel[];
+  callouts?: MapCallout[];
   roundabout?: RoundaboutInfo | null;
   yield_lanes: string[];
   bounds: { min_x: number; max_x: number; min_y: number; max_y: number };
@@ -194,6 +201,7 @@ export interface ODMetrics {
   configured_vph: number;
   arrived: number;
   throughput_vph: number;
+  avg_travel_time_s?: number | null; // mean depart -> arrival time of completed trips
 }
 
 export interface EntryQueue {

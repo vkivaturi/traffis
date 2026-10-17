@@ -73,7 +73,7 @@ class SpawnRequest(BaseModel):
     turn: Optional[str] = Field(None, description="Turn intention: 'straight', 'left', 'right', 'random'")
     lane: Optional[int] = Field(None, ge=0, le=2, description="Lane index: 0 (right / slow), 1 (left / fast)")
     speed: Optional[float] = Field(None, ge=1.0, le=50.0, description="Initial speed in m/s")
-    type: Optional[str] = Field("car", description="Vehicle type: car, sports, truck, van, motorcycle, auto_rickshaw, bus")
+    type: Optional[str] = Field("car", description="Vehicle type: car, sports, truck, van, motorcycle, auto_rickshaw")
     color: Optional[str] = Field(None, description="Hex color e.g. #38bdf8")
 
 class SpawnOriginInfo(BaseModel):
@@ -113,9 +113,10 @@ class JunctionShape(BaseModel):
     id: str
     shape: List[List[float]]  # closed polygon [[x, y], ...]
 
-class MedianShape(BaseModel):
+class CentreLine(BaseModel):
+    """Double solid centre line between opposing carriageways of the listed edges."""
     id: str
-    width: float
+    edges: List[str]
     shape: List[List[float]]
 
 class ArmLabel(BaseModel):
@@ -124,6 +125,12 @@ class ArmLabel(BaseModel):
     x: float
     y: float
     description: str = ""
+
+class MapCallout(BaseModel):
+    text: str
+    x: float
+    y: float
+    align: str = "center"  # canvas textAlign
 
 class RoundaboutInfo(BaseModel):
     x: float
@@ -136,9 +143,9 @@ class NetworkGeometry(BaseModel):
     lanes: List[LaneShape]
     connectors: List[LaneShape] = []   # internal junction lanes, drawn as asphalt only
     junctions: List[JunctionShape]
-    paved_areas: List[JunctionShape] = []  # extra asphalt polygons, e.g. median openings
-    medians: List[MedianShape] = []
+    centre_lines: List[CentreLine] = []
     labels: List[ArmLabel] = []
+    callouts: List[MapCallout] = []
     roundabout: Optional[RoundaboutInfo] = None
     yield_lanes: List[str] = []  # lanes whose downstream end gives way (ring entries, slip merge, U-turn)
     bounds: Dict[str, float] = {}
@@ -167,6 +174,7 @@ class ODMetrics(BaseModel):
     configured_vph: float
     arrived: int = 0
     throughput_vph: float = 0.0
+    avg_travel_time_s: Optional[float] = None  # mean depart -> arrival time of completed trips
 
 class EntryQueue(BaseModel):
     id: str                   # edge id, e.g. "NG_in"

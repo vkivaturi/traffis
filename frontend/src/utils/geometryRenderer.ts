@@ -1,6 +1,6 @@
 // ----------------------------------------------------
 // POLYLINE NETWORK RENDERER (GNT Circle & other curved-geometry scenarios)
-// Draws lanes, junctions, medians, island, markings straight from .net.xml shapes.
+// Draws lanes, junctions, centre lines, island, markings straight from .net.xml shapes.
 // ----------------------------------------------------
 import type { NetworkGeometry, LaneShape, Point } from '../types/simulation';
 
@@ -47,30 +47,6 @@ const tracePath = (ctx: CanvasRenderingContext2D, pts: Point[], sx: ToScreen, sy
     if (i === 0) ctx.moveTo(sx(p[0]), sy(p[1]));
     else ctx.lineTo(sx(p[0]), sy(p[1]));
   });
-};
-
-let hatchPattern: CanvasPattern | null = null;
-const getHatchPattern = (ctx: CanvasRenderingContext2D): CanvasPattern | null => {
-  if (hatchPattern) return hatchPattern;
-  const tile = document.createElement('canvas');
-  tile.width = 8;
-  tile.height = 8;
-  const t = tile.getContext('2d');
-  if (!t) return null;
-  t.fillStyle = '#3f4756';
-  t.fillRect(0, 0, 8, 8);
-  t.strokeStyle = '#9ca3af';
-  t.lineWidth = 1.2;
-  t.beginPath();
-  t.moveTo(0, 8);
-  t.lineTo(8, 0);
-  t.moveTo(-2, 2);
-  t.lineTo(2, -2);
-  t.moveTo(6, 10);
-  t.lineTo(10, 6);
-  t.stroke();
-  hatchPattern = ctx.createPattern(tile, 'repeat');
-  return hatchPattern;
 };
 
 /** Sample points along a polyline every `step` metres, with heading. */
@@ -142,7 +118,7 @@ export const renderGeometryNetwork = (
   ctx.fillStyle = ASPHALT;
   ctx.strokeStyle = ASPHALT;
   ctx.lineWidth = Math.max(1, 0.6 * zoom);
-  for (const j of [...geo.junctions, ...(geo.paved_areas ?? [])]) {
+  for (const j of geo.junctions) {
     tracePath(ctx, j.shape, sx, sy);
     ctx.closePath();
     ctx.fill();
@@ -185,25 +161,22 @@ export const renderGeometryNetwork = (
     }
   }
 
-  // 4. Raised medians (hatched)
-  const hatch = getHatchPattern(ctx);
-  for (const m of geo.medians) {
-    ctx.lineCap = 'round';
-    ctx.strokeStyle = '#9ca3af';
-    ctx.lineWidth = (m.width + 0.3) * zoom;
-    tracePath(ctx, m.shape, sx, sy);
-    ctx.stroke();
-    ctx.strokeStyle = hatch ?? '#3f4756';
-    ctx.lineWidth = m.width * zoom;
-    tracePath(ctx, m.shape, sx, sy);
-    ctx.stroke();
+  // 4. Centre lines between opposing carriageways: double solid yellow (as on the 3-way intersection)
+  const centreOffsetM = Math.max(1.5, 0.2 * zoom) / zoom;
+  ctx.strokeStyle = '#f59e0b';
+  ctx.lineWidth = Math.max(1.5, 0.25 * zoom);
+  for (const c of geo.centre_lines) {
+    for (const side of [centreOffsetM, -centreOffsetM]) {
+      tracePath(ctx, offsetPolyline(c.shape, side), sx, sy);
+      ctx.stroke();
+    }
   }
-  ctx.lineCap = 'butt';
+  const centreLineEdges = new Set(geo.centre_lines.flatMap((c) => c.edges));
 
   // 5. Lane markings: dashed separators within a carriageway, solid edges
   const edges = groupByEdge(geo.lanes);
   const markW = Math.max(1, 0.15 * zoom);
-  edges.forEach((lanes) => {
+  edges.forEach((lanes, edgeId) => {
     // Dashed dividers between neighbouring lanes
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.65)';
     ctx.lineWidth = markW;
@@ -215,15 +188,17 @@ export const renderGeometryNetwork = (
     }
     ctx.setLineDash([]);
 
-    // Kerb edge (left of lane 0, LHT) in white, median edge (right of top lane) in amber
-    const kerb = lanes[0];
+    // Solid edges: kerb (left of lane 0, LHT) and the inner side of the top lane,
+    // unless a double centre line already separates this carriageway from the opposing one
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
+    const kerb = lanes[0];
     tracePath(ctx, offsetPolyline(kerb.shape, kerb.width / 2 - 0.15), sx, sy);
     ctx.stroke();
-    const med = lanes[lanes.length - 1];
-    ctx.strokeStyle = 'rgba(245, 158, 11, 0.8)';
-    tracePath(ctx, offsetPolyline(med.shape, -(med.width / 2 - 0.15)), sx, sy);
-    ctx.stroke();
+    if (!centreLineEdges.has(edgeId)) {
+      const inner = lanes[lanes.length - 1];
+      tracePath(ctx, offsetPolyline(inner.shape, -(inner.width / 2 - 0.15)), sx, sy);
+      ctx.stroke();
+    }
   });
 
   // 6. Direction chevrons along each lane (teal, like the design sketch)
@@ -323,9 +298,10 @@ export const renderGeometryNetwork = (
   if (zoom > 2.2) {
     ctx.font = '700 10px Inter, sans-serif';
     ctx.fillStyle = 'rgba(244, 114, 182, 0.85)';
-    ctx.fillText('↶ U-TURN', sx(-250), sy(-204));
-    ctx.textAlign = 'left';
-    ctx.fillText('FREE LEFT → FL', sx(100), sy(-110));
+    for (const c of geo.callouts ?? []) {
+      ctx.textAlign = c.align ?? 'center';
+      ctx.fillText(c.text, sx(c.x), sy(c.y));
+    }
   }
 
   ctx.textBaseline = 'alphabetic';

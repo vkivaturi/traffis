@@ -9,7 +9,6 @@ interface CanvasViewProps {
   setCamera: React.Dispatch<React.SetStateAction<CameraState>>;
   selectedVehicleId: string | null;
   onSelectVehicle: (id: string | null) => void;
-  onViewportMetersChange: (meters: number) => void;
   trafficLight?: TrafficLightData;
   scenario?: ScenarioMetadata | null;
   networkInfo?: NetworkInfo | null;
@@ -1210,41 +1209,12 @@ const drawAutoRickshaw = (ctx: CanvasRenderingContext2D, L: number, W: number, c
   }
 };
 
-const drawBus = (ctx: CanvasRenderingContext2D, L: number, W: number, color: string, detailed: boolean) => {
-  ctx.fillStyle = color;
-  ctx.beginPath();
-  ctx.roundRect(-L / 2, -W / 2, L, W, Math.min(4, W * 0.2));
-  ctx.fill();
-  ctx.strokeStyle = 'rgba(255,255,255,0.3)';
-  ctx.lineWidth = 1;
-  ctx.stroke();
-  // Roof AC unit
-  ctx.fillStyle = 'rgba(255,255,255,0.18)';
-  ctx.beginPath();
-  ctx.roundRect(-L * 0.18, -W * 0.28, L * 0.3, W * 0.56, 2);
-  ctx.fill();
-  if (detailed) {
-    // Side windows
-    ctx.fillStyle = 'rgba(15, 23, 42, 0.75)';
-    const n = 6;
-    const ww = (L * 0.72) / n;
-    for (let i = 0; i < n; i++) {
-      const x = -L * 0.42 + i * ww;
-      ctx.fillRect(x, -W / 2 + 1, ww * 0.75, W * 0.14);
-      ctx.fillRect(x, W / 2 - 1 - W * 0.14, ww * 0.75, W * 0.14);
-    }
-    // Windscreen
-    ctx.fillRect(L / 2 - L * 0.06, -W * 0.4, L * 0.04, W * 0.8);
-  }
-};
-
 export const CanvasView: React.FC<CanvasViewProps> = ({
   vehicles,
   camera,
   setCamera,
   selectedVehicleId,
   onSelectVehicle,
-  onViewportMetersChange,
   trafficLight,
   scenario,
   networkInfo,
@@ -1348,7 +1318,7 @@ export const CanvasView: React.FC<CanvasViewProps> = ({
     }
   }, [camera.followingId, vehicles, setCamera]);
 
-  // Handle resize and report viewport visible meters
+  // Handle resize
   useEffect(() => {
     const updateSize = () => {
       const canvas = canvasRef.current;
@@ -1359,15 +1329,12 @@ export const CanvasView: React.FC<CanvasViewProps> = ({
       const rect = container.getBoundingClientRect();
       canvas.width = rect.width * dpr;
       canvas.height = rect.height * dpr;
-
-      const visibleMeters = rect.width / camera.zoom;
-      onViewportMetersChange(visibleMeters);
     };
 
     updateSize();
     window.addEventListener('resize', updateSize);
     return () => window.removeEventListener('resize', updateSize);
-  }, [camera.zoom, onViewportMetersChange]);
+  }, []);
 
   // Main 60FPS render loop
   useEffect(() => {
@@ -1488,7 +1455,7 @@ export const CanvasView: React.FC<CanvasViewProps> = ({
 
         if (vx < -120 || vx > width + 120 || vy < -120 || vy > height + 120) return;
 
-        // True-scale on the geometry view so motorcycles vs buses read correctly when zoomed out
+        // True-scale on the geometry view so motorcycles vs cars read correctly when zoomed out
         const vLenPx = Math.max(isGeometry ? 3 : 12, v.length * zoom);
         const vWidPx = Math.max(isGeometry ? 1.5 : 6, v.width * zoom);
         const headingRad = (v.currentAngle - 90) * (Math.PI / 180);
@@ -1539,9 +1506,8 @@ export const CanvasView: React.FC<CanvasViewProps> = ({
         ctx.roundRect(-vLenPx / 2 + 2, -vWidPx / 2 + 3, vLenPx, vWidPx, Math.min(4, vWidPx / 2));
         ctx.fill();
 
-        if (v.type === 'motorcycle' || v.type === 'auto_rickshaw' || v.type === 'bus') {
-          const draw =
-            v.type === 'motorcycle' ? drawMotorcycle : v.type === 'auto_rickshaw' ? drawAutoRickshaw : drawBus;
+        if (v.type === 'motorcycle' || v.type === 'auto_rickshaw') {
+          const draw = v.type === 'motorcycle' ? drawMotorcycle : drawAutoRickshaw;
           draw(ctx, vLenPx, vWidPx, v.color || '#38bdf8', zoom > 3);
           if (v.acceleration < -0.5 && zoom > 3) {
             ctx.fillStyle = '#ff1a1a';
@@ -1807,7 +1773,7 @@ export const CanvasView: React.FC<CanvasViewProps> = ({
 
         <button
           className="btn-icon"
-          onClick={() => jumpTo(isIntersection || isGeometry ? 0 : 500, 0, isIntersection ? 10 : isGeometry ? 7 : 14)}
+          onClick={() => jumpTo(isIntersection || isGeometry ? 0 : 500, 0, isIntersection ? 10 : isGeometry ? 12 : 14)}
           title={isGeometry ? 'Focus on GNT Circle' : 'Focus on Traffic Signal'}
         >
           <Crosshair size={16} />
@@ -1878,28 +1844,28 @@ export const CanvasView: React.FC<CanvasViewProps> = ({
           <button
             className="btn-secondary"
             style={{ padding: '3px 8px', fontSize: '0.72rem' }}
-            onClick={() => jumpTo(0, 0, 7)}
+            onClick={() => jumpTo(0, 0, 12)}
           >
             GNT Circle
           </button>
           <button
             className="btn-secondary"
             style={{ padding: '3px 8px', fontSize: '0.72rem' }}
-            onClick={() => jumpTo(0, -105, 3.2)}
+            onClick={() => jumpTo(0, -60, 5)}
           >
             Stem
           </button>
           <button
             className="btn-secondary"
             style={{ padding: '3px 8px', fontSize: '0.72rem' }}
-            onClick={() => jumpTo(80, -100, 3.2)}
+            onClick={() => jumpTo(15, -30, 7)}
           >
-            TL Slip
+            Free Left
           </button>
           <button
             className="btn-secondary"
             style={{ padding: '3px 8px', fontSize: '0.72rem' }}
-            onClick={() => jumpTo(-250, -190, 7)}
+            onClick={() => jumpTo(-110, -110, 7)}
           >
             U-Turn
           </button>

@@ -144,8 +144,6 @@ def _load_od_scenario(root: ET.Element, path: Path) -> ScenarioSettings:
             raise ScenarioSettingsError(f"{path.name}: od '{key}' has non-numeric vehsPerHour")
         if vph < 0:
             raise ScenarioSettingsError(f"{path.name}: od '{key}' has negative vehsPerHour ({vph})")
-        if vph > 3000:
-            raise ScenarioSettingsError(f"{path.name}: od '{key}' vehsPerHour {vph} exceeds 3000")
         s.od_demand[key] = vph
 
     behaviour = root.find("behaviour")

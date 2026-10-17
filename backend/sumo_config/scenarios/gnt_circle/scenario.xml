@@ -2,18 +2,18 @@
 <!--
   Traffis scenario settings: GNT Circle (SPEC.md §5.2.4 – normative shape).
   Edit values here and reset the simulation (or restart the backend) to apply.
-  demand      : vehicles/hour per O-D direction (0..3000, 0 disables).
+  demand      : vehicles/hour per O-D direction (>= 0, no upper cap; 0 disables).
   behaviour   : global (simulation-level) SUMO vType attributes applied to ALL vehicle types.
   vehicleMix  : shares (must sum to 1.0) + optional per-vtype attribute overrides.
 -->
 <scenario id="gnt_circle" maxSimTime="600">
     <demand>
-        <od key="NG_TL" vehsPerHour="900"/>
-        <od key="NG_FL" vehsPerHour="300"/>
-        <od key="TL_FL" vehsPerHour="450"/>
-        <od key="TL_NG" vehsPerHour="750"/>
-        <od key="FL_NG" vehsPerHour="450"/>
-        <od key="FL_TL" vehsPerHour="450"/>
+        <od key="NG_TL" vehsPerHour="500"/>
+        <od key="NG_FL" vehsPerHour="3500"/>
+        <od key="TL_FL" vehsPerHour="1000"/>
+        <od key="TL_NG" vehsPerHour="500"/>
+        <od key="FL_NG" vehsPerHour="3500"/>
+        <od key="FL_TL" vehsPerHour="1000"/>
     </demand>
 
     <behaviour carFollowModel="Krauss" laneChangeModel="SL2015" lateralResolution="0.8">
@@ -34,11 +34,10 @@
     </behaviour>
 
     <vehicleMix>
-        <vtype id="motorcycle" share="0.40" minGap="0.5" minGapLat="0.2" lcAssertive="3.0"/>
-        <vtype id="auto_rickshaw" share="0.15" minGap="0.8" sigma="0.7"/>
-        <vtype id="car" share="0.30"/>
-        <vtype id="bus" share="0.05" minGap="1.5" lcAssertive="1.5"/>
-        <vtype id="truck" share="0.05" minGap="1.5"/>
-        <vtype id="van" share="0.05"/>
+        <!-- No trucks or buses in this scenario; their shares are spread proportionally -->
+        <vtype id="motorcycle" share="0.4444" minGap="0.5" minGapLat="0.2" lcAssertive="3.0"/>
+        <vtype id="auto_rickshaw" share="0.1667" minGap="0.8" sigma="0.7"/>
+        <vtype id="car" share="0.3333"/>
+        <vtype id="van" share="0.0556"/>
     </vehicleMix>
 </scenario>

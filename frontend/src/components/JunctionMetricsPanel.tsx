@@ -103,12 +103,16 @@ export const JunctionMetricsPanel: React.FC<JunctionMetricsPanelProps> = ({ metr
 
           {/* O-D throughput vs configured demand */}
           <div style={{ marginTop: '10px', color: '#64748b', fontWeight: 700, fontSize: '0.62rem' }}>
-            O-D THROUGHPUT (ACTUAL / CONFIGURED VEH/H)
+            O-D THROUGHPUT (ACTUAL / CONFIGURED VEH/H) · AVG TRIP TIME
           </div>
           {metrics.od.map((o) => {
             const pct = o.configured_vph > 0 ? Math.min(100, (o.throughput_vph / o.configured_vph) * 100) : 0;
             return (
-              <div key={o.key} style={{ marginTop: '4px' }} title={`${o.arrived} vehicles arrived`}>
+              <div
+                key={o.key}
+                style={{ marginTop: '4px' }}
+                title={`${o.arrived} vehicles arrived; average travel time from entering to leaving the network`}
+              >
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <span style={{ fontWeight: 600, color: ARM_COLORS[o.key.slice(0, 2)] ?? '#e2e8f0' }}>
                     {odLabel(o.key)}
@@ -116,6 +120,9 @@ export const JunctionMetricsPanel: React.FC<JunctionMetricsPanelProps> = ({ metr
                   </span>
                   <span style={{ fontFamily: 'var(--font-mono)' }}>
                     {o.throughput_vph} / {o.configured_vph}
+                    <span style={{ color: '#94a3b8', marginLeft: '8px' }}>
+                      {o.avg_travel_time_s != null ? `${o.avg_travel_time_s.toFixed(0)}s` : '—'}
+                    </span>
                   </span>
                 </div>
                 <div style={{ height: '4px', borderRadius: '2px', backgroundColor: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>

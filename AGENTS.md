@@ -10,7 +10,7 @@ Welcome to **Traffis**. This document serves as the primary system map, architec
 - **Simulation Engine**: [Eclipse SUMO (Simulation of Urban MObility)](https://eclipse.dev/sumo/) running in headless daemon mode.
 - **Backend Application**: [Python 3.12+ FastAPI](file:///Users/vijay/Projects/traffis/backend/app/main.py) communicating with SUMO via [TraCI (Traffic Control Interface)](file:///Users/vijay/Projects/traffis/backend/app/simulation.py) over a TCP socket.
 - **Data Streaming**: Full-duplex WebSocket broadcasting vehicle kinematics and network metrics at **20 Hz (50ms ticks)**.
-- **Frontend Dashboard**: [React 19 + TypeScript 5.9 + Vite](file:///Users/vijay/Projects/traffis/frontend) rendering a high-performance **HTML5 Canvas viewport (60 FPS interpolated)**, interactive radar mini-map, telemetry HUD, and simulation controls.
+- **Frontend Dashboard**: [React 19 + TypeScript 5.9 + Vite](file:///Users/vijay/Projects/traffis/frontend) rendering a high-performance **HTML5 Canvas viewport (60 FPS interpolated)**, telemetry HUD, and simulation controls.
 
 ---
 
@@ -37,7 +37,6 @@ flowchart TD
         SOCK["useSimulationSocket Hook"] <-->|ws://.../ws & /api/*| WS
         SOCK --> APP["App.tsx State Root"]
         APP --> CV["CanvasView.tsx<br/>(60 FPS Lerp Renderer)"]
-        APP --> MM["MiniMap.tsx<br/>(1000m Highway Radar)"]
         APP --> CTRL["Controls.tsx<br/>(Start/Pause/Stop)"]
         APP --> STATS["StatsPanel.tsx<br/>(Flow & Density Metrics)"]
         APP --> INSP["VehicleInspector.tsx<br/>(Telemetry & Follow Cam)"]
@@ -100,7 +99,6 @@ flowchart TD
         │   ├── ImageLightboxModal.tsx # Fullscreen screenshot inspector with technical specs
         │   ├── Header.tsx        # Top status bar, connection health, audio toggle, reset & profile
         │   ├── CanvasView.tsx    # HTML5 Canvas viewport: camera pan/zoom/follow, traffic gantry & 60fps lerp
-        │   ├── MiniMap.tsx       # 1000m radar bar, vehicle dots, traffic signal marker, viewport bounding box
         │   ├── Controls.tsx      # Transport dock: Start / Pause / Stop + read-only clock & telemetry
         │   ├── StatsPanel.tsx    # Telemetry metrics (active count, speed, lane distribution)
         │   ├── JunctionMetricsPanel.tsx # Unsignalised junction metrics (per-arm flows, ring occupancy, U-turns, queues)
@@ -135,7 +133,6 @@ flowchart TD
 | [`src/hooks/useSimulationSocket.ts`](file:///Users/vijay/Projects/traffis/frontend/src/hooks/useSimulationSocket.ts) | Manages WebSocket lifecycle, auto-reconnect backoff (1.5s), message dispatch, packet rate (Hz) calculation, and REST fallbacks. |
 | [`src/App.tsx`](file:///Users/vijay/Projects/traffis/frontend/src/App.tsx) | Root application state: camera coordinates, selected vehicle ID, audio preferences, keyboard listeners (`Space` = toggle, `R` = reset). |
 | [`src/components/CanvasView.tsx`](file:///Users/vijay/Projects/traffis/frontend/src/components/CanvasView.tsx) | HTML5 Canvas renderer with `requestAnimationFrame` loop. Computes world-to-screen transforms, interpolates vehicle positions between 20Hz ticks, renders road markings, vehicles, wheels, headlights, brake glow, and leader indicators. |
-| [`src/components/MiniMap.tsx`](file:///Users/vijay/Projects/traffis/frontend/src/components/MiniMap.tsx) | 1000m overview radar bar. Shows road lines, glowing vehicle dots color-coded to actual cars, and camera viewport bounding box. Supports click/drag to jump camera position. |
 | [`src/components/Controls.tsx`](file:///Users/vijay/Projects/traffis/frontend/src/components/Controls.tsx) | Bottom dock with Start/Resume, Pause, Stop (reset to t=0), simulation clock progress, and read-only Avg Speed / PCE/h. |
 | [`src/components/StatsPanel.tsx`](file:///Users/vijay/Projects/traffis/frontend/src/components/StatsPanel.tsx) | Real-time analytics bar: Active Vehicles, Average Speed (km/h), Traffic Density (veh/km), Total Departed/Arrived, and Lane Utilization bars. |
 | [`src/components/VehicleInspector.tsx`](file:///Users/vijay/Projects/traffis/frontend/src/components/VehicleInspector.tsx) | Floating HUD displayed when clicking a vehicle. Displays speed, acceleration/braking state, distance to leader vehicle, lane index, and camera "Follow" toggle. |
@@ -346,7 +343,7 @@ npm run build
 1. Modify [`backend/sumo_config/road.edg.xml`](file:///Users/vijay/Projects/traffis/backend/sumo_config/road.edg.xml) or [`backend/sumo_config/build_network.py`](file:///Users/vijay/Projects/traffis/backend/sumo_config/build_network.py).
 2. Run `python backend/sumo_config/build_network.py` to regenerate [`road.net.xml`](file:///Users/vijay/Projects/traffis/backend/sumo_config/road.net.xml).
 3. Update `NUM_LANES` and lane mapping in [`backend/app/config.py`](file:///Users/vijay/Projects/traffis/backend/app/config.py) and [`backend/app/simulation.py`](file:///Users/vijay/Projects/traffis/backend/app/simulation.py) (`get_network_info`).
-4. Update [`frontend/src/components/CanvasView.tsx`](file:///Users/vijay/Projects/traffis/frontend/src/components/CanvasView.tsx) and [`frontend/src/components/MiniMap.tsx`](file:///Users/vijay/Projects/traffis/frontend/src/components/MiniMap.tsx) to match the new lane count and boundary offsets.
+4. Update [`frontend/src/components/CanvasView.tsx`](file:///Users/vijay/Projects/traffis/frontend/src/components/CanvasView.tsx) to match the new lane count and boundary offsets.
 
 ### Recipe 4: Adding a New Road / Simulation Scenario (e.g. 4-Way Crossroads, Roundabout)
 1. **Network XML Definition**:
@@ -355,6 +352,6 @@ npm run build
    Create a new class in `backend/app/scenarios/<scenario_id>.py` extending [`BaseScenario`](file:///Users/vijay/Projects/traffis/backend/app/scenarios/base.py). Implement `get_metadata()`, `get_network_info()`, `get_spawn_route()`, `get_auto_spawn_request()`, and traffic light handlers.
 3. **Register Scenario**:
    In [`backend/app/scenarios/registry.py`](file:///Users/vijay/Projects/traffis/backend/app/scenarios/registry.py), register the new scenario instance in `init_registry()`. It will immediately appear in `GET /api/scenarios` and the frontend Road dropdown.
-4. **Frontend Canvas & Radar Support**:
-   In [`frontend/src/components/CanvasView.tsx`](file:///Users/vijay/Projects/traffis/frontend/src/components/CanvasView.tsx) and [`frontend/src/components/MiniMap.tsx`](file:///Users/vijay/Projects/traffis/frontend/src/components/MiniMap.tsx), add a renderer function for the scenario's road geometry.
+4. **Frontend Canvas Support**:
+   In [`frontend/src/components/CanvasView.tsx`](file:///Users/vijay/Projects/traffis/frontend/src/components/CanvasView.tsx), add a renderer function for the scenario's road geometry (or send polyline `geometry` in `NetworkInfo` to reuse `utils/geometryRenderer.ts`).
 

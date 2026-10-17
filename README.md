@@ -31,7 +31,6 @@ graph LR
     subgraph React Frontend
         FE[React + Vite + TypeScript]
         CV[HTML5 Canvas View - 60 FPS]
-        MM[1000m Radar Mini-Map]
         CTRL[Transport & Spawner Controls]
         HUD[Telemetry & Vehicle Inspector]
     end
@@ -209,7 +208,6 @@ Open your browser and navigate to:
 - **Pan**: Click and drag anywhere on the highway canvas.
 - **Zoom**: Mouse scroll wheel in/out.
 - **Camera Presets**: Quick buttons to jump to **Start (0m)**, **Midpoint (500m)**, **Finish (1000m)**, or **Fit 1000m** to view the entire highway.
-- **1000m Radar Mini-Map**: Top radar strip displays all moving vehicle dots and camera viewport box. Click anywhere to jump the camera.
 - **Vehicle Inspector HUD**: Click on any vehicle to view:
   - Speed ($km/h$ & $m/s$)
   - Longitudinal position ($0\text{m}$ to $1000\text{m}$)

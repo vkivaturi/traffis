@@ -3,7 +3,6 @@ import { ExternalLink, Info } from 'lucide-react';
 import { useSimulationSocket } from './hooks/useSimulationSocket';
 import { useAuth } from './hooks/useAuth';
 import { Header } from './components/Header';
-import { MiniMap } from './components/MiniMap';
 import { CanvasView } from './components/CanvasView';
 import { Controls } from './components/Controls';
 import { VehicleInspector } from './components/VehicleInspector';
@@ -53,7 +52,6 @@ export const App: React.FC = () => {
   });
 
   const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null);
-  const [viewportWidthMeters, setViewportWidthMeters] = useState<number>(100);
   const [soundEnabled, setSoundEnabled] = useState<boolean>(false);
 
   // Sound effect when traffic signal changes
@@ -205,18 +203,8 @@ export const App: React.FC = () => {
         onSignOut={handleSignOut}
       />
 
-      {/* 2. Scenario-aware Radar Bar */}
-      <MiniMap
-        vehicles={state.vehicles}
-        camera={camera}
-        viewportWidthMeters={viewportWidthMeters}
-        onJumpToX={(x, y = 0) => setCamera((c) => ({ ...c, x, y, followingId: null }))}
-        trafficLight={state.traffic_light}
-        scenario={activeScenario}
-        networkInfo={networkInfo}
-      />
 
-      {/* 3. Main Canvas Viewport with Scenario-aware Road, Vehicles, Traffic Signals */}
+      {/* 2. Main Canvas Viewport with Scenario-aware Road, Vehicles, Traffic Signals */}
       <div
         style={{
           position: 'relative',
@@ -232,7 +220,6 @@ export const App: React.FC = () => {
           setCamera={setCamera}
           selectedVehicleId={selectedVehicleId}
           onSelectVehicle={setSelectedVehicleId}
-          onViewportMetersChange={setViewportWidthMeters}
           trafficLight={state.traffic_light}
           scenario={activeScenario}
           networkInfo={networkInfo}
@@ -259,7 +246,7 @@ export const App: React.FC = () => {
         )}
       </div>
 
-      {/* 4. Transport Dock: Start / Pause / Stop (all parameters come from scenario.xml) */}
+      {/* 3. Transport Dock: Start / Pause / Stop (all parameters come from scenario.xml) */}
       <Controls
         isRunning={state.is_running}
         onPlay={play}
@@ -271,7 +258,7 @@ export const App: React.FC = () => {
         timeLimitReached={state.time_limit_reached}
       />
 
-      {/* 5. Open-Source Attribution Credits Footer */}
+      {/* 4. Open-Source Attribution Credits Footer */}
       <footer
         id="app-credits-footer"
         style={{

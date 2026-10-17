@@ -39,12 +39,11 @@ PCE_WEIGHTS = {
     "sports": 1.0,
     "van": 1.4,
     "truck": 3.0,
-    "bus": 3.0,
     "motorcycle": 0.5,
     "auto_rickshaw": 1.2,
 }
 
-ALLOWED_VEHICLE_TYPES = ["car", "truck", "sports", "van", "motorcycle", "auto_rickshaw", "bus"]
+ALLOWED_VEHICLE_TYPES = ["car", "truck", "sports", "van", "motorcycle", "auto_rickshaw"]
 
 def hex_to_rgba(hex_color: str) -> tuple[int, int, int, int]:
     hex_color = hex_color.lstrip("#")

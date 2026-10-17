@@ -1,4 +1,4 @@
-"""GNT Circle: unsignalised clockwise roundabout with stem, TL free-left slip and median U-turn.
+"""GNT Circle: unsignalised clockwise roundabout with stem, TL free left at the circle and median U-turn.
 
 See `sumo_config/scenarios/gnt_circle/SPEC.md`. Demand is defined per O-D pair in
 `scenario.xml` and compiled into `gnt_circle.rou.xml` (one SUMO <flow> per non-zero
@@ -18,13 +18,13 @@ from .base import BaseScenario
 from .net_geometry import NetGeometry, load_net_geometry
 from .settings_loader import ScenarioSettingsError
 from ..schemas import (
-    JunctionShape,
     ScenarioMetadata,
     SpawnOriginInfo,
     NetworkInfo,
     NetworkGeometry,
-    MedianShape,
+    CentreLine,
     ArmLabel,
+    MapCallout,
     RoundaboutInfo,
     RoadArmInfo,
     SpawnRequest,
@@ -52,17 +52,17 @@ OD_ROUTES = {
 # All routes (SPEC.md §5). Same-arm U-turns are defined for completeness but never get a flow.
 ROUTES = {
     "r_NG_TL": "NG_in rb_W_N rb_N_E TL_out",
-    "r_NG_FL": "NG_in rb_W_N rb_N_E rb_E_S stem_sb bot_wb_b FL_out",
-    "r_TL_FL": "TL_in slip_TL_FL bot_wb_a bot_wb_b FL_out",
-    "r_TL_NG": "TL_in slip_TL_FL bot_wb_a bot_wb_b bot_eb stem_nb rb_S_W NG_out",
+    "r_NG_FL": "NG_in rb_W_N rb_N_E rb_E_S stem_sb_a stem_sb_b bot_wb_b FL_out",
+    "r_TL_FL": "TL_in TL_free_left stem_sb_b bot_wb_b FL_out",
+    "r_TL_NG": "TL_in TL_free_left stem_sb_b bot_wb_b bot_eb stem_nb rb_S_W NG_out",
     "r_FL_NG": "FL_in bot_eb stem_nb rb_S_W NG_out",
     "r_FL_TL": "FL_in bot_eb stem_nb rb_S_W rb_W_N rb_N_E TL_out",
     "r_NG_NG": "NG_in rb_W_N rb_N_E rb_E_S rb_S_W NG_out",
-    "r_TL_TL": "TL_in slip_TL_FL bot_wb_a bot_wb_b bot_eb stem_nb rb_S_W rb_W_N rb_N_E TL_out",
-    "r_FL_FL": "FL_in bot_eb stem_nb rb_S_W rb_W_N rb_N_E rb_E_S stem_sb bot_wb_b FL_out",
+    "r_TL_TL": "TL_in TL_free_left stem_sb_b bot_wb_b bot_eb stem_nb rb_S_W rb_W_N rb_N_E TL_out",
+    "r_FL_FL": "FL_in bot_eb stem_nb rb_S_W rb_W_N rb_N_E rb_E_S stem_sb_a stem_sb_b bot_wb_b FL_out",
 }
 
-# Built-in vType defaults (SPEC.md §5.2.3); lowest precedence after SUMO defaults.
+# Built-in vType defaults (SPEC.md §5.2.3); lowest precedence after SUMO defaults. No trucks or buses.
 BUILTIN_VTYPES: Dict[str, Dict[str, str]] = {
     "motorcycle": {"vClass": "motorcycle", "guiShape": "motorcycle", "color": "#f59e0b",
                    "length": "2.0", "width": "0.8", "maxSpeed": "22.0", "accel": "3.5", "decel": "6.0"},
@@ -70,10 +70,6 @@ BUILTIN_VTYPES: Dict[str, Dict[str, str]] = {
                       "length": "2.6", "width": "1.4", "maxSpeed": "14.0", "accel": "1.8", "decel": "4.0"},
     "car": {"vClass": "passenger", "guiShape": "passenger", "color": "#38bdf8",
             "length": "4.3", "width": "1.7", "maxSpeed": "30.0", "accel": "2.6", "decel": "4.5"},
-    "bus": {"vClass": "bus", "guiShape": "bus", "color": "#ef4444",
-            "length": "12.0", "width": "2.5", "maxSpeed": "18.0", "accel": "1.0", "decel": "3.5"},
-    "truck": {"vClass": "truck", "guiShape": "truck", "color": "#a3a3a3",
-              "length": "10.0", "width": "2.4", "maxSpeed": "18.0", "accel": "1.0", "decel": "3.5"},
     "van": {"vClass": "delivery", "guiShape": "delivery", "color": "#a78bfa",
             "length": "5.0", "width": "1.9", "maxSpeed": "25.0", "accel": "2.0", "decel": "4.2"},
 }
@@ -82,7 +78,7 @@ RING_EDGES = ["rb_W_N", "rb_N_E", "rb_E_S", "rb_S_W"]
 ENTRY_QUEUES = [
     ("NG_in", "NG entry (ring)"),
     ("stem_nb", "Stem entry (ring)"),
-    ("TL_in", "TL approach (slip)"),
+    ("TL_in", "TL approach (free left)"),
 ]
 QUEUE_ZONE_M = 100.0
 
@@ -91,37 +87,38 @@ EDGE_NAMES = {
     "TL_in": "From Tellapur", "TL_out": "To Tellapur",
     "rb_W_N": "GNT Circle (W→N)", "rb_N_E": "GNT Circle (N→E)",
     "rb_E_S": "GNT Circle (E→S)", "rb_S_W": "GNT Circle (S→W)",
-    "stem_sb": "Stem southbound", "stem_nb": "Stem northbound",
-    "slip_TL_FL": "TL free-left slip", "bot_wb_a": "Bottom road westbound (slip)",
+    "stem_sb_a": "Stem southbound (ring exit)", "stem_sb_b": "Stem southbound", "stem_nb": "Stem northbound",
+    "TL_free_left": "TL free left (merges into stem SB)",
     "bot_wb_b": "Bottom road westbound", "bot_eb": "Bottom road eastbound",
     "FL_in": "From Flyover", "FL_out": "To Flyover",
 }
 
-# Raised medians (SPEC.md §3, hatched on the sketch). U-turn gap of 12 m at X = -250.
-MEDIANS = [
-    MedianShape(id="median_NG", width=2.0, shape=[[-330.0, 0.0], [-36.0, 0.0]]),
-    MedianShape(id="median_TL", width=12.0, shape=[[100.0, 0.0], [330.0, 0.0]]),
-    MedianShape(id="median_stem", width=1.5, shape=[[0.0, -36.0], [0.0, -174.0]]),
-    MedianShape(id="median_bottom_W", width=1.5, shape=[[-340.0, -190.0], [-256.0, -190.0]]),
-    MedianShape(id="median_bottom_E", width=1.5, shape=[[-244.0, -190.0], [-14.0, -190.0]]),
-]
-
-# Asphalt across the 12 m median opening so the U-turn reads as paved road
-PAVED_AREAS = [
-    JunctionShape(id="uturn_gap", shape=[[-256.0, -191.0], [-244.0, -191.0], [-244.0, -189.0], [-256.0, -189.0]]),
+# Undivided carriageways: double solid centre lines (as on the 3-way intersection).
+# Broken for 12 m at X = -110 where the U-turn crosses.
+CENTRE_LINES = [
+    CentreLine(id="centre_NG", edges=["NG_in", "NG_out"], shape=[[-210.0, 0.0], [-19.2, 0.0]]),
+    CentreLine(id="centre_TL", edges=["TL_in", "TL_out"], shape=[[20.4, 0.0], [210.0, 0.0]]),
+    CentreLine(id="centre_stem", edges=["stem_sb_a", "stem_sb_b", "stem_nb"], shape=[[0.0, -17.1], [0.0, -100.4]]),
+    CentreLine(id="centre_bottom_W", edges=["FL_in", "FL_out"], shape=[[-200.0, -110.0], [-116.0, -110.0]]),
+    CentreLine(id="centre_bottom_E", edges=["bot_eb", "bot_wb_b"], shape=[[-104.0, -110.0], [-12.0, -110.0]]),
 ]
 
 LABELS = [
-    ArmLabel(id="NG", name=ARM_NAMES["NG"], x=-300.0, y=24.0,
-             description="Main road west: NG_in → GNT Circle, NG_out ← GNT Circle"),
-    ArmLabel(id="TL", name=ARM_NAMES["TL"], x=300.0, y=30.0,
-             description="Main road east: TL_out ← GNT Circle; TL_in → free-left slip only (no ring entry)"),
-    ArmLabel(id="FL", name=ARM_NAMES["FL"], x=-310.0, y=-166.0,
-             description="Bottom road west: FL_in → stem → GNT Circle; FL_out ← stem / TL slip"),
+    ArmLabel(id="NG", name=ARM_NAMES["NG"], x=-185.0, y=20.0,
+             description="Main road west (2 + 2 lanes): NG_in → GNT Circle, NG_out ← GNT Circle"),
+    ArmLabel(id="TL", name=ARM_NAMES["TL"], x=185.0, y=28.0,
+             description="Main road east: TL_out ← GNT Circle; TL_in → single-lane free left into the stem (no ring entry)"),
+    ArmLabel(id="FL", name=ARM_NAMES["FL"], x=-180.0, y=-86.0,
+             description="Bottom road west: FL_in → stem → GNT Circle; FL_out ← stem (incl. TL free left)"),
 ]
 
-# Downstream ends that give way: ring entries, slip merge at stem_S (D-6), U-turn (§6.4)
-YIELD_LANES = ["NG_in_0", "NG_in_1", "NG_in_2", "stem_nb_0", "stem_nb_1", "bot_wb_a_0", "bot_wb_a_1"]
+CALLOUTS = [
+    MapCallout(text="↶ U-TURN", x=-110.0, y=-124.0),
+    MapCallout(text="FREE LEFT", x=24.0, y=-42.0, align="left"),
+]
+
+# Downstream ends that give way: ring entries, free-left merge into stem SB (D-6)
+YIELD_LANES = ["NG_in_0", "NG_in_1", "stem_nb_0", "stem_nb_1", "TL_free_left_0"]
 
 
 def _od_key(veh_id: str) -> Optional[str]:
@@ -134,10 +131,10 @@ class GntCircleScenario(BaseScenario):
     id = "gnt_circle"
     name = "GNT Circle"
     description = ("Unsignalised clockwise roundabout on the Nallagandla ⇄ Tellapur corridor with a "
-                   "divided stem to the Flyover road, a TL free-left slip and a median U-turn "
+                   "stem to the Flyover road, a TL single-lane free left at the circle and a U-turn "
                    "(left-hand traffic, Indian mixed traffic)")
     type = "roundabout"
-    default_camera = {"x": -5.0, "y": -85.0, "zoom": 1.6}
+    default_camera = {"x": -40.0, "y": -45.0, "zoom": 2.5}
     demand_from_route_file = True
     apply_default_speed_limit = False
 
@@ -206,7 +203,7 @@ class GntCircleScenario(BaseScenario):
                 continue
             lines.append(
                 f'    <flow id="{key}" route="{route}" type="indian_mix" begin="0" end="100000" '
-                f'vehsPerHour="{vph:g}" departLane="best" departSpeed="desired"/>')
+                f'vehsPerHour="{vph:g}" departLane="random" departPosLat="random" departSpeed="desired"/>')
         lines.append("</routes>")
 
         tmp = self.route_file.with_suffix(".xml.tmp")
@@ -232,7 +229,7 @@ class GntCircleScenario(BaseScenario):
     def get_metadata(self) -> ScenarioMetadata:
         origins = [
             SpawnOriginInfo(id="NG", label="Nallagandla (NG)", description="Main road west end, enters GNT Circle at rb_W"),
-            SpawnOriginInfo(id="TL", label="Tellapur (TL)", description="Main road east end, free-left slip only (no ring entry)"),
+            SpawnOriginInfo(id="TL", label="Tellapur (TL)", description="Main road east end, single-lane free left into the stem (no ring entry)"),
             SpawnOriginInfo(id="FL", label="Flyover (FL)", description="Bottom road west end, reaches the ring via the stem"),
         ]
         return ScenarioMetadata(
@@ -263,13 +260,13 @@ class GntCircleScenario(BaseScenario):
         ]
         arms = [
             RoadArmInfo(id="NG", name=ARM_NAMES["NG"], direction="west",
-                        x_start=-330.0, y_start=0.0, x_end=-24.0, y_end=0.0,
-                        num_lanes_inbound=3, num_lanes_outbound=3),
+                        x_start=-210.0, y_start=0.0, x_end=-10.0, y_end=0.0,
+                        num_lanes_inbound=2, num_lanes_outbound=2),
             RoadArmInfo(id="TL", name=ARM_NAMES["TL"], direction="east",
-                        x_start=24.0, y_start=0.0, x_end=330.0, y_end=0.0,
+                        x_start=10.0, y_start=0.0, x_end=210.0, y_end=0.0,
                         num_lanes_inbound=3, num_lanes_outbound=3),
             RoadArmInfo(id="FL", name=ARM_NAMES["FL"], direction="west",
-                        x_start=-340.0, y_start=-190.0, x_end=0.0, y_end=-190.0,
+                        x_start=-200.0, y_start=-110.0, x_end=0.0, y_end=-110.0,
                         num_lanes_inbound=3, num_lanes_outbound=3),
         ]
         self._network_info = NetworkInfo(
@@ -286,9 +283,9 @@ class GntCircleScenario(BaseScenario):
                 lanes=geo.lanes,
                 connectors=geo.connectors,
                 junctions=geo.junctions,
-                paved_areas=PAVED_AREAS,
-                medians=MEDIANS,
+                centre_lines=CENTRE_LINES,
                 labels=LABELS,
+                callouts=CALLOUTS,
                 roundabout=RoundaboutInfo(x=0.0, y=0.0, island_radius=island_r, outer_radius=outer_r),
                 yield_lanes=YIELD_LANES,
                 bounds=self.bounds,
@@ -339,6 +336,7 @@ class GntCircleScenario(BaseScenario):
         self.inflow: Dict[str, int] = defaultdict(int)
         self.outflow: Dict[str, int] = defaultdict(int)
         self.od_arrived: Dict[str, int] = defaultdict(int)
+        self.od_travel_sum: Dict[str, float] = defaultdict(float)
         self.delay_sum: Dict[str, float] = defaultdict(float)
         self.delay_n: Dict[str, int] = defaultdict(int)
         self.depart_time: Dict[str, float] = {}
@@ -376,6 +374,7 @@ class GntCircleScenario(BaseScenario):
             self.outflow[key[3:]] += 1
             t0 = self.depart_time.pop(vid, None)
             if t0 is not None:
+                self.od_travel_sum[key] += now - t0
                 self.delay_sum[key[:2]] += (now - t0) - self.free_flow_s.get(key, 0.0)
                 self.delay_n[key[:2]] += 1
         # The only way a TL-origin vehicle reaches bot_eb is through the median U-turn.
@@ -410,6 +409,8 @@ class GntCircleScenario(BaseScenario):
                 configured_vph=self.settings.od_demand.get(key, 0.0),
                 arrived=self.od_arrived[key],
                 throughput_vph=round(self.od_arrived[key] * 3600.0 / sim_time, 0) if sim_time > 0 else 0.0,
+                avg_travel_time_s=(round(self.od_travel_sum[key] / self.od_arrived[key], 1)
+                                   if self.od_arrived[key] else None),
             )
             for key in OD_ROUTES
         ]
