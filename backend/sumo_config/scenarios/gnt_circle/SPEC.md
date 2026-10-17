@@ -1,8 +1,8 @@
 # GNT Circle — Scenario Specification
 
-> Status: **DRAFT – pending validation**. Derived from the whiteboard sketch.
+> Status: **FINAL – v1.0 (2026-10-17)**. Derived from the whiteboard sketch and confirmed with the product owner.
 > Scenario ID: `gnt_circle`. Read this spec before writing SUMO XML or backend/frontend code.
-> Items marked **[ASSUMPTION]** are my reading of the sketch. Items marked **[OPEN-x]** need confirmation (see §11).
+> Former open items are resolved as **decisions** in §11. Geometry values in §3 are design defaults (no survey data).
 
 ---
 
@@ -74,20 +74,20 @@ Same conventions as other scenarios: metres, X → right, Y → up (sketch top =
 | Element | Proposed value | Notes |
 | :--- | :--- | :--- |
 | Roundabout centre | (0, 0) | Node cluster `gnt_rb_*` |
-| Central island radius | 20 m | [ASSUMPTION] |
-| Circulating carriageway | 2 lanes, 7.0 m wide | [OPEN-1] sketch shows ~2 lanes |
+| Central island radius | 20 m | D-9 |
+| Circulating carriageway | 2 lanes, 7.0 m wide | D-1 |
 | Outer radius | ~27 m | |
-| Main road (NG arm) length | 300 m (X: −330 → −30) | [ASSUMPTION] |
-| Main road (TL arm) length | 300 m (X: +30 → +330) | [ASSUMPTION] |
-| Main road carriageway | 3 lanes / direction, 3.2 m | [OPEN-2] sketch dashes suggest 2–3 |
+| Main road (NG arm) length | 300 m (X: −330 → −30) | D-9 |
+| Main road (TL arm) length | 300 m (X: +30 → +330) | D-9 |
+| Main road carriageway | 3 lanes / direction, 3.2 m | D-2 |
 | Main road median | 2.0 m raised | hatched in sketch |
-| Stem length | 150 m (Y: −27 → −177) | [ASSUMPTION] |
+| Stem length | 150 m (Y: −27 → −177) | D-9 |
 | Stem carriageway | 2 lanes / direction, 3.2 m, median 1.5 m | |
-| TL slip | 1–2 lanes, joins bottom road at X≈+60 | Left of stem, curve radius ~15 m |
+| TL slip | 2 lanes, joins bottom road at X≈+60 | Left of stem, curve radius ~15 m |
 | Bottom road length | 400 m (X: −340 → +60), Y ≈ −190 | |
-| Bottom road carriageway | 3 lanes / direction | [OPEN-2] |
+| Bottom road carriageway | 3 lanes / direction | D-2 |
 | U-turn gap | X ≈ −250 m, gap width 12 m | Westbound → eastbound only |
-| Speed limit (main/bottom) | 50 km/h (13.89 m/s) | urban [OPEN-3] |
+| Speed limit (main/bottom) | 50 km/h (13.89 m/s) | urban, D-3 |
 | Speed limit (roundabout) | 25 km/h (6.94 m/s) | |
 | Speed limit (slip, U-turn) | 20 km/h (5.56 m/s) | |
 
@@ -149,28 +149,121 @@ All O-D pairs and the path each takes:
 | `r_TL_TL` | TL → TL (U) | TL_in → slip_TL_FL → bot_wb_a → bot_wb_b → uturn → bot_eb → stem_nb → rb_S_W → rb_W_N → rb_N_E → TL_out *(optional)* |
 | `r_FL_NG` | FL → NG | FL_in → bot_eb → stem_nb → rb_S_W → NG_out |
 | `r_FL_TL` | FL → TL | FL_in → bot_eb → stem_nb → rb_S_W → rb_W_N → rb_N_E → TL_out |
-| `r_FL_FL` | FL → FL (U) | FL_in → bot_eb → stem_nb → ring → stem_sb → … → FL_out *(rare)* |
-| `r_Uturn_*` | via U-turn | …→ bot_wb_b → **uturn** → bot_eb → stem_nb → rb_S → NG/TL |
 
-U-turn use case (per sketch label "To Nallagandla, Tellapur"): the U-turn is the **mandatory path for all TL → NG traffic** (and TL → TL). It is not optional demand; U-turn volume = TL inflow × (NG + TL share).
+**In scope (v1): exactly the six O-D routes** `r_NG_TL`, `r_NG_FL`, `r_TL_FL`, `r_TL_NG`, `r_FL_NG`, `r_FL_TL`. Same-arm U-turns (`r_NG_NG`, `r_TL_TL`, `r_FL_FL`) are defined in the route file for completeness but have **0 veh/h** and are not exposed in config.
 
-### 5.1 Default demand (to be put in `scenario.xml`)
-| Origin | Inflow (veh/h) | Destination split |
-| :--- | :--- | :--- |
-| NG | 1200 | TL 70%, FL 25%, NG 5% |
-| TL | 1200 | NG 60%, FL 35%, TL 5% |
-| FL | 900 | NG 50%, TL 50% |
-| *(U-turn)* | — | Not a separate origin; carries TL→NG and TL→TL routes |
+The U-turn is the **mandatory path for all TL → NG traffic**. It is not a separate origin; U-turn volume = `TL_NG` flow.
 
-Vehicle mix: car 70%, van 12%, truck 8%, sports 10% (reuse existing vTypes). **[OPEN-5]**: add `motorcycle` / `auto_rickshaw` for Indian mix?
+### 5.1 Demand configuration — per O-D (in `scenario.xml`)
+
+Each of the six directions has its own **vehicles-per-hour** value. No origin-total + split percentages.
+
+| Config key | O → D | Route | Default (veh/h) |
+| :--- | :--- | :--- | :--- |
+| `NG_TL` | NG → TL | `r_NG_TL` | 900 |
+| `NG_FL` | NG → FL | `r_NG_FL` | 300 |
+| `TL_FL` | TL → FL | `r_TL_FL` | 450 |
+| `TL_NG` | TL → NG | `r_TL_NG` (via U-turn) | 750 |
+| `FL_NG` | FL → NG | `r_FL_NG` | 450 |
+| `FL_TL` | FL → TL | `r_FL_TL` | 450 |
+
+- Range per key: `0`–`3000` veh/h; `0` disables that flow.
+- Each key becomes one SUMO `<flow>` with `vehsPerHour`, `departLane="best"`, `departSpeed="desired"`, and `type` = the global vType distribution (§5.2).
+- Values are loaded on every reset/scenario switch (same mechanism as existing scenarios; not runtime-tunable from the UI).
+
+### 5.2 Vehicle behaviour — global (simulation-level) settings
+
+Driver/vehicle behaviour is configured **once for the whole simulation**, not per direction or lane. Every flow draws from the same `vTypeDistribution id="indian_mix"`. Goal: reproduce **Indian urban conditions** — small gaps, high impatience, aggressive merging and lateral filtering.
+
+#### 5.2.1 Global model settings
+| Setting | SUMO mapping | Default | Why |
+| :--- | :--- | :--- | :--- |
+| Car-following model | `carFollowModel` | `Krauss` | Consistent with existing scenarios |
+| Lane-change model | `laneChangeModel` | `SL2015` | Required for sub-lane / filtering |
+| Lateral resolution | `--lateral-resolution` (sumocfg) | `0.8` m | Enables two-wheelers to filter between cars |
+| Junction blocking tolerance | `--ignore-junction-blocker` | `10` s | Prevents gridlock in ring |
+| Teleport time | `--time-to-teleport` | `120` s | Clears deadlocks; teleports counted in metrics |
+
+#### 5.2.2 Behaviour parameters (applied to every vType unless overridden in §5.2.3)
+| Parameter | SUMO attribute | Default (Indian) | SUMO default | Effect |
+| :--- | :--- | :--- | :--- | :--- |
+| Min gap | `minGap` | **1.0** m | 2.5 | Bumper gap when stopped |
+| Headway | `tau` | **0.6** s | 1.0 | Following headway |
+| Driver imperfection | `sigma` | **0.6** | 0.5 | Speed fluctuation |
+| Impatience | `impatience` | **0.8** | 0.0 | Forces entry into ring / merges after waiting |
+| Speed factor | `speedFactor` | **normc(1.1,0.15,0.7,1.5)** | 1.0 | Speed-limit compliance (≈ 10% over) |
+| Lane-change assertiveness | `lcAssertive` | **2.0** | 1.0 | Accepts smaller gaps |
+| Cooperative LC | `lcCooperative` | **0.3** | 1.0 | Less yielding to others |
+| Speed-gain LC | `lcSpeedGain` | **2.0** | 1.0 | Frequent overtaking |
+| Keep-left urge | `lcKeepRight`* | **0.3** | 1.0 | Weak lane discipline (*"keepRight" = keep to driving side; left in lefthand nets) |
+| Lateral alignment | `latAlignment` | `arbitrary` | `center` | Vehicles don't centre in lane |
+| Min lateral gap | `minGapLat` | **0.3** m | 0.6 | Side-by-side tightness |
+| Junction: ignore foes after wait | `jmIgnoreFoeProb` / `jmIgnoreFoeSpeed` | **0.1** / 5.0 | 0 | Occasional forcing at yields |
+| Junction: drive after red/yield time | `jmDriveAfterYellowTime` / `jmTimegapMinor` | — / **0.5** s | — / 1.0 | Smaller accepted gap entering ring |
+
+#### 5.2.3 Vehicle classes & mix (global)
+| vType | Share | Length / Width (m) | Max speed (m/s) | Accel / Decel | Overrides |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| `motorcycle` | 40% | 2.0 / 0.8 | 22.0 | 3.5 / 6.0 | `minGap 0.5`, `minGapLat 0.2`, `lcAssertive 3.0`, `vClass motorcycle` |
+| `auto_rickshaw` | 15% | 2.6 / 1.4 | 14.0 | 1.8 / 4.0 | `minGap 0.8`, `sigma 0.7` |
+| `car` | 30% | 4.3 / 1.7 | 30.0 | 2.6 / 4.5 | — |
+| `bus` | 5% | 12.0 / 2.5 | 18.0 | 1.0 / 3.5 | `minGap 1.5`, `lcAssertive 1.5` |
+| `truck` | 5% | 10.0 / 2.4 | 18.0 | 1.0 / 3.5 | `minGap 1.5` |
+| `van` | 5% | 5.0 / 1.9 | 25.0 | 2.0 / 4.2 | — |
+
+Shares must sum to 100%. Frontend needs render branches for `motorcycle`, `auto_rickshaw`, `bus`.
+
+#### 5.2.4 `scenario.xml` shape (normative)
+```xml
+<scenario id="gnt_circle" maxSimTime="600">
+  <demand>
+    <od key="NG_TL" vehsPerHour="900"/>
+    <od key="NG_FL" vehsPerHour="300"/>
+    <od key="TL_FL" vehsPerHour="450"/>
+    <od key="TL_NG" vehsPerHour="750"/>
+    <od key="FL_NG" vehsPerHour="450"/>
+    <od key="FL_TL" vehsPerHour="450"/>
+  </demand>
+  <behaviour carFollowModel="Krauss" laneChangeModel="SL2015" lateralResolution="0.8">
+    <!-- Global defaults: any SUMO vType attribute allowed; applied to all vTypes -->
+    <param key="minGap" value="1.0"/>
+    <param key="tau" value="0.6"/>
+    <param key="sigma" value="0.6"/>
+    <param key="impatience" value="0.8"/>
+    <param key="speedFactor" value="normc(1.1,0.15,0.7,1.5)"/>
+    <param key="lcAssertive" value="2.0"/>
+    <param key="lcCooperative" value="0.3"/>
+    <param key="lcSpeedGain" value="2.0"/>
+    <param key="lcKeepRight" value="0.3"/>
+    <param key="latAlignment" value="arbitrary"/>
+    <param key="minGapLat" value="0.3"/>
+    <param key="jmIgnoreFoeProb" value="0.1"/>
+    <param key="jmIgnoreFoeSpeed" value="5.0"/>
+    <param key="jmTimegapMinor" value="0.5"/>
+  </behaviour>
+  <vehicleMix>
+    <vtype id="motorcycle" share="0.40" minGap="0.5" minGapLat="0.2" lcAssertive="3.0"/>
+    <vtype id="auto_rickshaw" share="0.15" minGap="0.8" sigma="0.7"/>
+    <vtype id="car" share="0.30"/>
+    <vtype id="bus" share="0.05" minGap="1.5" lcAssertive="1.5"/>
+    <vtype id="truck" share="0.05" minGap="1.5"/>
+    <vtype id="van" share="0.05"/>
+  </vehicleMix>
+</scenario>
+```
+Rules for the loader (`settings_loader.py`):
+- Precedence: per-vtype attribute in `<vehicleMix>` > global `<behaviour>` param > built-in vType default (§5.2.3) > SUMO default.
+- `<behaviour>` params are passed through as vType attributes verbatim (any valid SUMO vType attribute is allowed) — the loader must not hard-code a whitelist beyond basic name validation.
+- Generated `gnt_circle.rou.xml` contains the resolved vTypes, the `vTypeDistribution`, and one `<flow>` per non-zero OD key.
+- Invalid values (shares ≠ 1.0 ± 0.01, negative veh/h, unknown OD key) → fail scenario load with a clear error.
 
 ---
 
 ## 6. Priority & Conflict Rules (no signals)
 
 1. **Roundabout**: circulating traffic has priority; entering traffic **yields** (SUMO `<roundabout>` + `priority` nodes).
-2. **TL free-left slip**: diverges before the roundabout; no conflict at diverge. Merges into bottom westbound road with **yield** to through traffic (`bot_wb_a` lower priority than stem SB at `stem_S`, or zipper merge **[OPEN-6]**).
-3. **stem_S**: stem SB merges into bottom westbound (yield to slip stream or vice versa — decide in OPEN-6). Bottom eastbound turns left into stem NB (free, no conflict).
+2. **TL free-left slip**: diverges before the roundabout; no conflict at diverge. At `stem_S` the slip stream (`bot_wb_a`) **yields** to stem SB traffic.
+3. **stem_S**: stem SB is major for the westbound merge. Bottom eastbound turns left into stem NB (free, no conflict).
 4. **U-turn**: U-turning vehicles **yield** to eastbound `FL_in` traffic (`bot_eb` major, uturn minor).
 5. No pedestrian crossings in v1.
 
@@ -181,10 +274,11 @@ Vehicle mix: car 70%, van 12%, truck 8%, sports 10% (reuse existing vTypes). **[
 - `backend/app/scenarios/gnt_circle.py` extending `BaseScenario`:
   - `get_metadata()` → id `gnt_circle`, name "GNT Circle", description.
   - `get_network_info()` → bounding box, roundabout centre/radii, arm list (`NG`, `TL`, `FL`), lane polylines read from `.net.xml` (non-straight geometry — send shapes, not just X ranges).
-  - Origin weights keyed by `NG`/`TL`/`FL` (+ `UTURN`).
+  - Demand keyed by the six OD keys (§5.1); no origin weights.
 - `traffic_light` field in state message → `null` for this scenario.
-- Compact vehicle tuple `direction` field → use origin→dest code, e.g. `"NG-TL"`.
-- `scenario.xml` holds inflow, mix, OD splits, max sim time (default 600 s).
+- Compact vehicle tuple `direction` field → use OD key, e.g. `"NG_TL"`.
+- `scenario.xml` (§5.2.4) holds per-OD veh/h, global behaviour params, vehicle mix, max sim time (default 600 s).
+- Add `motorcycle`, `auto_rickshaw`, `bus` to allowed vehicle types in `schemas.py` / `types/simulation.ts`.
 
 ## 8. Frontend Requirements
 
@@ -200,9 +294,9 @@ Vehicle mix: car 70%, van 12%, truck 8%, sports 10% (reuse existing vTypes). **[
 
 | Metric | Definition |
 | :--- | :--- |
-| Throughput per O-D | arrivals per route ID per hour |
+| Throughput per O-D | arrivals per OD key per hour (compare with configured veh/h) |
 | Avg delay per arm | actual travel time − free-flow time |
-| Entry queue length | halting vehicles on last 100 m of `NG_in`, `TL_in_b`, `stem_nb` |
+| Entry queue length | halting vehicles on last 100 m of `NG_in`, `stem_nb` (ring entries) and `TL_in` |
 | Roundabout occupancy | vehicles on ring edges |
 | U-turn usage | vehicles traversing `uturn` connection |
 
@@ -223,20 +317,25 @@ Vehicle mix: car 70%, van 12%, truck 8%, sports 10% (reuse existing vTypes). **[
 - [ ] No teleports in a 600 s run at default demand.
 - [ ] Frontend renders curves and vehicle headings correctly around the ring.
 - [ ] `test_ws.py` passes for `gnt_circle` (start/pause/stop, vehicles appear from all three arms).
+- [ ] Each of the 6 OD keys produces vehicles only on its own route; setting a key to `0` removes that flow.
+- [ ] Generated vTypes reflect `<behaviour>` params and per-vtype overrides with the precedence in §5.2.4.
+- [ ] Motorcycles visibly filter between cars (sub-lane model active).
 
 ---
 
-## 11. Open Questions (please confirm)
+## 11. Decisions (resolved)
 
-| # | Question | Current assumption |
+| # | Topic | Decision |
 | :--- | :--- | :--- |
-| OPEN-1 | Lanes on roundabout ring? | 2 |
-| OPEN-2 | Lanes per direction on main road, stem, bottom road? | 3 / 2 / 3 |
-| OPEN-3 | Speed limits? | 50 km/h roads, 25 km/h ring |
-| OPEN-4 | Does the bottom road's eastbound side (`FL_in`) carry traffic **from** the flyover, in addition to U-turn traffic? | Yes. U-turn source resolved: TL→NG/TL→TL traffic |
-| OPEN-5 | Add Indian vehicle types (2-wheeler, auto)? | No (reuse existing) |
-| OPEN-6 | Merge priority at bottom road: stem SB vs TL slip? | Slip yields to stem SB |
-| OPEN-7 | Does NG → TL traffic go round the northern arc of the circle (as drawn) — no bypass lane? | Yes, all via ring |
-| OPEN-8 | Is the middle-left "To Nallagandla" road the same as `NG_out` (exited by left turn from the stem at `rb_W`)? | Yes |
-| ~~OPEN-10~~ | TL→NG path | **Resolved:** south → U-turn → left at GNT Circle (no straight movement) |
-| OPEN-9 | Real-world dimensions (arm lengths, island diameter) — use satellite measurements? | Values in §3 |
+| D-1 | Lanes on roundabout ring | 2 |
+| D-2 | Lanes per direction: main / stem / bottom | 3 / 2 / 3 |
+| D-3 | Speed limits | 50 km/h roads, 25 km/h ring, 20 km/h slip & U-turn |
+| D-4 | `FL_in` traffic | Carries FL origin traffic **and** TL→NG U-turn traffic |
+| D-5 | Vehicle types | Indian mix: motorcycle, auto_rickshaw, car, bus, truck, van (§5.2.3) |
+| D-6 | Merge priority at `stem_S` | Slip yields to stem SB |
+| D-7 | NG → TL | All via ring northern arc, no bypass |
+| D-8 | Mid-left "To Nallagandla" road | Is `NG_out` (left exit from stem at `rb_W`) |
+| D-9 | Dimensions | Design defaults in §3 (no survey) |
+| D-10 | TL → NG | South → U-turn → left at GNT Circle; no straight movement |
+| D-11 | Demand config | Per-OD veh/h for 6 directions (§5.1) |
+| D-12 | Behaviour config | Global, simulation-level SUMO vType params (§5.2) |
