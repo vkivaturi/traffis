@@ -12,13 +12,13 @@
     <edge id="NG_out" from="rb_W"   to="NG_end" numLanes="2" speed="13.89" priority="3" width="3.2"
           shape="-10.00,-1.00 -160.00,-1.00"/>
 
-    <!-- Main corridor: TL arm -->
-    <edge id="TL_out" from="rb_E"   to="TL_end" numLanes="3" speed="13.89" priority="3" width="3.2"/>
-    <edge id="TL_in"  from="TL_end" to="tl_fl"  numLanes="3" speed="13.89" priority="3" width="3.2"/>
+    <!-- Main corridor: TL arm (4-lane road, 2 + 2) -->
+    <edge id="TL_out" from="rb_E"   to="TL_end" numLanes="2" speed="13.89" priority="3" width="3.2"/>
+    <edge id="TL_in"  from="TL_end" to="tl_fl"  numLanes="2" speed="13.89" priority="3" width="3.2"/>
 
     <!-- TL free left (single lane): carries TL->FL and TL->NG (via U-turn); yields at stem_merge (D-6) -->
     <edge id="TL_free_left" from="tl_fl" to="stem_merge" numLanes="1" speed="5.56" priority="2" width="3.2"
-          shape="45.00,-6.40 35.35,-6.40 31.01,-6.67 26.80,-7.46 22.85,-8.76 19.28,-10.52 16.20,-12.69 13.70,-15.20 11.86,-17.98 10.73,-20.94 10.35,-24.00"/>
+          shape="45.00,-3.20 35.35,-3.20 31.01,-3.52 26.80,-4.45 22.85,-5.99 19.28,-8.07 16.20,-10.63 13.70,-13.60 11.86,-16.89 10.73,-20.39 10.35,-24.00"/>
 
     <!-- Roundabout ring (2 lanes, clockwise) -->
     <edge id="rb_W_N" from="rb_W" to="rb_N" numLanes="2" speed="6.94" priority="4" width="3.5"

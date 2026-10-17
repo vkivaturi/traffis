@@ -82,6 +82,18 @@ ENTRY_QUEUES = [
 ]
 QUEUE_ZONE_M = 100.0
 
+# Per-vehicle settings for TL-origin traffic (free-left merge + median U-turn).
+# NOTE: SUMO rejects `junctionModel.*` via traci.vehicle.setParameter, and per-OD vType ids
+# would break frontend rendering, so aggression uses supported per-vehicle TraCI calls instead.
+AGGRESSIVE_IMPATIENCE = 1.0
+AGGRESSIVE_MIN_GAP = 0.3   # m  - tiny bumper gaps so TL vehicles squeeze into any opening
+AGGRESSIVE_TAU = 0.3       # s  - tiny following headway
+# While on these edges TL-origin vehicles disregard right-of-way at the junction ahead
+# (merge at stem_merge, U-turn at uturn_W). SUMO speed mode 23 = default 31 minus bit 3.
+FORCE_EDGES = {"TL_free_left", "bot_wb_b"}
+SPEED_MODE_DEFAULT = 31
+SPEED_MODE_FORCE = 23
+
 EDGE_NAMES = {
     "NG_in": "From Nallagandla", "NG_out": "To Nallagandla",
     "TL_in": "From Tellapur", "TL_out": "To Tellapur",
@@ -107,7 +119,7 @@ LABELS = [
     ArmLabel(id="NG", name=ARM_NAMES["NG"], x=-135.0, y=20.0,
              description="Main road west (2 + 2 lanes): NG_in → GNT Circle, NG_out ← GNT Circle"),
     ArmLabel(id="TL", name=ARM_NAMES["TL"], x=135.0, y=28.0,
-             description="Main road east: TL_out ← GNT Circle; TL_in → single-lane free left into the stem (no ring entry)"),
+             description="Main road east (2 + 2 lanes): TL_out ← GNT Circle; TL_in → single-lane free left into the stem (no ring entry)"),
     ArmLabel(id="FL", name=ARM_NAMES["FL"], x=-130.0, y=-86.0,
              description="Bottom road west: FL_in → stem → GNT Circle; FL_out ← stem (incl. TL free left)"),
 ]
@@ -264,7 +276,7 @@ class GntCircleScenario(BaseScenario):
                         num_lanes_inbound=2, num_lanes_outbound=2),
             RoadArmInfo(id="TL", name=ARM_NAMES["TL"], direction="east",
                         x_start=10.0, y_start=0.0, x_end=160.0, y_end=0.0,
-                        num_lanes_inbound=3, num_lanes_outbound=3),
+                        num_lanes_inbound=2, num_lanes_outbound=2),
             RoadArmInfo(id="FL", name=ARM_NAMES["FL"], direction="west",
                         x_start=-150.0, y_start=-110.0, x_end=0.0, y_end=-110.0,
                         num_lanes_inbound=3, num_lanes_outbound=3),
@@ -345,6 +357,8 @@ class GntCircleScenario(BaseScenario):
         self.teleports = 0
         self.free_flow_s: Dict[str, float] = {}
         self.ring_edge_ids: List[str] = list(RING_EDGES)
+        self.aggressive_ids: set[str] = set()
+        self.forcing_ids: set[str] = set()
 
     def reset_state(self) -> None:
         """Called right after traci.start(): reset counters and cache free-flow route times."""
@@ -365,6 +379,8 @@ class GntCircleScenario(BaseScenario):
             if key:
                 self.inflow[key[:2]] += 1
                 self.depart_time[vid] = now
+                if key.startswith("TL_"):
+                    self._make_aggressive(vid)
         for vid in traci.simulation.getArrivedIDList():
             key = _od_key(vid)
             self.uturn_seen.discard(vid)
@@ -383,6 +399,34 @@ class GntCircleScenario(BaseScenario):
                 self.uturn_seen.add(vid)
                 self.uturn_count += 1
         self.teleports += traci.simulation.getStartingTeleportNumber()
+        self._update_force_mode()
+
+    def _make_aggressive(self, vid: str) -> None:
+        """TL-origin vehicles force the free-left merge into the stem and the median U-turn:
+        accept tiny gaps, ignore foes, and never wait politely."""
+        try:
+            traci.vehicle.setImpatience(vid, AGGRESSIVE_IMPATIENCE)
+            traci.vehicle.setMinGap(vid, AGGRESSIVE_MIN_GAP)
+            traci.vehicle.setTau(vid, AGGRESSIVE_TAU)
+            self.aggressive_ids.add(vid)
+        except traci.TraCIException as exc:
+            logger.debug("could not set aggressive params on %s: %s", vid, exc)
+
+    def _update_force_mode(self) -> None:
+        """Disable right-of-way checks only while an aggressive vehicle is on a conflict edge."""
+        for vid in list(self.aggressive_ids):
+            try:
+                road = traci.vehicle.getRoadID(vid)
+                if road in FORCE_EDGES:
+                    if vid not in self.forcing_ids:
+                        traci.vehicle.setSpeedMode(vid, SPEED_MODE_FORCE)
+                        self.forcing_ids.add(vid)
+                elif not road.startswith(":") and vid in self.forcing_ids:
+                    traci.vehicle.setSpeedMode(vid, SPEED_MODE_DEFAULT)
+                    self.forcing_ids.discard(vid)
+            except traci.TraCIException:
+                self.aggressive_ids.discard(vid)
+                self.forcing_ids.discard(vid)
 
     def _queue_length(self, edge: str) -> int:
         halting = 0

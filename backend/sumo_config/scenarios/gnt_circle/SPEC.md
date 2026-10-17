@@ -11,7 +11,7 @@
 GNT Circle is an **unsignalised** junction with:
 - A **clockwise roundabout** (the "GNT Circle") on the main NG ⇄ TL corridor.
 - A **divided two-way stem** running south from the roundabout to a lower east–west road.
-- A **single-lane free left** for all TL traffic at the roundabout: TL's 3 lanes merge into one lane that curves round the circle's south-east side and merges into the stem southbound kerb lane (no ring entry).
+- A **single-lane free left** for all TL traffic at the roundabout: TL's 2 lanes merge into one lane that curves round the circle's south-east side and merges into the stem southbound kerb lane (no ring entry).
 - A lower **undivided road** (double solid centre line) leading west to/from the Flyover (FL), with a **U-turn opening**.
 
 There are **no traffic signals** anywhere. All conflicts are resolved by priority rules (§6).
@@ -49,7 +49,7 @@ Direction suffixes used in IDs: `_in` = traffic entering the model from that arm
 ```text
   NG_in  ══▶══════╮   ╭─────╮   ╭══════════════▶══  TL_out
                   ╰──▶│ GNT │──▶╯
-  NG_out ══◀══════╮   │Circle│   ╭═════════════◀══  TL_in (3 lanes → 1)
+  NG_out ══◀══════╮   │Circle│   ╭═════════════◀══  TL_in (2 lanes → 1)
                   ╰──◀│(cw) │  ╭╯  (NO entry into circle from TL)
                       ╰┬───┬╯ ╭╯  single-lane free left: ALL TL traffic
                  stem ▲│   │▼╭╯   (TL→FL, and TL→NG via U-turn)
@@ -79,17 +79,18 @@ Same conventions as other scenarios: metres, X → right, Y → up (sketch top =
 | Outer radius | ~17 m | |
 | Main road (NG arm) length | 150 m (X: −160 → −10, ring node) | D-9 |
 | Main road (TL arm) length | 150 m (X: +10 → +160, ring node) | D-9 |
-| Main road carriageway | NG: 2 lanes / direction (4-lane road); TL: 3 lanes / direction; 3.2 m | D-2 |
+| Main road carriageway | NG: 2 lanes / direction (4-lane road); TL: 2 lanes / direction (4-lane road); 3.2 m | D-2 |
 | Centre lines | Double solid yellow lines, no raised medians | like the 3-way intersection UI |
 | Stem length | 100 m (Y: −10 → −110) | D-9 |
 | Stem carriageway | 3 lanes / direction, 3.2 m | D-2 |
-| TL free left | 1 lane (TL_in 3 → 1 at X = +45), short quarter-ellipse arc round the circle's south-east side, merges into stem SB lane 0 at Y = −24 (14 m below the ring) | All TL traffic |
+| TL free left | 1 lane (TL_in 2 → 1 at X = +45), short quarter-ellipse arc round the circle's south-east side, merges into stem SB lane 0 at Y = −24 (14 m below the ring) | All TL traffic |
 | Bottom road length | 150 m, FL end → stem junction (X: −150 → 0), Y = −110 | |
 | Bottom road carriageway | 3 lanes / direction | D-2 |
 | U-turn gap | X = −110 m (40 m from FL end, 110 m from stem junction), gap width 12 m | Westbound → eastbound only |
 | Speed limit (main/bottom) | 50 km/h (13.89 m/s) | urban, D-3 |
 | Speed limit (roundabout) | 25 km/h (6.94 m/s) | |
-| Speed limit (free left, U-turn) | 20 km/h (5.56 m/s) | |
+| Speed limit (free left) | 20 km/h (5.56 m/s) | |
+| Speed limit (U-turn connection) | 30 km/h (8.33 m/s) | aggressive U-turn (§5.2.5) |
 
 ---
 
@@ -105,7 +106,7 @@ Same conventions as other scenarios: metres, X → right, Y → up (sketch top =
 | `rb_N` | `priority` | Roundabout north node (shape only, no arm) |
 | `rb_E` | `priority` | Roundabout east node — **exit-only** to TL (no TL entry) |
 | `rb_S` | `priority` | Roundabout south node (stem entry/exit) |
-| `tl_fl` | `priority` | End of TL_in (X = +40): 3 lanes merge into the single free-left lane. **All** TL traffic goes here — no ring entry |
+| `tl_fl` | `priority` | End of TL_in (X = +45): 2 lanes merge into the single free-left lane. **All** TL traffic goes here — no ring entry |
 | `stem_merge` | `priority` | Free left merges into stem SB kerb lane (Y = −24); free left yields |
 | `stem_S` | `priority` | Stem meets bottom road (merge SB, diverge NB) |
 | `uturn_W` | `priority` | U-turn opening (westbound → eastbound) |
@@ -117,9 +118,9 @@ Declare the ring in `<roundabout nodes="rb_W rb_N rb_E rb_S" edges="..."/>` so S
 | :--- | :--- | :--- | :--- |
 | `NG_in` | NG_end → rb_W | 2 | From NG towards roundabout |
 | `NG_out` | rb_W → NG_end | 2 | Roundabout to NG |
-| `TL_in` | TL_end → tl_fl | 3 | From TL (only connects to the free left) |
+| `TL_in` | TL_end → tl_fl | 2 | From TL (only connects to the free left) |
 | ~~`TL_in_b`~~ | — | — | **Does not exist.** No TL entry into the ring |
-| `TL_out` | rb_E → TL_end | 3 | Roundabout to TL |
+| `TL_out` | rb_E → TL_end | 2 | Roundabout to TL |
 | `rb_W_N`, `rb_N_E`, `rb_E_S`, `rb_S_W` | ring | 2 | **Clockwise** ring segments (W→N→E→S→W) |
 | `stem_sb_a` | rb_S → stem_merge | 2 | Ring exit down to the free-left merge |
 | `stem_sb_b` | stem_merge → stem_S | 2 | Stem SB after the merge (ring exit + TL free left) |
@@ -180,7 +181,7 @@ Driver/vehicle behaviour is configured **once for the whole simulation**, not pe
 | :--- | :--- | :--- | :--- |
 | Car-following model | `carFollowModel` | `Krauss` | Consistent with existing scenarios |
 | Lane-change model | `laneChangeModel` | `SL2015` | Required for sub-lane / filtering |
-| Lateral resolution | `--lateral-resolution` (sumocfg) | `0.8` m | Enables two-wheelers to filter between cars |
+| Lateral resolution | `--lateral-resolution` (sumocfg) | `0.8` m | Enables sub-lane filtering / tight lateral spacing |
 | Junction blocking tolerance | `--ignore-junction-blocker` | `10` s | Prevents gridlock in ring |
 | Teleport time | `--time-to-teleport` | `120` s | Clears deadlocks; teleports counted in metrics |
 
@@ -204,12 +205,11 @@ Driver/vehicle behaviour is configured **once for the whole simulation**, not pe
 #### 5.2.3 Vehicle classes & mix (global)
 | vType | Share | Length / Width (m) | Max speed (m/s) | Accel / Decel | Overrides |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| `motorcycle` | 44.44% | 2.0 / 0.8 | 22.0 | 3.5 / 6.0 | `minGap 0.5`, `minGapLat 0.2`, `lcAssertive 3.0`, `vClass motorcycle` |
-| `auto_rickshaw` | 16.67% | 2.6 / 1.4 | 14.0 | 1.8 / 4.0 | `minGap 0.8`, `sigma 0.7` |
-| `car` | 33.33% | 4.3 / 1.7 | 30.0 | 2.6 / 4.5 | — |
-| `van` | 5.56% | 5.0 / 1.9 | 25.0 | 2.0 / 4.2 | — |
+| `auto_rickshaw` | 30% | 2.6 / 1.4 | 14.0 | 1.8 / 4.0 | `minGap 0.8`, `sigma 0.7` |
+| `car` | 60% | 4.3 / 1.7 | 30.0 | 2.6 / 4.5 | — |
+| `van` | 10% | 5.0 / 1.9 | 25.0 | 2.0 / 4.2 | — |
 
-No trucks or buses in this scenario (their former 5% shares are spread proportionally). Shares must sum to 100%. Frontend needs render branches for `motorcycle`, `auto_rickshaw`.
+No motorcycles, trucks or buses in this scenario (motorcycles were removed; their share was spread proportionally). Shares must sum to 100%. Frontend needs a render branch for `auto_rickshaw`. (`motorcycle` remains defined in `BUILTIN_VTYPES` and can be re-enabled by adding a `<vtype>` to `scenario.xml`.)
 
 #### 5.2.4 `scenario.xml` shape (normative)
 ```xml
@@ -240,10 +240,9 @@ No trucks or buses in this scenario (their former 5% shares are spread proportio
     <param key="jmTimegapMinor" value="0.5"/>
   </behaviour>
   <vehicleMix>
-    <vtype id="motorcycle" share="0.4444" minGap="0.5" minGapLat="0.2" lcAssertive="3.0"/>
-    <vtype id="auto_rickshaw" share="0.1667" minGap="0.8" sigma="0.7"/>
-    <vtype id="car" share="0.3333"/>
-    <vtype id="van" share="0.0556"/>
+    <vtype id="auto_rickshaw" share="0.30" minGap="0.8" sigma="0.7"/>
+    <vtype id="car" share="0.60"/>
+    <vtype id="van" share="0.10"/>
   </vehicleMix>
 </scenario>
 ```
@@ -252,6 +251,22 @@ Rules for the loader (`settings_loader.py`):
 - `<behaviour>` params are passed through as vType attributes verbatim (any valid SUMO vType attribute is allowed) — the loader must not hard-code a whitelist beyond basic name validation.
 - Generated `gnt_circle.rou.xml` contains the resolved vTypes, the `vTypeDistribution`, and one `<flow>` per non-zero OD key.
 - Invalid values (shares ≠ 1.0 ± 0.01, negative veh/h, unknown OD key) → fail scenario load with a clear error.
+
+#### 5.2.5 Aggressive TL-origin behaviour (free-left merge + median U-turn)
+Vehicles from TL (flows `TL_FL`, `TL_NG`, `TL_TL`) force their way through two conflict points: the free-left merge into the stem SB kerb lane at `stem_merge`, and (TL→NG only) the median U-turn at `uturn_W` heading towards FL. This is **not** in `scenario.xml` — it is applied per vehicle on departure by `GntCircleScenario._make_aggressive()` in `backend/app/scenarios/gnt_circle.py` (`on_step`, for OD keys starting `TL_`).
+
+| Knob | Where | Current value | Effect |
+| :--- | :--- | :--- | :--- |
+| `impatience` | `AGGRESSIVE_IMPATIENCE` → `setImpatience` | `1.0` | Maximum willingness to push into gaps |
+| `minGap` | `AGGRESSIVE_MIN_GAP` → `setMinGap` | `0.3` m | Tiny bumper-to-bumper gap |
+| `tau` | `AGGRESSIVE_TAU` → `setTau` | `0.3` s | Tiny following headway |
+| Right-of-way bypass | `FORCE_EDGES`, `SPEED_MODE_FORCE` → `setSpeedMode` | `{TL_free_left, bot_wb_b}`, mode `23` | While on these edges the vehicle ignores right-of-way at the junction ahead (merge / U-turn), so it never queues for a gap; reset to `31` afterwards |
+| Connection `pass` | `gnt_circle.con.xml` | `true` on `TL_free_left→stem_sb_b` and the U-turn | Vehicles may enter the junction even if foes occupy it |
+| U-turn connection `speed` | `gnt_circle.con.xml` (`bot_wb_b`→`bot_eb`) | `8.33` m/s (30 km/h) | Speed through the U-turn (was 5.56) |
+
+Note: SUMO rejects `junctionModel.*` via `traci.vehicle.setParameter`, and per-OD vType ids would break frontend rendering (type id drives colour/shape), hence the speed-mode approach.
+
+Tuning: lower `minGap`/`tau` or add edges to `FORCE_EDGES` for more forcing; set `SPEED_MODE_FORCE = 31` to restore polite yielding. Forced vehicles can overlap foes — watch collisions and `teleports` in junction metrics. Changing `.con.xml` requires re-running `python backend/sumo_config/build_network.py`; changing `gnt_circle.py` needs a backend restart (the backend does not hot-reload).
 
 ---
 
@@ -274,7 +289,7 @@ Rules for the loader (`settings_loader.py`):
 - `traffic_light` field in state message → `null` for this scenario.
 - Compact vehicle tuple `direction` field → use OD key, e.g. `"NG_TL"`.
 - `scenario.xml` (§5.2.4) holds per-OD veh/h, global behaviour params, vehicle mix, max sim time (default 600 s).
-- Add `motorcycle`, `auto_rickshaw` to allowed vehicle types in `schemas.py` / `types/simulation.ts`.
+- Add `auto_rickshaw` (and optionally `motorcycle`) to allowed vehicle types in `schemas.py` / `types/simulation.ts`.
 
 ## 8. Frontend Requirements
 
@@ -315,7 +330,7 @@ Rules for the loader (`settings_loader.py`):
 - [ ] `test_ws.py` passes for `gnt_circle` (start/pause/stop, vehicles appear from all three arms).
 - [ ] Each of the 6 OD keys produces vehicles only on its own route; setting a key to `0` removes that flow.
 - [ ] Generated vTypes reflect `<behaviour>` params and per-vtype overrides with the precedence in §5.2.4.
-- [ ] Motorcycles visibly filter between cars (sub-lane model active).
+- [ ] Vehicles use sub-lane spacing (sub-lane model active); no motorcycles are spawned.
 
 ---
 
@@ -324,10 +339,10 @@ Rules for the loader (`settings_loader.py`):
 | # | Topic | Decision |
 | :--- | :--- | :--- |
 | D-1 | Lanes on roundabout ring | 2 |
-| D-2 | Lanes per direction: NG main / TL main / stem / bottom | 2 / 3 / 3 / 3 |
-| D-3 | Speed limits | 50 km/h roads, 25 km/h ring, 20 km/h free left & U-turn |
+| D-2 | Lanes per direction: NG main / TL main / stem / bottom | 2 / 2 / 3 / 3 |
+| D-3 | Speed limits | 50 km/h roads, 25 km/h ring, 20 km/h free left, 30 km/h U-turn connection |
 | D-4 | `FL_in` traffic | Carries FL origin traffic **and** TL→NG U-turn traffic |
-| D-5 | Vehicle types | Indian mix: motorcycle, auto_rickshaw, car, van — no trucks or buses (§5.2.3) |
+| D-5 | Vehicle types | Mix: auto_rickshaw, car, van — no motorcycles, trucks or buses (§5.2.3) |
 | D-6 | Merge priority at `stem_merge` | TL free left yields to ring-exit stem SB traffic; joins the kerb lane |
 | D-7 | NG → TL | All via ring northern arc, no bypass |
 | D-8 | Mid-left "To Nallagandla" road | Is `NG_out` (left exit from stem at `rb_W`) |

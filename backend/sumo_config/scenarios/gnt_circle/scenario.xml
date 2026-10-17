@@ -34,10 +34,9 @@
     </behaviour>
 
     <vehicleMix>
-        <!-- No trucks or buses in this scenario; their shares are spread proportionally -->
-        <vtype id="motorcycle" share="0.4444" minGap="0.5" minGapLat="0.2" lcAssertive="3.0"/>
-        <vtype id="auto_rickshaw" share="0.1667" minGap="0.8" sigma="0.7"/>
-        <vtype id="car" share="0.3333"/>
-        <vtype id="van" share="0.0556"/>
+        <!-- No motorcycles, trucks or buses in this scenario; shares spread proportionally -->
+        <vtype id="auto_rickshaw" share="0.30" minGap="0.8" sigma="0.7"/>
+        <vtype id="car" share="0.60"/>
+        <vtype id="van" share="0.10"/>
     </vehicleMix>
 </scenario>

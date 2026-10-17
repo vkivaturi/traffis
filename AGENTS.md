@@ -171,6 +171,16 @@ Defined in [`backend/sumo_config/road.rou.xml`](file:///Users/vijay/Projects/tra
   $$\text{screenX} = (\text{worldX} - \text{camera.x}) \times \text{camera.zoom} + \frac{\text{canvasWidth}}{2}$$
   $$\text{screenY} = (\text{worldY} - \text{camera.y}) \times \text{camera.zoom} + \frac{\text{canvasHeight}}{2}$$
 
+### 5.4 GNT Circle Driver Behaviour & Aggression Tuning
+Full details: [`SPEC.md` §5.2.5](file:///Users/vijay/Projects/traffis/backend/sumo_config/scenarios/gnt_circle/SPEC.md). Expect this to be fine-tuned further — these are the knobs:
+
+- **Vehicle mix** (no motorcycles): `auto_rickshaw` 30% / `car` 60% / `van` 10%, in [`scenario.xml`](file:///Users/vijay/Projects/traffis/backend/sumo_config/scenarios/gnt_circle/scenario.xml) `<vehicleMix>`. Shares must sum to 1.0. `motorcycle` is still defined in `BUILTIN_VTYPES` (`gnt_circle.py`) if it needs re-enabling.
+- **Global behaviour** (all vehicles): `<behaviour>` params in `scenario.xml` (`impatience`, `jmIgnoreFoeProb`, `jmTimegapMinor`, `lc*`, ...). Re-read on every reset.
+- **Extra aggression for TL-origin vehicles** (`TL_FL`, `TL_NG`, `TL_TL`) at the TL free-left merge into the stem SB lane and the TL→NG median U-turn towards FL. Applied per vehicle in [`GntCircleScenario._make_aggressive()`](file:///Users/vijay/Projects/traffis/backend/app/scenarios/gnt_circle.py) on departure (`AGGRESSIVE_IMPATIENCE=1.0`, `AGGRESSIVE_MIN_GAP=0.3` m, `AGGRESSIVE_TAU=0.3` s) and by `_update_force_mode()` each step, which sets SUMO speed mode `23` (ignore right-of-way) only while the vehicle is on `FORCE_EDGES` (`TL_free_left`, `bot_wb_b`) and restores `31` afterwards. Backend restart is required (no hot reload).
+- **Connection settings** in [`gnt_circle.con.xml`](file:///Users/vijay/Projects/traffis/backend/sumo_config/scenarios/gnt_circle/gnt_circle.con.xml): `pass="true"` on `TL_free_left → stem_sb_b` and the U-turn, and U-turn `speed="8.33"` (30 km/h) on `bot_wb_b → bot_eb`. Re-run `python backend/sumo_config/build_network.py` after editing.
+- **Gotchas**: `junctionModel.*` keys are rejected by `traci.vehicle.setParameter` (not usable per vehicle), and giving TL flows their own vType ids would break frontend rendering (type id drives colour/shape).
+- **Tuning tips**: lower `AGGRESSIVE_MIN_GAP`/`TAU` or extend `FORCE_EDGES` for more forcing; set `SPEED_MODE_FORCE = 31` to make vehicles yield again. Watch `teleports` and collisions in the junction metrics panel — forced vehicles can overlap foes.
+
 ---
 
 ## 6. Communication Protocols & APIs

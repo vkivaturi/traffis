@@ -17,7 +17,7 @@
     <node id="rb_E" x="10.0"  y="0.0"   type="priority"/>
     <node id="rb_S" x="0.0"   y="-10.0" type="priority"/>
 
-    <!-- TL free left at the roundabout: 3 -> 1 lane, merges into stem SB kerb lane -->
+    <!-- TL free left at the roundabout: 2 -> 1 lane, merges into stem SB kerb lane -->
     <node id="tl_fl"      x="45.0" y="0.0"   type="priority"/>
     <node id="stem_merge" x="0.0"  y="-24.0" type="priority"/>
 

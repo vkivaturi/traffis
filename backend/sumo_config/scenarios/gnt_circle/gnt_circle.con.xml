@@ -8,16 +8,15 @@
     * the only U-turn is bot_wb_b (median lane) -> bot_eb at uturn_W
 -->
 <connections xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/connections_file.xsd">
-    <!-- tl_fl: TL's 3 lanes merge into the single free-left lane -->
+    <!-- tl_fl: TL's 2 lanes merge into the single free-left lane -->
     <connection from="TL_in" to="TL_free_left" fromLane="0" toLane="0"/>
     <connection from="TL_in" to="TL_free_left" fromLane="1" toLane="0"/>
-    <connection from="TL_in" to="TL_free_left" fromLane="2" toLane="0"/>
 
     <!-- stem_merge: free left joins the stem SB kerb (left-most) lane, yielding to ring exit traffic (D-6) -->
     <connection from="stem_sb_a"    to="stem_sb_b" fromLane="0" toLane="0"/>
     <connection from="stem_sb_a"    to="stem_sb_b" fromLane="1" toLane="1"/>
     <connection from="stem_sb_a"    to="stem_sb_b" fromLane="2" toLane="2"/>
-    <connection from="TL_free_left" to="stem_sb_b" fromLane="0" toLane="0" pass="false"/>
+    <connection from="TL_free_left" to="stem_sb_b" fromLane="0" toLane="0" pass="true"/>
 
     <!-- stem_S: stem SB turns right (west) onto the bottom road -->
     <connection from="stem_sb_b" to="bot_wb_b" fromLane="0" toLane="0"/>
@@ -47,8 +46,7 @@
     <connection from="NG_in" to="rb_W_N" fromLane="1" toLane="1"/>
 
     <connection from="rb_N_E" to="TL_out" fromLane="0" toLane="0"/>
-    <connection from="rb_N_E" to="TL_out" fromLane="0" toLane="1"/>
-    <connection from="rb_N_E" to="TL_out" fromLane="1" toLane="2"/>
+    <connection from="rb_N_E" to="TL_out" fromLane="1" toLane="1"/>
     <connection from="rb_N_E" to="rb_E_S" fromLane="0" toLane="0"/>
     <connection from="rb_N_E" to="rb_E_S" fromLane="1" toLane="1"/>
 
@@ -63,6 +61,6 @@
     <connection from="rb_S_W" to="rb_W_N" fromLane="0" toLane="0"/>
     <connection from="rb_S_W" to="rb_W_N" fromLane="1" toLane="1"/>
 
-    <!-- uturn_W: median U-turn (westbound -> eastbound), 20 km/h, yields to FL_in -->
-    <connection from="bot_wb_b" to="bot_eb" fromLane="2" toLane="2" speed="5.56" pass="false"/>
+    <!-- uturn_W: aggressive median U-turn (westbound -> eastbound), 30 km/h, yields to FL_in -->
+    <connection from="bot_wb_b" to="bot_eb" fromLane="2" toLane="2" speed="8.33" pass="true"/>
 </connections>
