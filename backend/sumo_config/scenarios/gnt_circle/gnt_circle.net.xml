@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<!-- generated on 2026-10-17T21:15:38.809225+05:30 by Eclipse SUMO netconvert 1.27.1
+<!-- generated on 2026-10-17T21:32:27.851671+05:30 by Eclipse SUMO netconvert 1.27.1
 <netconvertConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/netconvertConfiguration.xsd">
 
     <input>
@@ -235,8 +235,8 @@
         <request index="1" response="000000" foes="110100" cont="0"/>
         <request index="2" response="000010" foes="000010" cont="1"/>
         <request index="3" response="000000" foes="100000" cont="0"/>
-        <request index="4" response="000010" foes="000010" cont="0"/>
-        <request index="5" response="001010" foes="001010" cont="0"/>
+        <request index="4" response="000000" foes="000010" cont="0"/>
+        <request index="5" response="000000" foes="001010" cont="0"/>
     </junction>
     <junction id="stem_S" type="priority" x="0.00" y="-80.00" incLanes="stem_sb_b_0 stem_sb_b_1 stem_sb_b_2 bot_eb_0 bot_eb_1 bot_eb_2" intLanes=":stem_S_0_0 :stem_S_0_1 :stem_S_0_2 :stem_S_3_0 :stem_S_3_1 :stem_S_3_2" shape="9.60,-79.58 -9.60,-79.58 9.53,-81.27 9.58,-80.64 9.59,-80.42 9.60,-80.20 9.60,-79.94">
         <request index="0" response="000000" foes="000000" cont="0"/>
@@ -274,8 +274,8 @@
     <connection from="FL_in" to="bot_eb" fromLane="0" toLane="0" via=":uturn_W_4_0" dir="s" state="M"/>
     <connection from="FL_in" to="bot_eb" fromLane="1" toLane="1" via=":uturn_W_4_1" dir="s" state="M"/>
     <connection from="FL_in" to="bot_eb" fromLane="2" toLane="2" via=":uturn_W_4_2" dir="s" state="M"/>
-    <connection from="NG_in" to="rb_W_N" fromLane="0" toLane="0" via=":rb_W_4_0" dir="l" state="m" visibility="9.00"/>
-    <connection from="NG_in" to="rb_W_N" fromLane="1" toLane="1" via=":rb_W_4_1" dir="l" state="m" visibility="9.00"/>
+    <connection from="NG_in" to="rb_W_N" fromLane="0" toLane="0" pass="1" via=":rb_W_4_0" dir="l" state="M"/>
+    <connection from="NG_in" to="rb_W_N" fromLane="1" toLane="1" pass="1" via=":rb_W_4_1" dir="l" state="M"/>
     <connection from="TL_free_left" to="stem_sb_b" fromLane="0" toLane="0" pass="1" via=":stem_merge_0_0" dir="s" state="M"/>
     <connection from="TL_in" to="TL_free_left" fromLane="0" toLane="0" via=":tl_fl_0_0" dir="s" state="m"/>
     <connection from="TL_in" to="TL_free_left" fromLane="1" toLane="0" keepClear="0" via=":tl_fl_0_1" dir="s" state="M"/>

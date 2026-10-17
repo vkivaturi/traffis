@@ -6,7 +6,7 @@
   behaviour   : global (simulation-level) SUMO vType attributes applied to ALL vehicle types.
   vehicleMix  : shares (must sum to 1.0) + optional per-vtype attribute overrides.
 -->
-<scenario id="gnt_circle" maxSimTime="600">
+<scenario id="gnt_circle" maxSimTime="300">
     <demand>
         <od key="NG_TL" vehsPerHour="500"/>
         <od key="NG_FL" vehsPerHour="3500"/>

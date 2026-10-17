@@ -82,15 +82,16 @@ ENTRY_QUEUES = [
 ]
 QUEUE_ZONE_M = 100.0
 
-# Per-vehicle settings for TL-origin traffic (free-left merge + median U-turn).
+# Per-vehicle settings for aggressive traffic: TL-origin (free-left merge + U-turn)
+# and NG-origin (joining GNT Circle roundabout without yielding right-of-way).
 # NOTE: SUMO rejects `junctionModel.*` via traci.vehicle.setParameter, and per-OD vType ids
 # would break frontend rendering, so aggression uses supported per-vehicle TraCI calls instead.
 AGGRESSIVE_IMPATIENCE = 1.0
-AGGRESSIVE_MIN_GAP = 0.3   # m  - tiny bumper gaps so TL vehicles squeeze into any opening
+AGGRESSIVE_MIN_GAP = 0.3   # m  - tiny bumper gaps so aggressive vehicles squeeze into any opening
 AGGRESSIVE_TAU = 0.3       # s  - tiny following headway
-# While on these edges TL-origin vehicles disregard right-of-way at the junction ahead
-# (merge at stem_merge, U-turn at uturn_W). SUMO speed mode 23 = default 31 minus bit 3.
-FORCE_EDGES = {"TL_free_left", "bot_wb_b"}
+# While on these edges vehicles disregard right-of-way at the junction ahead
+# (NG entry at rb_W, merge at stem_merge, U-turn at uturn_W). SUMO speed mode 23 = default 31 minus bit 3.
+FORCE_EDGES = {"TL_free_left", "bot_wb_b", "NG_in"}
 SPEED_MODE_DEFAULT = 31
 SPEED_MODE_FORCE = 23
 
@@ -383,7 +384,7 @@ class GntCircleScenario(BaseScenario):
             if key:
                 self.inflow[key[:2]] += 1
                 self.depart_time[vid] = now
-                if key.startswith("TL_"):
+                if key.startswith(("TL_", "NG_")):
                     self._make_aggressive(vid)
         for vid in traci.simulation.getArrivedIDList():
             key = _od_key(vid)
@@ -408,8 +409,7 @@ class GntCircleScenario(BaseScenario):
         self._update_force_mode()
 
     def _make_aggressive(self, vid: str) -> None:
-        """TL-origin vehicles force the free-left merge into the stem and the median U-turn:
-        accept tiny gaps, ignore foes, and never wait politely."""
+        """TL and NG vehicles join aggressively: accept tiny gaps, ignore foes, and never wait politely."""
         try:
             traci.vehicle.setImpatience(vid, AGGRESSIVE_IMPATIENCE)
             traci.vehicle.setMinGap(vid, AGGRESSIVE_MIN_GAP)
