@@ -2,14 +2,14 @@ export interface Vehicle {
   id: string;
   x: number;            // longitudinal position in meters
   y: number;            // lateral position in meters
-  direction?: 'east' | 'west' | 'north' | 'south'; // Travel direction
+  direction?: string;   // Travel direction ('east' | 'west' | 'north' | 'south') or O-D key (e.g. 'TL_NG')
   lane_index: number;   // 0: Right (Slow), 1: Left (Fast)
   lane_id: string;
   speed: number;        // m/s
   speed_kmh: number;    // km/h
   acceleration: number; // m/s^2
   angle: number;        // heading angle in degrees (90 = East, 270 = West, 180 = South, 0/360 = North)
-  type: string;         // 'car' | 'sports' | 'truck' | 'van'
+  type: string;         // 'car' | 'sports' | 'truck' | 'van' | 'motorcycle' | 'auto_rickshaw' | 'bus'
   color: string;        // Hex color
   length: number;       // meters
   width: number;        // meters
@@ -65,6 +65,7 @@ export interface SimulationState {
   compact_vehicles?: (string | number | null)[][];
   stats: SimulationStats;
   traffic_light?: TrafficLightData;
+  junction_metrics?: JunctionMetrics;
   default_speed_kmh?: number;
   max_sim_time?: number;
   time_limit_reached?: boolean;
@@ -128,6 +129,86 @@ export interface NetworkInfo {
   traffic_light_y?: number;
   lanes: LaneInfo[];
   arms?: RoadArmInfo[];
+  geometry?: NetworkGeometry;
+}
+
+export type Point = [number, number];
+
+export interface LaneShape {
+  id: string;
+  edge: string;
+  index: number;       // left-hand traffic: 0 = kerb side, highest = median side
+  width: number;
+  speed_limit_kmh: number;
+  shape: Point[];      // polyline in world metres, in driving direction
+}
+
+export interface JunctionShape {
+  id: string;
+  shape: Point[];
+}
+
+export interface MedianShape {
+  id: string;
+  width: number;
+  shape: Point[];
+}
+
+export interface ArmLabel {
+  id: string;          // 'NG' | 'TL' | 'FL'
+  name: string;        // full name, shown on hover
+  x: number;
+  y: number;
+  description?: string;
+}
+
+export interface RoundaboutInfo {
+  x: number;
+  y: number;
+  island_radius: number;
+  outer_radius: number;
+}
+
+export interface NetworkGeometry {
+  lanes: LaneShape[];
+  connectors?: LaneShape[]; // internal junction lanes (turn paths), asphalt only
+  junctions: JunctionShape[];
+  paved_areas?: JunctionShape[]; // extra asphalt polygons (e.g. median U-turn opening)
+  medians: MedianShape[];
+  labels: ArmLabel[];
+  roundabout?: RoundaboutInfo | null;
+  yield_lanes: string[];
+  bounds: { min_x: number; max_x: number; min_y: number; max_y: number };
+}
+
+export interface ArmFlowMetrics {
+  id: string;
+  name: string;
+  inflow: number;
+  outflow: number;
+  avg_delay_s?: number | null;
+}
+
+export interface ODMetrics {
+  key: string;
+  configured_vph: number;
+  arrived: number;
+  throughput_vph: number;
+}
+
+export interface EntryQueue {
+  id: string;
+  label: string;
+  halting: number;
+}
+
+export interface JunctionMetrics {
+  arms: ArmFlowMetrics[];
+  od: ODMetrics[];
+  entry_queues: EntryQueue[];
+  roundabout_occupancy: number;
+  uturn_count: number;
+  teleports: number;
 }
 
 export interface CameraState {

@@ -2,7 +2,7 @@ import logging
 import random
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 import traci
 
 from ..schemas import (
@@ -11,6 +11,7 @@ from ..schemas import (
     SpawnRequest,
     TrafficLightState,
     SignalGroupTiming,
+    JunctionMetrics,
 )
 from .settings_loader import ScenarioSettings, load_scenario_settings
 
@@ -38,6 +39,10 @@ class BaseScenario(ABC):
     tl_id: str
     tl_x: float = 0.0
     tl_y: float = 0.0
+    # Demand comes from <flow>s in the scenario's .rou.xml instead of TraCI auto-spawning
+    demand_from_route_file: bool = False
+    # Overwrite every lane's speed limit with scenario.xml defaultSpeedKmh on start
+    apply_default_speed_limit: bool = True
 
     def __init__(self, sumocfg_file: str):
         self.sumocfg_file = sumocfg_file
@@ -72,6 +77,22 @@ class BaseScenario(ABC):
     def enrich_vehicle_direction(self, lane_id: str, angle: float, x: float, y: float) -> str:
         """Infer cardinal travel direction ('east', 'west', 'north', 'south') for vehicle."""
         pass
+
+    def get_vehicle_direction(self, veh_id: str, lane_id: str, angle: float, x: float, y: float) -> str:
+        """Direction field of the compact vehicle tuple. Override to use e.g. O-D keys."""
+        return self.enrich_vehicle_direction(lane_id, angle, x, y)
+
+    def extra_sumo_args(self) -> List[str]:
+        """Additional SUMO command-line options (e.g. --lateral-resolution)."""
+        return []
+
+    def on_step(self) -> None:
+        """Called after every traci.simulationStep() (while holding the TraCI lock)."""
+        pass
+
+    def get_junction_metrics(self) -> Optional[JunctionMetrics]:
+        """Scenario-specific metrics included in each state broadcast."""
+        return None
 
     def get_origin_ids(self) -> List[str]:
         return [o.id for o in self.get_metadata().spawn_origins]
@@ -118,7 +139,7 @@ class BaseScenario(ABC):
             self.current_phase_idx = (self.current_phase_idx + 1) % len(phases)
             self.apply_traffic_light_state()
 
-    def get_traffic_light_data(self) -> TrafficLightState:
+    def get_traffic_light_data(self) -> Optional[TrafficLightState]:
         phases = self.settings.phases
         if not phases:
             return TrafficLightState(id=getattr(self, "tl_id", ""), x=self.tl_x, y=self.tl_y)

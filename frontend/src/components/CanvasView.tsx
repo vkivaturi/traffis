@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useState } from 'react';
-import type { Vehicle, CameraState, TrafficLightData, ScenarioMetadata } from '../types/simulation';
+import type { Vehicle, CameraState, TrafficLightData, ScenarioMetadata, NetworkInfo } from '../types/simulation';
 import { ZoomIn, ZoomOut, Maximize2, Crosshair } from 'lucide-react';
+import { renderGeometryNetwork, type LabelHitRect } from '../utils/geometryRenderer';
 
 interface CanvasViewProps {
   vehicles: Vehicle[];
@@ -11,6 +12,7 @@ interface CanvasViewProps {
   onViewportMetersChange: (meters: number) => void;
   trafficLight?: TrafficLightData;
   scenario?: ScenarioMetadata | null;
+  networkInfo?: NetworkInfo | null;
 }
 
 interface InterpolatedVehicle {
@@ -22,7 +24,8 @@ interface InterpolatedVehicle {
   speed_kmh: number;
   acceleration: number;
   angle: number;
-  direction?: 'east' | 'west' | 'north' | 'south';
+  currentAngle: number;
+  direction?: string;
   type: string;
   color: string;
   length: number;
@@ -1129,6 +1132,112 @@ const renderFourWayIntersection = (
   ctx.textBaseline = 'alphabetic';
 };
 
+// Fit the full curved network, leaving room for the junction metrics panel on the left
+const GEOMETRY_LEFT_INSET_PX = 330;
+const fitGeometryCamera = (w: number, h: number, b: { min_x: number; max_x: number; min_y: number; max_y: number }) => {
+  const usableW = Math.max(200, w - GEOMETRY_LEFT_INSET_PX - 40);
+  const zoom = Math.max(0.5, Math.min(usableW / (b.max_x - b.min_x), (h - 120) / (b.max_y - b.min_y)));
+  return {
+    x: (b.min_x + b.max_x) / 2 - GEOMETRY_LEFT_INSET_PX / 2 / zoom,
+    y: (b.min_y + b.max_y) / 2,
+    zoom,
+    followingId: null,
+  };
+};
+
+// ----------------------------------------------------
+// INDIAN MIXED-TRAFFIC VEHICLE SHAPES (local frame: +X = forward, centred)
+// ----------------------------------------------------
+const drawMotorcycle = (ctx: CanvasRenderingContext2D, L: number, W: number, color: string, detailed: boolean) => {
+  // Wheels
+  ctx.fillStyle = '#0b0f17';
+  ctx.beginPath();
+  ctx.roundRect(L * 0.22, -W * 0.14, L * 0.28, W * 0.28, W * 0.12);
+  ctx.roundRect(-L * 0.5, -W * 0.14, L * 0.28, W * 0.28, W * 0.12);
+  ctx.fill();
+  // Body / tank
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.roundRect(-L * 0.3, -W * 0.3, L * 0.62, W * 0.6, W * 0.25);
+  ctx.fill();
+  // Handlebar
+  ctx.strokeStyle = '#cbd5e1';
+  ctx.lineWidth = Math.max(1, W * 0.08);
+  ctx.beginPath();
+  ctx.moveTo(L * 0.2, -W * 0.5);
+  ctx.lineTo(L * 0.2, W * 0.5);
+  ctx.stroke();
+  // Rider helmet
+  ctx.fillStyle = '#1f2937';
+  ctx.beginPath();
+  ctx.arc(-L * 0.04, 0, W * 0.38, 0, Math.PI * 2);
+  ctx.fill();
+  if (detailed) {
+    ctx.fillStyle = 'rgba(255,255,255,0.35)';
+    ctx.beginPath();
+    ctx.arc(L * 0.02, -W * 0.1, W * 0.12, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#fef08a';
+    ctx.fillRect(L * 0.46, -W * 0.08, Math.max(1, L * 0.04), W * 0.16);
+  }
+};
+
+const drawAutoRickshaw = (ctx: CanvasRenderingContext2D, L: number, W: number, color: string, detailed: boolean) => {
+  // Body with rounded nose (single front wheel)
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.moveTo(-L / 2, -W / 2);
+  ctx.lineTo(L * 0.12, -W / 2);
+  ctx.quadraticCurveTo(L / 2, -W * 0.4, L / 2, 0);
+  ctx.quadraticCurveTo(L / 2, W * 0.4, L * 0.12, W / 2);
+  ctx.lineTo(-L / 2, W / 2);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  // Black canopy over cabin
+  ctx.fillStyle = '#111827';
+  ctx.beginPath();
+  ctx.roundRect(-L * 0.46, -W * 0.44, L * 0.66, W * 0.88, W * 0.18);
+  ctx.fill();
+  // Green trim stripe (classic Hyderabad auto)
+  ctx.fillStyle = '#16a34a';
+  ctx.fillRect(-L * 0.46, -W * 0.06, L * 0.66, W * 0.12);
+  if (detailed) {
+    ctx.fillStyle = '#fef08a';
+    ctx.fillRect(L / 2 - 2, -W * 0.08, 2, W * 0.16);
+  }
+};
+
+const drawBus = (ctx: CanvasRenderingContext2D, L: number, W: number, color: string, detailed: boolean) => {
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.roundRect(-L / 2, -W / 2, L, W, Math.min(4, W * 0.2));
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  // Roof AC unit
+  ctx.fillStyle = 'rgba(255,255,255,0.18)';
+  ctx.beginPath();
+  ctx.roundRect(-L * 0.18, -W * 0.28, L * 0.3, W * 0.56, 2);
+  ctx.fill();
+  if (detailed) {
+    // Side windows
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.75)';
+    const n = 6;
+    const ww = (L * 0.72) / n;
+    for (let i = 0; i < n; i++) {
+      const x = -L * 0.42 + i * ww;
+      ctx.fillRect(x, -W / 2 + 1, ww * 0.75, W * 0.14);
+      ctx.fillRect(x, W / 2 - 1 - W * 0.14, ww * 0.75, W * 0.14);
+    }
+    // Windscreen
+    ctx.fillRect(L / 2 - L * 0.06, -W * 0.4, L * 0.04, W * 0.8);
+  }
+};
+
 export const CanvasView: React.FC<CanvasViewProps> = ({
   vehicles,
   camera,
@@ -1138,11 +1247,19 @@ export const CanvasView: React.FC<CanvasViewProps> = ({
   onViewportMetersChange,
   trafficLight,
   scenario,
+  networkInfo,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
 
   const isIntersection = scenario?.type === 'intersection' || scenario?.id === 'three_way_intersection';
+  // Curved-geometry scenarios (e.g. GNT Circle) render lane polylines from network info
+  const geometry =
+    networkInfo?.geometry && networkInfo.scenario?.id === scenario?.id ? networkInfo.geometry : null;
+  const isGeometry = !!geometry;
+
+  const labelRectsRef = useRef<LabelHitRect[]>([]);
+  const [hoveredLabel, setHoveredLabel] = useState<{ id: string; x: number; y: number; alignRight: boolean } | null>(null);
 
   const [isDragging, setIsDragging] = useState(false);
   const dragStartRef = useRef<{ mouseX: number; mouseY: number; camX: number; camY: number }>({
@@ -1172,6 +1289,9 @@ export const CanvasView: React.FC<CanvasViewProps> = ({
         existing.acceleration = v.acceleration;
         existing.angle = v.angle;
         existing.direction = dir;
+        existing.type = v.type;
+        existing.length = v.length;
+        existing.width = v.width;
         existing.color = v.color;
         existing.lane_index = v.lane_index;
         existing.leader_id = v.leader_id;
@@ -1186,6 +1306,7 @@ export const CanvasView: React.FC<CanvasViewProps> = ({
           speed_kmh: v.speed_kmh,
           acceleration: v.acceleration,
           angle: v.angle,
+          currentAngle: v.angle,
           direction: dir,
           type: v.type,
           color: v.color,
@@ -1205,6 +1326,13 @@ export const CanvasView: React.FC<CanvasViewProps> = ({
       }
     }
   }, [vehicles]);
+
+  // Auto-fit the whole network when a curved-geometry scenario loads
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!geometry || !container) return;
+    setCamera(fitGeometryCamera(container.clientWidth, container.clientHeight, geometry.bounds));
+  }, [geometry, setCamera]);
 
   // Handle follow mode
   useEffect(() => {
@@ -1304,7 +1432,11 @@ export const CanvasView: React.FC<CanvasViewProps> = ({
       }
 
       // 2. Render Road Network according to active scenario
-      if (scenario?.id === 'four_way_intersection') {
+      if (geometry) {
+        labelRectsRef.current = renderGeometryNetwork(
+          ctx, worldToScreenX, worldToScreenY, zoom, geometry, hoveredLabel?.id ?? null
+        );
+      } else if (scenario?.id === 'four_way_intersection') {
         renderFourWayIntersection(ctx, worldToScreenX, worldToScreenY, zoom, trafficLight);
       } else if (isIntersection || scenario?.id === 'three_way_intersection') {
         renderThreeWayIntersection(ctx, worldToScreenX, worldToScreenY, zoom, trafficLight);
@@ -1312,21 +1444,54 @@ export const CanvasView: React.FC<CanvasViewProps> = ({
         renderStraightHighway(ctx, worldToScreenX, worldToScreenY, zoom, width, trafficLight);
       }
 
+      // Selection ring + telemetry badge (drawn unrotated, at the vehicle origin)
+      const drawOverlay = (vid: string, vWidPx: number, vLenPx: number, speedKmh: number) => {
+        if (vid === selectedVehicleId) {
+          ctx.strokeStyle = '#38bdf8';
+          ctx.lineWidth = 2;
+          ctx.setLineDash([4, 3]);
+          ctx.beginPath();
+          ctx.arc(0, 0, Math.max(vLenPx, vWidPx) * 0.75 + 4, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.setLineDash([]);
+        }
+
+        if (zoom > 4 || vid === selectedVehicleId) {
+          const badgeY = -vWidPx - 10;
+          ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+          ctx.beginPath();
+          ctx.roundRect(-30, badgeY - 14, 60, 16, 4);
+          ctx.fill();
+          ctx.strokeStyle = vid === selectedVehicleId ? '#38bdf8' : 'rgba(255,255,255,0.15)';
+          ctx.lineWidth = 1;
+          ctx.stroke();
+
+          ctx.fillStyle = '#ffffff';
+          ctx.font = '700 9px JetBrains Mono, monospace';
+          ctx.textAlign = 'center';
+          ctx.fillText(`${speedKmh.toFixed(0)} km/h`, 0, badgeY - 3);
+        }
+      };
+
       // 3. Render Vehicles with smooth 60 FPS lerping & rich styling
       const interpMap = interpVehiclesRef.current;
       interpMap.forEach((v, vid) => {
         const lerpFactor = Math.min(1.0, dt * 15);
         v.currentX += (v.targetX - v.currentX) * lerpFactor;
         v.currentY += (v.targetY - v.currentY) * lerpFactor;
+        // Shortest-arc heading interpolation (smooth turning on the ring / curves)
+        const dAng = ((((v.angle - v.currentAngle) % 360) + 540) % 360) - 180;
+        v.currentAngle += dAng * lerpFactor;
 
         const vx = worldToScreenX(v.currentX);
         const vy = worldToScreenY(v.currentY);
 
         if (vx < -120 || vx > width + 120 || vy < -120 || vy > height + 120) return;
 
-        const vLenPx = Math.max(12, v.length * zoom);
-        const vWidPx = Math.max(6, v.width * zoom);
-        const headingRad = (v.angle - 90) * (Math.PI / 180);
+        // True-scale on the geometry view so motorcycles vs buses read correctly when zoomed out
+        const vLenPx = Math.max(isGeometry ? 3 : 12, v.length * zoom);
+        const vWidPx = Math.max(isGeometry ? 1.5 : 6, v.width * zoom);
+        const headingRad = (v.currentAngle - 90) * (Math.PI / 180);
 
         ctx.save();
         ctx.translate(vx, vy);
@@ -1371,8 +1536,22 @@ export const CanvasView: React.FC<CanvasViewProps> = ({
         // Drop shadow
         ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
         ctx.beginPath();
-        ctx.roundRect(-vLenPx / 2 + 2, -vWidPx / 2 + 3, vLenPx, vWidPx, 4);
+        ctx.roundRect(-vLenPx / 2 + 2, -vWidPx / 2 + 3, vLenPx, vWidPx, Math.min(4, vWidPx / 2));
         ctx.fill();
+
+        if (v.type === 'motorcycle' || v.type === 'auto_rickshaw' || v.type === 'bus') {
+          const draw =
+            v.type === 'motorcycle' ? drawMotorcycle : v.type === 'auto_rickshaw' ? drawAutoRickshaw : drawBus;
+          draw(ctx, vLenPx, vWidPx, v.color || '#38bdf8', zoom > 3);
+          if (v.acceleration < -0.5 && zoom > 3) {
+            ctx.fillStyle = '#ff1a1a';
+            ctx.fillRect(-vLenPx / 2, -vWidPx * 0.3, 2, vWidPx * 0.6);
+          }
+          ctx.restore();
+          drawOverlay(vid, vWidPx, vLenPx, v.speed_kmh);
+          ctx.restore();
+          return;
+        }
 
         // Vehicle Body
         ctx.fillStyle = v.color || '#38bdf8';
@@ -1424,35 +1603,7 @@ export const CanvasView: React.FC<CanvasViewProps> = ({
         }
 
         ctx.restore();
-
-        // Selection ring
-        if (vid === selectedVehicleId) {
-          ctx.strokeStyle = '#38bdf8';
-          ctx.lineWidth = 2;
-          ctx.setLineDash([4, 3]);
-          ctx.beginPath();
-          ctx.arc(0, 0, Math.max(vLenPx, vWidPx) * 0.75 + 4, 0, Math.PI * 2);
-          ctx.stroke();
-          ctx.setLineDash([]);
-        }
-
-        // Telemetry label
-        if (zoom > 4 || vid === selectedVehicleId) {
-          const badgeY = -vWidPx - 10;
-          ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
-          ctx.beginPath();
-          ctx.roundRect(-30, badgeY - 14, 60, 16, 4);
-          ctx.fill();
-          ctx.strokeStyle = vid === selectedVehicleId ? '#38bdf8' : 'rgba(255,255,255,0.15)';
-          ctx.lineWidth = 1;
-          ctx.stroke();
-
-          ctx.fillStyle = '#ffffff';
-          ctx.font = '700 9px JetBrains Mono, monospace';
-          ctx.textAlign = 'center';
-          ctx.fillText(`${v.speed_kmh.toFixed(0)} km/h`, 0, badgeY - 3);
-        }
-
+        drawOverlay(vid, vWidPx, vLenPx, v.speed_kmh);
         ctx.restore();
       });
 
@@ -1462,7 +1613,7 @@ export const CanvasView: React.FC<CanvasViewProps> = ({
 
     animId = requestAnimationFrame(render);
     return () => cancelAnimationFrame(animId);
-  }, [camera, selectedVehicleId, trafficLight, isIntersection, scenario]);
+  }, [camera, selectedVehicleId, trafficLight, isIntersection, scenario, geometry, isGeometry, hoveredLabel]);
 
   // Mouse pan/zoom handlers
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -1477,7 +1628,22 @@ export const CanvasView: React.FC<CanvasViewProps> = ({
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
-    if (!isDragging) return;
+    if (!isDragging) {
+      if (!isGeometry) return;
+      const rect = canvasRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      const mx = e.clientX - rect.left;
+      const my = e.clientY - rect.top;
+      const hit = labelRectsRef.current.find((r) => mx >= r.x && mx <= r.x + r.w && my >= r.y && my <= r.y + r.h);
+      if ((hit?.id ?? null) !== (hoveredLabel?.id ?? null)) {
+        setHoveredLabel(
+          hit
+            ? { id: hit.id, x: hit.x + hit.w / 2, y: hit.y + hit.h, alignRight: hit.x + hit.w / 2 > rect.width - 150 }
+            : null
+        );
+      }
+      return;
+    }
     const dx = e.clientX - dragStartRef.current.mouseX;
     const dy = e.clientY - dragStartRef.current.mouseY;
 
@@ -1491,6 +1657,11 @@ export const CanvasView: React.FC<CanvasViewProps> = ({
 
   const handleMouseUp = () => {
     setIsDragging(false);
+  };
+
+  const handleMouseLeave = () => {
+    setIsDragging(false);
+    setHoveredLabel(null);
   };
 
   const handleWheel = (e: React.WheelEvent) => {
@@ -1516,14 +1687,14 @@ export const CanvasView: React.FC<CanvasViewProps> = ({
 
     let clickedId: string | null = null;
     interpVehiclesRef.current.forEach((v, vid) => {
-      const halfLen = v.length / 2 + 2;
-      const halfWid = v.width / 2 + 2;
-      if (
-        worldX >= v.currentX - halfLen &&
-        worldX <= v.currentX + halfLen &&
-        worldY >= v.currentY - halfWid &&
-        worldY <= v.currentY + halfWid
-      ) {
+      // Hit-test in the vehicle's own frame (SUMO angle: 0 = north, clockwise)
+      const a = (v.currentAngle * Math.PI) / 180;
+      const dx = worldX - v.currentX;
+      const dy = worldY - v.currentY;
+      const lon = dx * Math.sin(a) + dy * Math.cos(a);
+      const lat = dx * Math.cos(a) - dy * Math.sin(a);
+      const pad = 2;
+      if (Math.abs(lon) <= v.length / 2 + pad && Math.abs(lat) <= v.width / 2 + pad) {
         clickedId = vid;
       }
     });
@@ -1547,7 +1718,9 @@ export const CanvasView: React.FC<CanvasViewProps> = ({
     const w = container.clientWidth;
     const h = container.clientHeight;
 
-    if (isIntersection) {
+    if (geometry) {
+      setCamera(fitGeometryCamera(w, h, geometry.bounds));
+    } else if (isIntersection) {
       const fitZoom = Math.max(1.0, Math.min((w - 80) / 520, (h - 80) / 280));
       setCamera({
         x: 0,
@@ -1581,7 +1754,7 @@ export const CanvasView: React.FC<CanvasViewProps> = ({
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
-      onMouseLeave={handleMouseUp}
+      onMouseLeave={handleMouseLeave}
       onWheel={handleWheel}
       onClick={handleClick}
     >
@@ -1634,8 +1807,8 @@ export const CanvasView: React.FC<CanvasViewProps> = ({
 
         <button
           className="btn-icon"
-          onClick={() => jumpTo(isIntersection ? 0 : 500, 0, isIntersection ? 10 : 14)}
-          title="Focus on Traffic Signal"
+          onClick={() => jumpTo(isIntersection || isGeometry ? 0 : 500, 0, isIntersection ? 10 : isGeometry ? 7 : 14)}
+          title={isGeometry ? 'Focus on GNT Circle' : 'Focus on Traffic Signal'}
         >
           <Crosshair size={16} />
         </button>
@@ -1652,8 +1825,86 @@ export const CanvasView: React.FC<CanvasViewProps> = ({
         )}
       </div>
 
-      {/* Quick View Presets for 3-Way Intersection */}
-      {isIntersection ? (
+      {hoveredLabel && geometry && (() => {
+        const lb = geometry.labels.find((l) => l.id === hoveredLabel.id);
+        if (!lb) return null;
+        return (
+          <div
+            className="glass-panel"
+            style={{
+              position: 'absolute',
+              left: hoveredLabel.x,
+              top: hoveredLabel.y + 6,
+              transform: `translateX(${hoveredLabel.alignRight ? '-100%' : '-50%'})`,
+              padding: '6px 10px',
+              fontSize: '0.72rem',
+              width: 'max-content',
+              maxWidth: '260px',
+              pointerEvents: 'none',
+              zIndex: 15,
+            }}
+          >
+            <div style={{ fontWeight: 800, color: '#f9a8d4' }}>
+              {lb.name} ({lb.id})
+            </div>
+            {lb.description && <div style={{ color: '#94a3b8', marginTop: '2px' }}>{lb.description}</div>}
+          </div>
+        );
+      })()}
+
+      {/* Quick View Presets */}
+      {isGeometry ? (
+        <div
+          className="glass-panel"
+          style={{
+            position: 'absolute',
+            top: '16px',
+            left: '16px',
+            padding: '4px 8px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            zIndex: 10,
+          }}
+        >
+          <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 600 }}>VIEW:</span>
+          <button
+            className="btn-secondary"
+            style={{ padding: '3px 8px', fontSize: '0.72rem' }}
+            onClick={fitFullRoad}
+          >
+            Overview
+          </button>
+          <button
+            className="btn-secondary"
+            style={{ padding: '3px 8px', fontSize: '0.72rem' }}
+            onClick={() => jumpTo(0, 0, 7)}
+          >
+            GNT Circle
+          </button>
+          <button
+            className="btn-secondary"
+            style={{ padding: '3px 8px', fontSize: '0.72rem' }}
+            onClick={() => jumpTo(0, -105, 3.2)}
+          >
+            Stem
+          </button>
+          <button
+            className="btn-secondary"
+            style={{ padding: '3px 8px', fontSize: '0.72rem' }}
+            onClick={() => jumpTo(80, -100, 3.2)}
+          >
+            TL Slip
+          </button>
+          <button
+            className="btn-secondary"
+            style={{ padding: '3px 8px', fontSize: '0.72rem' }}
+            onClick={() => jumpTo(-250, -190, 7)}
+          >
+            U-Turn
+          </button>
+        </div>
+      ) : isIntersection ? (
         <div
           className="glass-panel"
           style={{

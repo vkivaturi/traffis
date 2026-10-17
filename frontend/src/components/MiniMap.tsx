@@ -1,5 +1,9 @@
 import React, { useRef, useEffect } from 'react';
-import type { Vehicle, CameraState, TrafficLightData, ScenarioMetadata } from '../types/simulation';
+import type { Vehicle, CameraState, TrafficLightData, ScenarioMetadata, NetworkInfo } from '../types/simulation';
+
+const GEOMETRY_MAP_HEIGHT = 84;
+const BAR_WIDTH = 1400;
+const BAR_HEIGHT = 52;
 
 interface MiniMapProps {
   vehicles: Vehicle[];
@@ -8,6 +12,7 @@ interface MiniMapProps {
   onJumpToX: (x: number, y?: number) => void;
   trafficLight?: TrafficLightData;
   scenario?: ScenarioMetadata | null;
+  networkInfo?: NetworkInfo | null;
 }
 
 export const MiniMap: React.FC<MiniMapProps> = ({
@@ -17,15 +22,97 @@ export const MiniMap: React.FC<MiniMapProps> = ({
   onJumpToX,
   trafficLight,
   scenario,
+  networkInfo,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const isIntersection = scenario?.type === 'intersection' || scenario?.id === 'three_way_intersection';
+  const geometry =
+    networkInfo?.geometry && networkInfo.scenario?.id === scenario?.id ? networkInfo.geometry : null;
+  // World -> minimap CSS-pixel transform for the 2D geometry overview (used by click handler)
+  const geoTransformRef = useRef<{ scale: number; ox: number; oy: number } | null>(null);
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
+
+    if (geometry) {
+      // ----------------------------------------------------
+      // 2D BOUNDING-BOX OVERVIEW (curved geometry, no signal marker)
+      // ----------------------------------------------------
+      const dpr = window.devicePixelRatio || 1;
+      const rect = canvas.getBoundingClientRect();
+      const W = rect.width;
+      const H = rect.height;
+      if (canvas.width !== Math.round(W * dpr)) canvas.width = Math.round(W * dpr);
+      if (canvas.height !== Math.round(H * dpr)) canvas.height = Math.round(H * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+      ctx.fillStyle = '#0b101b';
+      ctx.fillRect(0, 0, W, H);
+
+      const b = geometry.bounds;
+      const scale = Math.min((W - 40) / (b.max_x - b.min_x), (H - 10) / (b.max_y - b.min_y));
+      const ox = W / 2 - ((b.min_x + b.max_x) / 2) * scale;
+      const oy = H / 2 + ((b.min_y + b.max_y) / 2) * scale;
+      geoTransformRef.current = { scale, ox, oy };
+      const px = (x: number) => ox + x * scale;
+      const py = (y: number) => oy - y * scale;
+
+      ctx.fillStyle = '#1e2430';
+      for (const j of geometry.junctions) {
+        ctx.beginPath();
+        j.shape.forEach(([x, y], i) => (i === 0 ? ctx.moveTo(px(x), py(y)) : ctx.lineTo(px(x), py(y))));
+        ctx.closePath();
+        ctx.fill();
+      }
+      ctx.strokeStyle = '#2b3445';
+      ctx.lineJoin = 'round';
+      for (const ln of geometry.lanes) {
+        ctx.lineWidth = Math.max(1, ln.width * scale);
+        ctx.beginPath();
+        ln.shape.forEach(([x, y], i) => (i === 0 ? ctx.moveTo(px(x), py(y)) : ctx.lineTo(px(x), py(y))));
+        ctx.stroke();
+      }
+      if (geometry.roundabout) {
+        ctx.fillStyle = '#166534';
+        ctx.beginPath();
+        ctx.arc(px(geometry.roundabout.x), py(geometry.roundabout.y), geometry.roundabout.island_radius * scale, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      ctx.fillStyle = '#f9a8d4';
+      ctx.font = '700 8px JetBrains Mono, monospace';
+      ctx.textAlign = 'center';
+      for (const lb of geometry.labels) {
+        ctx.fillText(lb.id, px(lb.x), Math.max(8, Math.min(H - 2, py(lb.y))));
+      }
+
+      for (const v of vehicles) {
+        ctx.fillStyle = v.color || '#38bdf8';
+        ctx.beginPath();
+        ctx.arc(px(v.x), py(v.y), 1.6, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // Camera viewport box (height estimated from the window aspect ratio)
+      const viewW = viewportWidthMeters * scale;
+      const viewH = viewW * Math.max(0.3, (window.innerHeight - 220) / Math.max(1, window.innerWidth));
+      const camX = px(camera.x);
+      const camY = py(camera.y);
+      ctx.fillStyle = 'rgba(56, 189, 248, 0.15)';
+      ctx.fillRect(camX - viewW / 2, camY - viewH / 2, viewW, viewH);
+      ctx.strokeStyle = '#38bdf8';
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(camX - viewW / 2, camY - viewH / 2, viewW, viewH);
+      return;
+    }
+
+    // Fixed-size radar bar for the original scenarios
+    if (canvas.width !== BAR_WIDTH) canvas.width = BAR_WIDTH;
+    if (canvas.height !== BAR_HEIGHT) canvas.height = BAR_HEIGHT;
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
 
     const width = canvas.width;
     const height = canvas.height;
@@ -383,7 +470,7 @@ export const MiniMap: React.FC<MiniMapProps> = ({
       ctx.lineTo(camPx, roadY + roadH + 4);
       ctx.stroke();
     }
-  }, [vehicles, camera, viewportWidthMeters, trafficLight, isIntersection, scenario]);
+  }, [vehicles, camera, viewportWidthMeters, trafficLight, isIntersection, scenario, geometry]);
 
   const handleClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
@@ -392,7 +479,10 @@ export const MiniMap: React.FC<MiniMapProps> = ({
     const clickX = e.clientX - rect.left;
     const clickY = e.clientY - rect.top;
 
-    if (scenario?.id === 'four_way_intersection') {
+    const geoT = geoTransformRef.current;
+    if (geometry && geoT) {
+      onJumpToX((clickX - geoT.ox) / geoT.scale, (geoT.oy - clickY) / geoT.scale);
+    } else if (scenario?.id === 'four_way_intersection') {
       const cx = rect.width / 2;
       const cy = rect.height / 2;
       const armLengthPx = Math.min((rect.width - 60) / 2, (rect.height - 10) / 2);
@@ -434,8 +524,10 @@ export const MiniMap: React.FC<MiniMapProps> = ({
     }
   };
 
-  const radarLabel =
-    scenario?.id === 'four_way_intersection'
+  const mapHeight = geometry ? GEOMETRY_MAP_HEIGHT : BAR_HEIGHT;
+  const radarLabel = geometry
+    ? `${scenario?.name ?? 'Network'} Overview`
+    : scenario?.id === 'four_way_intersection'
       ? '4-Way Crossroads Radar Overview'
       : isIntersection
       ? '3-Way T-Junction Radar Overview'
@@ -445,7 +537,7 @@ export const MiniMap: React.FC<MiniMapProps> = ({
     <div
       style={{
         position: 'relative',
-        height: '52px',
+        height: `${mapHeight}px`,
         backgroundColor: 'rgba(8, 12, 20, 0.95)',
         borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
         display: 'flex',
@@ -472,12 +564,12 @@ export const MiniMap: React.FC<MiniMapProps> = ({
       </div>
       <canvas
         ref={canvasRef}
-        width={1400}
-        height={52}
+        width={BAR_WIDTH}
+        height={BAR_HEIGHT}
         onClick={handleClick}
         style={{
           width: '100%',
-          height: '52px',
+          height: `${mapHeight}px`,
           display: 'block',
         }}
       />

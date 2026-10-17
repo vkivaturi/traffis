@@ -7,6 +7,7 @@ import {
   VolumeX,
   GitFork,
   Milestone,
+  RotateCw,
   ChevronDown,
   ArrowDownUp,
   Home,
@@ -149,7 +150,9 @@ export const Header: React.FC<HeaderProps> = ({
           }}
           title="Select Road Network Simulation"
         >
-          {isIntersection ? (
+          {currentScenario?.type === 'roundabout' ? (
+            <RotateCw size={15} color="#38bdf8" />
+          ) : isIntersection ? (
             <GitFork size={15} color="#38bdf8" />
           ) : (
             <Milestone size={15} color="#38bdf8" />
@@ -264,7 +267,7 @@ export const Header: React.FC<HeaderProps> = ({
           return (
             <div
               className="glass-pill"
-              title={`Simulation Time: ${state.sim_time.toFixed(1)}s / ${maxSec}s (Hard Limit: 5 Minutes)`}
+              title={`Simulation Time: ${state.sim_time.toFixed(1)}s / ${maxSec}s (Hard Limit: ${formatTime(maxSec)})`}
               style={{
                 borderColor: isLimitReached ? 'rgba(244, 63, 94, 0.6)' : isWarning ? 'rgba(245, 158, 11, 0.6)' : undefined,
                 backgroundColor: isLimitReached ? 'rgba(244, 63, 94, 0.15)' : isWarning ? 'rgba(245, 158, 11, 0.12)' : undefined,
@@ -276,10 +279,10 @@ export const Header: React.FC<HeaderProps> = ({
                 <Clock size={12} color={isWarning ? '#f59e0b' : '#94a3b8'} />
               )}
               <span style={{ color: isLimitReached ? '#fb7185' : isWarning ? '#fbbf24' : '#94a3b8', fontWeight: 600 }}>
-                {isLimitReached ? '5M LIMIT:' : 'SIM T:'}
+                {isLimitReached ? 'LIMIT:' : 'SIM T:'}
               </span>
               <span style={{ color: isLimitReached ? '#f43f5e' : isWarning ? '#f59e0b' : '#f8fafc', fontWeight: 700 }}>
-                {formatTime(state.sim_time)} / 5:00
+                {formatTime(state.sim_time)} / {formatTime(maxSec)}
               </span>
               <span style={{ color: '#64748b', fontSize: '0.68rem', marginLeft: '-2px' }}>
                 ({state.sim_time.toFixed(1)}s)

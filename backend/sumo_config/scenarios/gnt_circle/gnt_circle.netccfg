@@ -13,6 +13,7 @@
         <lefthand value="true"/>
         <no-turnarounds value="true"/>
         <junctions.corner-detail value="5"/>
+        <offset.disable-normalization value="true"/>
     </processing>
     <tls_building>
         <tls.guess value="false"/>

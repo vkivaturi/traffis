@@ -3,11 +3,15 @@
   GNT Circle – edges (SPEC.md §4.2). Speeds: roads 13.89 m/s (50 km/h), ring 6.94 m/s (25 km/h),
   slip 5.56 m/s (20 km/h). Ring is clockwise W -> N -> E -> S -> W (left-hand traffic).
   NOTE: there is intentionally NO edge from TL into the ring (D-10).
+  Paired carriageways are offset from the node line by half the raised-median width
+  (main road 2.0 m, stem & bottom road 1.5 m, SPEC.md §3).
 -->
 <edges xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/edges_file.xsd">
     <!-- Main corridor: NG arm (paired, divided) -->
-    <edge id="NG_in"  from="NG_end" to="rb_W"   numLanes="3" speed="13.89" priority="3" width="3.2"/>
-    <edge id="NG_out" from="rb_W"   to="NG_end" numLanes="3" speed="13.89" priority="3" width="3.2"/>
+    <edge id="NG_in"  from="NG_end" to="rb_W"   numLanes="3" speed="13.89" priority="3" width="3.2"
+          shape="-330.00,1.00 -24.00,1.00"/>
+    <edge id="NG_out" from="rb_W"   to="NG_end" numLanes="3" speed="13.89" priority="3" width="3.2"
+          shape="-24.00,-1.00 -330.00,-1.00"/>
 
     <!-- Main corridor: TL arm -->
     <edge id="TL_out" from="rb_E"   to="TL_end"   numLanes="3" speed="13.89" priority="3" width="3.2"
@@ -25,8 +29,10 @@
           shape="0.00,-24.00 -9.18,-22.17 -16.97,-16.97 -22.17,-9.18 -24.00,0.00"/>
 
     <!-- Stem (paired, divided) -->
-    <edge id="stem_sb" from="rb_S"   to="stem_S" numLanes="2" speed="13.89" priority="3" width="3.2"/>
-    <edge id="stem_nb" from="stem_S" to="rb_S"   numLanes="2" speed="13.89" priority="3" width="3.2"/>
+    <edge id="stem_sb" from="rb_S"   to="stem_S" numLanes="2" speed="13.89" priority="3" width="3.2"
+          shape="0.75,-24.00 0.75,-190.00"/>
+    <edge id="stem_nb" from="stem_S" to="rb_S"   numLanes="2" speed="13.89" priority="3" width="3.2"
+          shape="-0.75,-190.00 -0.75,-24.00"/>
 
     <!-- TL free-left slip (carries TL->FL and TL->NG via U-turn) -->
     <edge id="slip_TL_FL" from="slip_div" to="slip_merge" numLanes="2" speed="5.56" priority="2" width="3.2"
@@ -34,11 +40,15 @@
 
     <!-- Bottom road -->
     <edge id="bot_wb_a" from="slip_merge" to="stem_S"  numLanes="2" speed="13.89" priority="2" width="3.2"
-          shape="90.00,-195.00 10.00,-195.00 0.00,-190.00"/>
-    <edge id="bot_wb_b" from="stem_S"     to="uturn_W" numLanes="3" speed="13.89" priority="3" width="3.2"/>
-    <edge id="FL_out"   from="uturn_W"    to="FL_end"  numLanes="3" speed="13.89" priority="3" width="3.2"/>
-    <edge id="FL_in"    from="FL_end"     to="uturn_W" numLanes="3" speed="13.89" priority="3" width="3.2"/>
-    <edge id="bot_eb"   from="uturn_W"    to="stem_S"  numLanes="3" speed="13.89" priority="3" width="3.2"/>
+          shape="90.00,-194.00 10.00,-194.00 0.00,-190.00"/>
+    <edge id="bot_wb_b" from="stem_S"     to="uturn_W" numLanes="3" speed="13.89" priority="3" width="3.2"
+          shape="0.00,-190.75 -250.00,-190.75"/>
+    <edge id="FL_out"   from="uturn_W"    to="FL_end"  numLanes="3" speed="13.89" priority="3" width="3.2"
+          shape="-250.00,-190.75 -340.00,-190.75"/>
+    <edge id="FL_in"    from="FL_end"     to="uturn_W" numLanes="3" speed="13.89" priority="3" width="3.2"
+          shape="-340.00,-189.25 -250.00,-189.25"/>
+    <edge id="bot_eb"   from="uturn_W"    to="stem_S"  numLanes="3" speed="13.89" priority="3" width="3.2"
+          shape="-250.00,-189.25 0.00,-189.25"/>
 
     <roundabout nodes="rb_W rb_N rb_E rb_S" edges="rb_W_N rb_N_E rb_E_S rb_S_W"/>
 </edges>

@@ -114,13 +114,18 @@ export function useSimulationSocket(authToken?: string) {
               width: (c[10] as number) || 1.8,
               leader_id: (c[11] as string | null) ?? null,
               leader_dist: (c[12] as number | null) ?? null,
-              direction: (c[13] as 'east' | 'west' | 'north' | 'south') || ((c[5] as number) > 225 && (c[5] as number) < 315 ? 'west' : (c[5] as number) > 135 && (c[5] as number) <= 225 ? 'south' : 'east'),
+              direction: (c[13] as string) || ((c[5] as number) > 225 && (c[5] as number) < 315 ? 'west' : (c[5] as number) > 135 && (c[5] as number) <= 225 ? 'south' : 'east'),
               lane_id: `lane_${c[6]}`,
             }));
           } else if (!data.vehicles) {
             data.vehicles = [];
           }
-          setState(data);
+          // junction_metrics is sent at 1 Hz; carry the last value across intermediate ticks
+          setState((prev) =>
+            !data.junction_metrics && prev.junction_metrics && prev.scenario_id === data.scenario_id && data.step > 0
+              ? { ...data, junction_metrics: prev.junction_metrics }
+              : data
+          );
         } else if (data.type === 'network_info') {
           setNetworkInfo(data.data);
           if (data.data?.scenario) {

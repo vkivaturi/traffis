@@ -39,7 +39,12 @@ PCE_WEIGHTS = {
     "sports": 1.0,
     "van": 1.4,
     "truck": 3.0,
+    "bus": 3.0,
+    "motorcycle": 0.5,
+    "auto_rickshaw": 1.2,
 }
+
+ALLOWED_VEHICLE_TYPES = ["car", "truck", "sports", "van", "motorcycle", "auto_rickshaw", "bus"]
 
 def hex_to_rgba(hex_color: str) -> tuple[int, int, int, int]:
     hex_color = hex_color.lstrip("#")
@@ -105,7 +110,8 @@ class SimulationManager:
             "--start",
             "--quit-on-end",
             "--no-step-log", "true",
-            "--no-warnings", "true"
+            "--no-warnings", "true",
+            *self.scenario.extra_sumo_args(),
         ]
         logger.info("Starting SUMO TraCI for scenario '%s' with command: %s", self.scenario.id, " ".join(cmd))
         self.scenario.reload_settings()
@@ -122,6 +128,9 @@ class SimulationManager:
         self.cumulative_speed_samples = 0
         self.scenario.reset_state()
 
+        if not self.scenario.apply_default_speed_limit:
+            return
+
         # Apply default speed limit to all lanes
         default_speed_m_s = self.default_speed_kmh / 3.6
         try:
@@ -135,6 +144,9 @@ class SimulationManager:
         target = registry.get(scenario_id)
         if not target:
             raise ValueError(f"Unknown scenario ID: {scenario_id}")
+
+        # Validate scenario.xml before tearing down the running SUMO instance
+        target.reload_settings()
 
         async with self.lock:
             logger.info("Switching scenario to '%s' (%s)...", target.id, target.name)
@@ -163,7 +175,7 @@ class SimulationManager:
     def max_sim_time(self) -> float:
         return self.scenario.settings.max_sim_time
 
-    def _get_traffic_light_data(self) -> TrafficLightState:
+    def _get_traffic_light_data(self) -> Optional[TrafficLightState]:
         return self.scenario.get_traffic_light_data()
 
     async def stop(self):
@@ -186,6 +198,9 @@ class SimulationManager:
 
     async def reset(self):
         """Reset the current simulation back to t=0."""
+        # Validate scenario.xml before tearing down the running SUMO instance
+        self.scenario.reload_settings()
+
         async with self.lock:
             logger.info("Resetting simulation for scenario '%s'...", self.scenario.id)
             try:
@@ -220,7 +235,7 @@ class SimulationManager:
     def _insert_vehicle(self, req: SpawnRequest) -> str:
         self.vehicle_counter += 1
         veh_id = f"veh_{self.vehicle_counter}"
-        v_type = req.type if req.type in ["car", "truck", "sports", "van"] else "car"
+        v_type = req.type if req.type in ALLOWED_VEHICLE_TYPES else "car"
         
         # Resolve route using scenario logic
         route_id = self.scenario.get_spawn_route(req)
@@ -287,6 +302,17 @@ class SimulationManager:
         traci.simulationStep()
         self.step_count += 1
         self.sim_time = round(self.step_count * settings.STEP_LENGTH, 2)
+
+        if self.scenario.demand_from_route_file:
+            # Vehicles come from <flow>s, so count & colour them as they enter the network
+            for vid in traci.simulation.getDepartedIDList():
+                self.total_spawned += 1
+                v_type = traci.vehicle.getTypeID(vid)
+                if v_type == "car":
+                    self.vehicle_colors[vid] = random.choice(COLOR_PALETTE)
+                else:
+                    self.vehicle_colors[vid] = rgba_to_hex(traci.vehicletype.getColor(v_type))
+        self.scenario.on_step()
         
         # Accumulate vehicle speed samples across all active vehicles in this step
         # This guarantees vehicles that entered and later exited remain included in the run-wide average speed
@@ -346,7 +372,7 @@ class SimulationManager:
                 leader_dist = round(leader_info[1], 1) if leader_info else None
 
                 # Direction detection delegated to scenario
-                v_dir = self.scenario.enrich_vehicle_direction(lane_id, angle, x, y)
+                v_dir = self.scenario.get_vehicle_direction(vid, lane_id, angle, x, y)
 
                 # Compact tuple format:
                 # [0:id, 1:x, 2:y, 3:speed, 4:accel, 5:angle, 6:lane_idx, 7:type, 8:color, 9:len, 10:wid, 11:leader_id, 12:leader_dist, 13:direction]
@@ -402,6 +428,11 @@ class SimulationManager:
 
         tl_data = self._get_traffic_light_data()
 
+        # Junction metrics change slowly: send at 1 Hz (frontend keeps the last value)
+        steps_per_sec = max(1, int(round(settings.SIMULATION_RATE_HZ)))
+        send_metrics = not self.is_running or self.step_count % steps_per_sec == 0
+        junction_metrics = self.scenario.get_junction_metrics() if send_metrics else None
+
         return SimulationStateMessage(
             sim_time=self.sim_time,
             step=self.step_count,
@@ -411,6 +442,7 @@ class SimulationManager:
             vehicles=None,
             stats=stats,
             traffic_light=tl_data,
+            junction_metrics=junction_metrics,
             default_speed_kmh=self.default_speed_kmh,
             max_sim_time=self.max_sim_time,
             time_limit_reached=self.time_limit_reached or (self.sim_time >= self.max_sim_time)

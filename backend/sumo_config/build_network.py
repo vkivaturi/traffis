@@ -317,6 +317,20 @@ def build_four_way_intersection():
     compile_network(nod, edg, net, disable_offset_normalization=True)
 
 
+def build_gnt_circle():
+    # GNT Circle XML (nodes/edges/connections) is hand-authored per SPEC.md; only compile it.
+    target_dir = SCENARIOS_DIR / "gnt_circle"
+    netconvert_bin = find_sumo_binary("netconvert")
+    if not netconvert_bin:
+        raise RuntimeError("netconvert binary could not be found! Ensure SUMO is installed.")
+    print(f"Compiling gnt_circle.net.xml with {netconvert_bin}...")
+    result = subprocess.run([netconvert_bin, "-c", "gnt_circle.netccfg"], cwd=target_dir, capture_output=True, text=True)
+    if result.returncode != 0:
+        print("netconvert failed:", result.stderr)
+        sys.exit(result.returncode)
+    print(f"Successfully generated {target_dir / 'gnt_circle.net.xml'}!")
+
+
 def build():
     CONFIG_DIR.mkdir(parents=True, exist_ok=True)
     SCENARIOS_DIR.mkdir(parents=True, exist_ok=True)
@@ -326,6 +340,8 @@ def build():
     build_three_way_intersection()
     print("Building scenario 3: 4-Way Intersection...")
     build_four_way_intersection()
+    print("Building scenario 4: GNT Circle...")
+    build_gnt_circle()
     print("All road networks built successfully!")
 
 

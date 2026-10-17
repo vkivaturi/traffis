@@ -63,7 +63,10 @@ flowchart TD
 │   │   ├── config.py             # Settings, SUMO_HOME resolver, tick rates, highway specs
 │   │   ├── schemas.py            # Pydantic schemas (VehicleData, Stats, StateMessage, SpawnRequest)
 │   │   ├── simulation.py         # SimulationManager class: TraCI controller & 20Hz async loop
-│   │   └── main.py               # FastAPI app, lifespan setup, REST endpoints & WebSocket route
+│   │   ├── main.py               # FastAPI app, lifespan setup, REST endpoints & WebSocket route
+│   │   └── scenarios/            # BaseScenario + one module per scenario (registry.py registers them)
+│   │       ├── gnt_circle.py     # GNT Circle roundabout: O-D flows -> .rou.xml, polyline geometry, junction metrics
+│   │       └── net_geometry.py   # Reads lane/junction polylines from a compiled .net.xml
 │   └── sumo_config/              # SUMO road geometry and routes
 │       ├── build_network.py      # Python script to compile .nod.xml & .edg.xml into .net.xml
 │       ├── road.nod.xml          # Node/junction definitions (start at 0.0, end at 1000.0)
@@ -100,10 +103,12 @@ flowchart TD
         │   ├── MiniMap.tsx       # 1000m radar bar, vehicle dots, traffic signal marker, viewport bounding box
         │   ├── Controls.tsx      # Transport dock: Start / Pause / Stop + read-only clock & telemetry
         │   ├── StatsPanel.tsx    # Telemetry metrics (active count, speed, lane distribution)
+        │   ├── JunctionMetricsPanel.tsx # Unsignalised junction metrics (per-arm flows, ring occupancy, U-turns, queues)
         │   ├── VehicleInspector.tsx # Floating inspector card for individual vehicle telemetry
         │   └── (no runtime tuning UI — all parameters live in sumo_config/scenarios/<id>/scenario.xml)
         └── utils/
-            └── audio.ts          # Web Audio API procedural sound synthesizer (tones for spawns, resets & signal changes)
+            ├── audio.ts          # Web Audio API procedural sound synthesizer (tones for spawns, resets & signal changes)
+            └── geometryRenderer.ts # Polyline network renderer (lanes/junctions/medians/island from .net.xml shapes)
 ```
 
 ---

@@ -2,6 +2,8 @@ import React from 'react';
 import { X, Eye, Gauge, ArrowUpRight, ShieldAlert } from 'lucide-react';
 import type { Vehicle } from '../types/simulation';
 
+const ARM_NAMES: Record<string, string> = { NG: 'Nallagandla', TL: 'Tellapur', FL: 'Flyover' };
+
 interface VehicleInspectorProps {
   vehicle: Vehicle | null;
   isFollowing: boolean;
@@ -21,8 +23,18 @@ export const VehicleInspector: React.FC<VehicleInspectorProps> = ({
   const isAccelerating = vehicle.acceleration > 0.5;
   const isWest = vehicle.angle > 180 || vehicle.direction === 'west' || vehicle.y > 0;
 
-  const dirName = isWest ? 'Westbound (1000m → 0m)' : 'Eastbound (0m → 1000m)';
-  const laneLabel = `${isWest ? 'WB' : 'EB'} ${vehicle.lane_index === 0 ? 'Lane 0 (Right / Slow)' : 'Lane 1 (Left / Fast)'}`;
+  // O-D scenarios (e.g. GNT Circle) send the trip key, e.g. "TL_NG", as the direction
+  const odMatch = /^([A-Z]{2})_([A-Z]{2})$/.exec(vehicle.direction ?? '');
+  const odTag = odMatch ? `${odMatch[1]} → ${odMatch[2]}` : null;
+  const odName = odMatch
+    ? `${ARM_NAMES[odMatch[1]] ?? odMatch[1]} → ${ARM_NAMES[odMatch[2]] ?? odMatch[2]}${vehicle.direction === 'TL_NG' ? ' (via U-turn)' : ''}`
+    : null;
+
+  const dirName = odName ?? (isWest ? 'Westbound (1000m → 0m)' : 'Eastbound (0m → 1000m)');
+  const laneLabel = odMatch
+    ? `Lane ${vehicle.lane_index} (${vehicle.lane_index === 0 ? 'kerb side' : 'towards median'})`
+    : `${isWest ? 'WB' : 'EB'} ${vehicle.lane_index === 0 ? 'Lane 0 (Right / Slow)' : 'Lane 1 (Left / Fast)'}`;
+  const headingName = ['North', 'East', 'South', 'West'][Math.round(((vehicle.angle % 360) + 360) % 360 / 90) % 4];
 
   return (
     <div
@@ -65,7 +77,7 @@ export const VehicleInspector: React.FC<VehicleInspectorProps> = ({
               color: '#94a3b8',
             }}
           >
-            {vehicle.type}
+            {vehicle.type.replace('_', ' ')}
           </span>
           <span
             style={{
@@ -77,7 +89,7 @@ export const VehicleInspector: React.FC<VehicleInspectorProps> = ({
               color: isWest ? '#38bdf8' : '#10b981',
             }}
           >
-            {isWest ? '← WB' : 'EB →'}
+            {odTag ?? (isWest ? '← WB' : 'EB →')}
           </span>
         </div>
         <button className="btn-icon" style={{ width: '28px', height: '28px' }} onClick={onClose}>
@@ -142,7 +154,7 @@ export const VehicleInspector: React.FC<VehicleInspectorProps> = ({
         <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '4px' }}>
           <span style={{ color: '#94a3b8' }}>Position:</span>
           <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 600 }}>
-            {vehicle.x.toFixed(1)}m / 1000m
+            {odMatch ? `${vehicle.x.toFixed(1)}, ${vehicle.y.toFixed(1)} m` : `${vehicle.x.toFixed(1)}m / 1000m`}
           </span>
         </div>
 
@@ -155,7 +167,7 @@ export const VehicleInspector: React.FC<VehicleInspectorProps> = ({
 
         <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '4px' }}>
           <span style={{ color: '#94a3b8' }}>Heading Angle:</span>
-          <span style={{ fontFamily: 'var(--font-mono)' }}>{vehicle.angle}° ({isWest ? 'West' : 'East'})</span>
+          <span style={{ fontFamily: 'var(--font-mono)' }}>{vehicle.angle}° ({odMatch ? headingName : isWest ? 'West' : 'East'})</span>
         </div>
 
         {vehicle.leader_id && (

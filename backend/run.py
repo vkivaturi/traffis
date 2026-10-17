@@ -10,7 +10,8 @@ sys.path.insert(0, str(BACKEND_DIR))
 net_file = BACKEND_DIR / "sumo_config" / "road.net.xml"
 three_way_net = BACKEND_DIR / "sumo_config" / "scenarios" / "three_way_intersection" / "intersection.net.xml"
 four_way_net = BACKEND_DIR / "sumo_config" / "scenarios" / "four_way_intersection" / "intersection.net.xml"
-if not net_file.exists() or not three_way_net.exists() or not four_way_net.exists():
+gnt_circle_net = BACKEND_DIR / "sumo_config" / "scenarios" / "gnt_circle" / "gnt_circle.net.xml"
+if not net_file.exists() or not three_way_net.exists() or not four_way_net.exists() or not gnt_circle_net.exists():
     print("Networks missing. Building all scenario networks with netconvert...")
     from sumo_config.build_network import build
     build()

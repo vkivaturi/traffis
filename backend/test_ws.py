@@ -3,7 +3,8 @@ import json
 import time
 import websockets
 
-SCENARIOS = ["straight_road", "three_way_intersection", "four_way_intersection"]
+SCENARIOS = ["straight_road", "three_way_intersection", "four_way_intersection", "gnt_circle"]
+GNT_ARMS = {"NG", "TL", "FL"}
 
 
 async def test_full_flow():
@@ -34,16 +35,31 @@ async def test_full_flow():
             # START: vehicles must appear automatically from scenario.xml inflow
             await ws.send(json.dumps({"action": "play"}))
             state = None
-            deadline = time.time() + 8.0
+            is_gnt = scenario_id == "gnt_circle"
+            seen_origins = set()
+            jm = None
+            deadline = time.time() + (20.0 if is_gnt else 8.0)
             while time.time() < deadline:
                 state = await recv_type("state")
-                if n_vehs(state) > 0 and state["sim_time"] > 3:
+                # compact tuple direction field carries the OD key, e.g. "TL_NG"
+                seen_origins |= {str(v[13])[:2] for v in state.get("compact_vehicles") or []}
+                jm = state.get("junction_metrics") or jm  # sent at 1 Hz
+                if n_vehs(state) > 0 and state["sim_time"] > 3 and (not is_gnt or GNT_ARMS <= seen_origins):
                     break
-            tl = state["traffic_light"]
+            tl = state.get("traffic_light")
+            tl_desc = (f"tl={tl['state']} ({tl.get('phase_name')}) "
+                       f"groups={[g['id'] + ':' + str(g['green_duration']) for g in tl.get('signal_groups') or []]}"
+                       if tl else "tl=none")
             print(f"Running: t={state['sim_time']}s vehs={n_vehs(state)} "
-                  f"default_speed={state.get('default_speed_kmh')} max_t={state.get('max_sim_time')} "
-                  f"tl={tl['state']} ({tl.get('phase_name')}) groups={[g['id'] + ':' + str(g['green_duration']) for g in tl.get('signal_groups') or []]}")
+                  f"default_speed={state.get('default_speed_kmh')} max_t={state.get('max_sim_time')} {tl_desc}")
             assert n_vehs(state) > 0, "No vehicles spawned from scenario.xml inflow"
+            if is_gnt:
+                assert tl is None, "gnt_circle must not report a traffic light"
+                assert GNT_ARMS <= seen_origins, f"Vehicles not seen from all arms: {seen_origins}"
+                assert jm is not None, "No junction_metrics received"
+                print(f"Junction: ring={jm['roundabout_occupancy']} uturns={jm['uturn_count']} "
+                      f"inflow={ {a['id']: a['inflow'] for a in jm['arms']} } "
+                      f"queues={ {q['id']: q['halting'] for q in jm['entry_queues']} }")
 
             # PAUSE: clock must freeze
             await ws.send(json.dumps({"action": "pause"}))

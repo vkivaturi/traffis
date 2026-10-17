@@ -9,6 +9,7 @@ import { Controls } from './components/Controls';
 import { VehicleInspector } from './components/VehicleInspector';
 import { LandingPage } from './components/LandingPage';
 import { AboutModal } from './components/AboutModal';
+import { JunctionMetricsPanel } from './components/JunctionMetricsPanel';
 import type { CameraState } from './types/simulation';
 import { soundSystem } from './utils/audio';
 
@@ -29,6 +30,7 @@ export const App: React.FC = () => {
 
   const {
     state,
+    networkInfo,
     scenarios,
     activeScenario,
     selectScenario,
@@ -211,6 +213,7 @@ export const App: React.FC = () => {
         onJumpToX={(x, y = 0) => setCamera((c) => ({ ...c, x, y, followingId: null }))}
         trafficLight={state.traffic_light}
         scenario={activeScenario}
+        networkInfo={networkInfo}
       />
 
       {/* 3. Main Canvas Viewport with Scenario-aware Road, Vehicles, Traffic Signals */}
@@ -232,7 +235,13 @@ export const App: React.FC = () => {
           onViewportMetersChange={setViewportWidthMeters}
           trafficLight={state.traffic_light}
           scenario={activeScenario}
+          networkInfo={networkInfo}
         />
+
+        {/* Unsignalised junction metrics (GNT Circle): per-arm flows, ring occupancy, U-turns */}
+        {state.junction_metrics && state.scenario_id === activeScenario?.id && (
+          <JunctionMetricsPanel metrics={state.junction_metrics} />
+        )}
 
         {/* Selected Vehicle Floating HUD */}
         {selectedVehicle && (
