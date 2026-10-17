@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  GNT Circle – explicit connections (SPEC.md §4.2, §6, §10).
+  Left-hand net: lane 0 = kerb side, highest index = median side.
+  Explicit connections for an incoming edge replace netconvert's guessed ones, which enforces:
+    * slip/westbound traffic can NOT turn north into the stem at stem_S (must use the U-turn)
+    * the only U-turn is bot_wb_b (median lane) -> bot_eb at uturn_W
+-->
+<connections xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/connections_file.xsd">
+    <!-- slip_div / slip_merge -->
+    <connection from="TL_in" to="slip_TL_FL" fromLane="0" toLane="0"/>
+    <connection from="TL_in" to="slip_TL_FL" fromLane="1" toLane="1"/>
+    <connection from="TL_in" to="slip_TL_FL" fromLane="2" toLane="1"/>
+    <connection from="slip_TL_FL" to="bot_wb_a" fromLane="0" toLane="0"/>
+    <connection from="slip_TL_FL" to="bot_wb_a" fromLane="1" toLane="1"/>
+
+    <!-- stem_S: westbound merge (slip yields to stem SB, D-6) -->
+    <connection from="bot_wb_a" to="bot_wb_b" fromLane="0" toLane="0"/>
+    <connection from="bot_wb_a" to="bot_wb_b" fromLane="1" toLane="1"/>
+    <connection from="stem_sb"  to="bot_wb_b" fromLane="0" toLane="1"/>
+    <connection from="stem_sb"  to="bot_wb_b" fromLane="1" toLane="2"/>
+
+    <!-- stem_S: eastbound turns left (north) into stem -->
+    <connection from="bot_eb" to="stem_nb" fromLane="0" toLane="0"/>
+    <connection from="bot_eb" to="stem_nb" fromLane="1" toLane="1"/>
+    <connection from="bot_eb" to="stem_nb" fromLane="2" toLane="1"/>
+
+    <!-- uturn_W: through movements -->
+    <connection from="bot_wb_b" to="FL_out" fromLane="0" toLane="0"/>
+    <connection from="bot_wb_b" to="FL_out" fromLane="1" toLane="1"/>
+    <connection from="bot_wb_b" to="FL_out" fromLane="2" toLane="2"/>
+    <connection from="FL_in" to="bot_eb" fromLane="0" toLane="0"/>
+    <connection from="FL_in" to="bot_eb" fromLane="1" toLane="1"/>
+    <connection from="FL_in" to="bot_eb" fromLane="2" toLane="2"/>
+
+    <!-- uturn_W: median U-turn (westbound -> eastbound), 20 km/h, yields to FL_in -->
+    <connection from="bot_wb_b" to="bot_eb" fromLane="2" toLane="2" speed="5.56" pass="false"/>
+</connections>

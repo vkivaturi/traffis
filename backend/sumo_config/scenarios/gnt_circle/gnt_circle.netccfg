@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- GNT Circle – netconvert config. Run: netconvert -c gnt_circle.netccfg -->
+<configuration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/netconvertConfiguration.xsd">
+    <input>
+        <node-files value="gnt_circle.nod.xml"/>
+        <edge-files value="gnt_circle.edg.xml"/>
+        <connection-files value="gnt_circle.con.xml"/>
+    </input>
+    <output>
+        <output-file value="gnt_circle.net.xml"/>
+    </output>
+    <processing>
+        <lefthand value="true"/>
+        <no-turnarounds value="true"/>
+        <junctions.corner-detail value="5"/>
+    </processing>
+    <tls_building>
+        <tls.guess value="false"/>
+    </tls_building>
+    <report>
+        <verbose value="false"/>
+    </report>
+</configuration>

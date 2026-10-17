@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Traffis scenario settings: GNT Circle (SPEC.md §5.2.4 – normative shape).
+  Edit values here and reset the simulation (or restart the backend) to apply.
+  demand      : vehicles/hour per O-D direction (0..3000, 0 disables).
+  behaviour   : global (simulation-level) SUMO vType attributes applied to ALL vehicle types.
+  vehicleMix  : shares (must sum to 1.0) + optional per-vtype attribute overrides.
+-->
+<scenario id="gnt_circle" maxSimTime="600">
+    <demand>
+        <od key="NG_TL" vehsPerHour="900"/>
+        <od key="NG_FL" vehsPerHour="300"/>
+        <od key="TL_FL" vehsPerHour="450"/>
+        <od key="TL_NG" vehsPerHour="750"/>
+        <od key="FL_NG" vehsPerHour="450"/>
+        <od key="FL_TL" vehsPerHour="450"/>
+    </demand>
+
+    <behaviour carFollowModel="Krauss" laneChangeModel="SL2015" lateralResolution="0.8">
+        <param key="minGap" value="1.0"/>
+        <param key="tau" value="0.6"/>
+        <param key="sigma" value="0.6"/>
+        <param key="impatience" value="0.8"/>
+        <param key="speedFactor" value="normc(1.1,0.15,0.7,1.5)"/>
+        <param key="lcAssertive" value="2.0"/>
+        <param key="lcCooperative" value="0.3"/>
+        <param key="lcSpeedGain" value="2.0"/>
+        <param key="lcKeepRight" value="0.3"/>
+        <param key="latAlignment" value="arbitrary"/>
+        <param key="minGapLat" value="0.3"/>
+        <param key="jmIgnoreFoeProb" value="0.1"/>
+        <param key="jmIgnoreFoeSpeed" value="5.0"/>
+        <param key="jmTimegapMinor" value="0.5"/>
+    </behaviour>
+
+    <vehicleMix>
+        <vtype id="motorcycle" share="0.40" minGap="0.5" minGapLat="0.2" lcAssertive="3.0"/>
+        <vtype id="auto_rickshaw" share="0.15" minGap="0.8" sigma="0.7"/>
+        <vtype id="car" share="0.30"/>
+        <vtype id="bus" share="0.05" minGap="1.5" lcAssertive="1.5"/>
+        <vtype id="truck" share="0.05" minGap="1.5"/>
+        <vtype id="van" share="0.05"/>
+    </vehicleMix>
+</scenario>

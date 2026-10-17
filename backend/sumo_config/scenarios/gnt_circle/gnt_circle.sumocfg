@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- GNT Circle – SUMO run config (SPEC.md §5.2.1). -->
+<configuration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+    <input>
+        <net-file value="gnt_circle.net.xml"/>
+        <route-files value="gnt_circle.rou.xml"/>
+    </input>
+    <time>
+        <begin value="0"/>
+        <end value="100000"/>
+        <step-length value="0.05"/>
+    </time>
+    <processing>
+        <lateral-resolution value="0.8"/>
+        <ignore-junction-blocker value="10"/>
+        <time-to-teleport value="120"/>
+        <collision.action value="none"/>
+    </processing>
+    <report>
+        <no-step-log value="true"/>
+        <no-warnings value="true"/>
+    </report>
+</configuration>

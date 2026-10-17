@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  GNT Circle – routes & demand (SPEC.md §5). Default/resolved form of scenario.xml.
+  The backend loader regenerates this file from scenario.xml; keep both in sync if edited by hand.
+  vType values = global <behaviour> params + per-vtype overrides (precedence per §5.2.4).
+-->
+<routes xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/routes_file.xsd">
+    <vTypeDistribution id="indian_mix">
+        <vType id="motorcycle" probability="0.40" vClass="motorcycle" guiShape="motorcycle" color="#f59e0b"
+               length="2.0" width="0.8" maxSpeed="22.0" accel="3.5" decel="6.0"
+               carFollowModel="Krauss" laneChangeModel="SL2015"
+               minGap="0.5" tau="0.6" sigma="0.6" impatience="0.8" speedFactor="normc(1.1,0.15,0.7,1.5)"
+               lcAssertive="3.0" lcCooperative="0.3" lcSpeedGain="2.0" lcKeepRight="0.3"
+               latAlignment="arbitrary" minGapLat="0.2"
+               jmIgnoreFoeProb="0.1" jmIgnoreFoeSpeed="5.0" jmTimegapMinor="0.5"/>
+        <vType id="auto_rickshaw" probability="0.15" vClass="passenger" guiShape="passenger/hatchback" color="#facc15"
+               length="2.6" width="1.4" maxSpeed="14.0" accel="1.8" decel="4.0"
+               carFollowModel="Krauss" laneChangeModel="SL2015"
+               minGap="0.8" tau="0.6" sigma="0.7" impatience="0.8" speedFactor="normc(1.1,0.15,0.7,1.5)"
+               lcAssertive="2.0" lcCooperative="0.3" lcSpeedGain="2.0" lcKeepRight="0.3"
+               latAlignment="arbitrary" minGapLat="0.3"
+               jmIgnoreFoeProb="0.1" jmIgnoreFoeSpeed="5.0" jmTimegapMinor="0.5"/>
+        <vType id="car" probability="0.30" vClass="passenger" guiShape="passenger" color="#38bdf8"
+               length="4.3" width="1.7" maxSpeed="30.0" accel="2.6" decel="4.5"
+               carFollowModel="Krauss" laneChangeModel="SL2015"
+               minGap="1.0" tau="0.6" sigma="0.6" impatience="0.8" speedFactor="normc(1.1,0.15,0.7,1.5)"
+               lcAssertive="2.0" lcCooperative="0.3" lcSpeedGain="2.0" lcKeepRight="0.3"
+               latAlignment="arbitrary" minGapLat="0.3"
+               jmIgnoreFoeProb="0.1" jmIgnoreFoeSpeed="5.0" jmTimegapMinor="0.5"/>
+        <vType id="bus" probability="0.05" vClass="bus" guiShape="bus" color="#ef4444"
+               length="12.0" width="2.5" maxSpeed="18.0" accel="1.0" decel="3.5"
+               carFollowModel="Krauss" laneChangeModel="SL2015"
+               minGap="1.5" tau="0.6" sigma="0.6" impatience="0.8" speedFactor="normc(1.1,0.15,0.7,1.5)"
+               lcAssertive="1.5" lcCooperative="0.3" lcSpeedGain="2.0" lcKeepRight="0.3"
+               latAlignment="arbitrary" minGapLat="0.3"
+               jmIgnoreFoeProb="0.1" jmIgnoreFoeSpeed="5.0" jmTimegapMinor="0.5"/>
+        <vType id="truck" probability="0.05" vClass="truck" guiShape="truck" color="#a3a3a3"
+               length="10.0" width="2.4" maxSpeed="18.0" accel="1.0" decel="3.5"
+               carFollowModel="Krauss" laneChangeModel="SL2015"
+               minGap="1.5" tau="0.6" sigma="0.6" impatience="0.8" speedFactor="normc(1.1,0.15,0.7,1.5)"
+               lcAssertive="2.0" lcCooperative="0.3" lcSpeedGain="2.0" lcKeepRight="0.3"
+               latAlignment="arbitrary" minGapLat="0.3"
+               jmIgnoreFoeProb="0.1" jmIgnoreFoeSpeed="5.0" jmTimegapMinor="0.5"/>
+        <vType id="van" probability="0.05" vClass="delivery" guiShape="delivery" color="#a78bfa"
+               length="5.0" width="1.9" maxSpeed="25.0" accel="2.0" decel="4.2"
+               carFollowModel="Krauss" laneChangeModel="SL2015"
+               minGap="1.0" tau="0.6" sigma="0.6" impatience="0.8" speedFactor="normc(1.1,0.15,0.7,1.5)"
+               lcAssertive="2.0" lcCooperative="0.3" lcSpeedGain="2.0" lcKeepRight="0.3"
+               latAlignment="arbitrary" minGapLat="0.3"
+               jmIgnoreFoeProb="0.1" jmIgnoreFoeSpeed="5.0" jmTimegapMinor="0.5"/>
+    </vTypeDistribution>
+
+    <!-- The six in-scope O-D routes -->
+    <route id="r_NG_TL" edges="NG_in rb_W_N rb_N_E TL_out"/>
+    <route id="r_NG_FL" edges="NG_in rb_W_N rb_N_E rb_E_S stem_sb bot_wb_b FL_out"/>
+    <route id="r_TL_FL" edges="TL_in slip_TL_FL bot_wb_a bot_wb_b FL_out"/>
+    <route id="r_TL_NG" edges="TL_in slip_TL_FL bot_wb_a bot_wb_b bot_eb stem_nb rb_S_W NG_out"/>
+    <route id="r_FL_NG" edges="FL_in bot_eb stem_nb rb_S_W NG_out"/>
+    <route id="r_FL_TL" edges="FL_in bot_eb stem_nb rb_S_W rb_W_N rb_N_E TL_out"/>
+
+    <!-- Same-arm U-turn routes: defined for completeness, 0 veh/h in v1 (no flows) -->
+    <route id="r_NG_NG" edges="NG_in rb_W_N rb_N_E rb_E_S rb_S_W NG_out"/>
+    <route id="r_TL_TL" edges="TL_in slip_TL_FL bot_wb_a bot_wb_b bot_eb stem_nb rb_S_W rb_W_N rb_N_E TL_out"/>
+    <route id="r_FL_FL" edges="FL_in bot_eb stem_nb rb_S_W rb_W_N rb_N_E rb_E_S stem_sb bot_wb_b FL_out"/>
+
+    <!-- Demand: one flow per OD key (SPEC.md §5.1 defaults) -->
+    <flow id="NG_TL" route="r_NG_TL" type="indian_mix" begin="0" end="100000" vehsPerHour="900" departLane="best" departSpeed="desired"/>
+    <flow id="NG_FL" route="r_NG_FL" type="indian_mix" begin="0" end="100000" vehsPerHour="300" departLane="best" departSpeed="desired"/>
+    <flow id="TL_FL" route="r_TL_FL" type="indian_mix" begin="0" end="100000" vehsPerHour="450" departLane="best" departSpeed="desired"/>
+    <flow id="TL_NG" route="r_TL_NG" type="indian_mix" begin="0" end="100000" vehsPerHour="750" departLane="best" departSpeed="desired"/>
+    <flow id="FL_NG" route="r_FL_NG" type="indian_mix" begin="0" end="100000" vehsPerHour="450" departLane="best" departSpeed="desired"/>
+    <flow id="FL_TL" route="r_FL_TL" type="indian_mix" begin="0" end="100000" vehsPerHour="450" departLane="best" departSpeed="desired"/>
+</routes>

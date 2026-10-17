@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  GNT Circle – nodes (SPEC.md §4.1). Origin = roundabout centre. Left-hand traffic.
+  TL has two terminal nodes (TL_end = outbound sink, TL_src = inbound source) because the
+  TL carriageways are not paired: TL inbound never reaches the roundabout (D-10).
+-->
+<nodes xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/nodes_file.xsd">
+    <!-- Terminals -->
+    <node id="NG_end" x="-330.0" y="0.0"    type="dead_end"/>
+    <node id="TL_end" x="330.0"  y="6.0"    type="dead_end"/>
+    <node id="TL_src" x="330.0"  y="-6.0"   type="dead_end"/>
+    <node id="FL_end" x="-340.0" y="-190.0" type="dead_end"/>
+
+    <!-- Roundabout ring (centreline radius 24 m) -->
+    <node id="rb_W" x="-24.0" y="0.0"   type="priority"/>
+    <node id="rb_N" x="0.0"   y="24.0"  type="priority"/>
+    <node id="rb_E" x="24.0"  y="0.0"   type="priority"/>
+    <node id="rb_S" x="0.0"   y="-24.0" type="priority"/>
+
+    <!-- TL free-left slip -->
+    <node id="slip_div"   x="70.0" y="-6.0"   type="priority"/>
+    <node id="slip_merge" x="90.0" y="-195.0" type="priority"/>
+
+    <!-- Bottom road -->
+    <node id="stem_S"  x="0.0"    y="-190.0" type="priority"/>
+    <node id="uturn_W" x="-250.0" y="-190.0" type="priority"/>
+</nodes>
