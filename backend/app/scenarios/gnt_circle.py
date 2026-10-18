@@ -280,17 +280,17 @@ class GntCircleScenario(BaseScenario):
         self.all_red_duration = all_red
 
         phases = [
-            GntPhase(name="NG Entry Green", state="green", raw="GGrGG", duration=ng_green, group="NG"),
-            GntPhase(name="NG Entry Amber", state="yellow", raw="GGryy", duration=amber, group="NG"),
+            GntPhase(name="NG Entry Green", state="green", raw="GrGrGG", duration=ng_green, group="NG"),
+            GntPhase(name="NG Entry Amber", state="yellow", raw="GrGryy", duration=amber, group="NG"),
         ]
         if all_red > 0:
-            phases.append(GntPhase(name="All-Red Clearance", state="red", raw="GGrrr", duration=all_red, group=""))
+            phases.append(GntPhase(name="All-Red Clearance", state="red", raw="GrGrrr", duration=all_red, group=""))
         phases.extend([
-            GntPhase(name="Ring FL→TL Green", state="green", raw="GGGrr", duration=fl_tl_green, group="FL_TL"),
-            GntPhase(name="Ring FL→TL Amber", state="yellow", raw="GGyrr", duration=amber, group="FL_TL"),
+            GntPhase(name="Ring FL→TL Green", state="green", raw="GGGGrr", duration=fl_tl_green, group="FL_TL"),
+            GntPhase(name="Ring FL→TL Amber", state="yellow", raw="GyGyrr", duration=amber, group="FL_TL"),
         ])
         if all_red > 0:
-            phases.append(GntPhase(name="All-Red Clearance", state="red", raw="GGrrr", duration=all_red, group=""))
+            phases.append(GntPhase(name="All-Red Clearance", state="red", raw="GrGrrr", duration=all_red, group=""))
         self._phases = phases
         self.tl_id = "gnt_rb_W" if self.signals_enabled else ""
 
@@ -338,8 +338,10 @@ class GntCircleScenario(BaseScenario):
             if vph <= 0:
                 continue
             # FL to NG traffic always uses the left-most lane (departLane="0")
-            depart_lane = "0" if key == "FL_NG" else ("1" if key == "FL_TL" else "random")
-            depart_pos_lat = "center" if key == "FL_NG" else "random"
+            # NG to TL traffic uses the dedicated left-most arc at the roundabout (departLane="0")
+            # FL to TL traffic can use any of the 3 lanes on the approach road (departLane="random")
+            depart_lane = "0" if key in ("FL_NG", "NG_TL") else "random"
+            depart_pos_lat = "center" if key in ("FL_NG", "NG_TL") else "random"
             lines.append(
                 f'    <flow id="{key}" route="{route}" type="indian_mix" begin="0" end="100000" '
                 f'vehsPerHour="{vph:g}" departLane="{depart_lane}" departPosLat="{depart_pos_lat}" departSpeed="desired"/>')
@@ -607,13 +609,14 @@ class GntCircleScenario(BaseScenario):
 
     def _make_aggressive(self, vid: str) -> None:
         """TL and NG vehicles join aggressively: accept tiny gaps, ignore foes, and never wait politely.
-        FL_NG vehicles are locked to lane 0 (the leftmost lane) throughout their trip."""
+        FL_NG vehicles are locked to lane 0 (the leftmost lane) throughout their trip.
+        NG_TL vehicles are locked to lane 0 so they exclusively use the additional leftmost arc at the roundabout."""
         try:
             traci.vehicle.setImpatience(vid, AGGRESSIVE_IMPATIENCE)
             traci.vehicle.setMinGap(vid, AGGRESSIVE_MIN_GAP)
             traci.vehicle.setTau(vid, AGGRESSIVE_TAU)
-            if vid.startswith("FL_NG"):
-                # Disallow autonomous lane changes so FL_NG vehicles stay in the leftmost lane
+            if vid.startswith("FL_NG") or vid.startswith("NG_TL"):
+                # Disallow autonomous lane changes so vehicles stay in the leftmost lane
                 traci.vehicle.setLaneChangeMode(vid, 512)
             self.aggressive_ids.add(vid)
         except traci.TraCIException as exc:

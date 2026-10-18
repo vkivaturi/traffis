@@ -14,10 +14,10 @@
 <scenario id="gnt_circle" maxSimTime="300">
     <demand>
         <od key="NG_TL" vehsPerHour="500"/>
-        <od key="NG_FL" vehsPerHour="3500"/>
+        <od key="NG_FL" vehsPerHour="3000"/>
         <od key="TL_FL" vehsPerHour="1000"/>
         <od key="TL_NG" vehsPerHour="500"/>
-        <od key="FL_NG" vehsPerHour="3500"/>
+        <od key="FL_NG" vehsPerHour="3000"/>
         <od key="FL_TL" vehsPerHour="1000"/>
     </demand>
 
@@ -39,10 +39,9 @@
     </behaviour>
 
     <vehicleMix>
-        <!-- No motorcycles, trucks or buses in this scenario; shares spread proportionally -->
-        <vtype id="auto_rickshaw" share="0.30" minGap="0.8" sigma="0.7"/>
-        <vtype id="car" share="0.60"/>
-        <vtype id="van" share="0.10"/>
+        <!-- No motorcycles, auto rickshaws, trucks or buses in this scenario; shares spread proportionally -->
+        <vtype id="car" share="0.85"/>
+        <vtype id="van" share="0.15"/>
     </vehicleMix>
 
     <signals enabled="false" amberDuration="3" allRedDuration="2">

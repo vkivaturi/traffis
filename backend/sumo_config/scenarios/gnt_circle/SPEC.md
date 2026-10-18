@@ -124,11 +124,12 @@ Declare the ring in `<roundabout nodes="rb_W rb_N rb_E rb_S" edges="..."/>` so S
 | `TL_in` | TL_end → tl_fl | 2 | From TL (only connects to the free left) |
 | ~~`TL_in_b`~~ | — | — | **Does not exist.** No TL entry into the ring |
 | `TL_out` | rb_E → TL_end | 2 | Roundabout to TL |
-| `rb_W_N`, `rb_N_E`, `rb_E_S`, `rb_S_W` | ring | 2 | **Clockwise** ring segments (W→N→E→S→W) |
+| `rb_W_N`, `rb_N_E` | ring | 3 | **Clockwise** ring segments (W→N→E, dedicated outer lane 0 for NG→TL) |
+| `rb_E_S`, `rb_S_W` | ring | 2 | **Clockwise** ring segments (E→S→W) |
 | `stem_sb_a` | rb_S → stem_merge | 3 | Ring exit down to the free-left merge |
 | `stem_sb_b` | stem_merge → stem_S | 3 | Stem SB after the merge (ring exit + TL free left) |
 | `stem_nb_a` | stem_S → fl_stem | 3 | Bottom road up to FL free-left diverge |
-| `stem_nb_b` | fl_stem → rb_S | 3 | Stem NB continuing to roundabout ring (lanes 1, 2) |
+| `stem_nb_b` | fl_stem → rb_S | 3 | Stem NB continuing to roundabout ring (lanes 0, 1, 2) |
 | `TL_free_left` | tl_fl → stem_merge | 1 | Free left at the circle; carries TL→FL **and** TL→NG/TL→TL (U-turn bound) |
 | `FL_free_left` | fl_stem → ng_merge | 1 | Free left at the circle; carries FL→NG traffic bypassing roundabout ring |
 | `bot_wb_b` | stem_S → uturn_W | 3 | Westbound: sweeping curve + straight road to U-turn and FL |
@@ -212,22 +213,21 @@ Driver/vehicle behaviour is configured **once for the whole simulation**, not pe
 #### 5.2.3 Vehicle classes & mix (global)
 | vType | Share | Length / Width (m) | Max speed (m/s) | Accel / Decel | Overrides |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| `auto_rickshaw` | 30% | 2.6 / 1.4 | 14.0 | 1.8 / 4.0 | `minGap 0.8`, `sigma 0.7` |
-| `car` | 60% | 4.3 / 1.7 | 30.0 | 2.6 / 4.5 | — |
-| `van` | 10% | 5.0 / 1.9 | 25.0 | 2.0 / 4.2 | — |
+| `car` | 85% | 4.3 / 1.7 | 30.0 | 2.6 / 4.5 | — |
+| `van` | 15% | 5.0 / 1.9 | 25.0 | 2.0 / 4.2 | — |
 
-No motorcycles, trucks or buses in this scenario (motorcycles were removed; their share was spread proportionally). Shares must sum to 100%. Frontend needs a render branch for `auto_rickshaw`. (`motorcycle` remains defined in `BUILTIN_VTYPES` and can be re-enabled by adding a `<vtype>` to `scenario.xml`.)
+No auto rickshaws, motorcycles, trucks or buses in this scenario (their shares were spread proportionally). Shares must sum to 100%. (`auto_rickshaw` and `motorcycle` remain defined in `BUILTIN_VTYPES` and can be re-enabled by adding a `<vtype>` to `scenario.xml`.)
 
 #### 5.2.4 `scenario.xml` shape (normative)
 ```xml
 <scenario id="gnt_circle" maxSimTime="600">
   <demand>
-    <od key="NG_TL" vehsPerHour="900"/>
-    <od key="NG_FL" vehsPerHour="300"/>
-    <od key="TL_FL" vehsPerHour="450"/>
-    <od key="TL_NG" vehsPerHour="750"/>
-    <od key="FL_NG" vehsPerHour="450"/>
-    <od key="FL_TL" vehsPerHour="450"/>
+    <od key="NG_TL" vehsPerHour="500"/>
+    <od key="NG_FL" vehsPerHour="3500"/>
+    <od key="TL_FL" vehsPerHour="2000"/>
+    <od key="TL_NG" vehsPerHour="500"/>
+    <od key="FL_NG" vehsPerHour="3500"/>
+    <od key="FL_TL" vehsPerHour="2000"/>
   </demand>
   <behaviour carFollowModel="Krauss" laneChangeModel="SL2015" lateralResolution="0.8">
     <!-- Global defaults: any SUMO vType attribute allowed; applied to all vTypes -->
@@ -247,9 +247,8 @@ No motorcycles, trucks or buses in this scenario (motorcycles were removed; thei
     <param key="jmTimegapMinor" value="0.5"/>
   </behaviour>
   <vehicleMix>
-    <vtype id="auto_rickshaw" share="0.30" minGap="0.8" sigma="0.7"/>
-    <vtype id="car" share="0.60"/>
-    <vtype id="van" share="0.10"/>
+    <vtype id="car" share="0.85"/>
+    <vtype id="van" share="0.15"/>
   </vehicleMix>
 </scenario>
 ```
