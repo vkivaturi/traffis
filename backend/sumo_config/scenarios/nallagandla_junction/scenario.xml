@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Traffis scenario settings: Nallagandla Junction (Signalized 3-Way T-Junction).
+  East-West corridor: Nallagandla (NG) <-> Tellapur (TL).
+  South approach: Flyover stem road (FL).
+  Free-left bypasses:
+    - TL to FL: free left via dedicated bypass curve (yields to stem SB)
+    - FL to NG: free left via dedicated bypass curve (merges into NG outbound)
+  Signalized center junction handles:
+    - NG -> TL (through) and NG -> FL (right turn)
+    - TL -> NG (through) and TL -> FL (left turn)
+    - FL -> TL (right turn) and FL -> NG (left turn)
+-->
+<scenario id="nallagandla_junction" maxSimTime="300">
+    <demand>
+        <od key="NG_TL" vehsPerHour="500"/>
+        <od key="NG_FL" vehsPerHour="3000"/>
+        <od key="TL_FL" vehsPerHour="1000"/>
+        <od key="TL_NG" vehsPerHour="500"/>
+        <od key="FL_NG" vehsPerHour="3000"/>
+        <od key="FL_TL" vehsPerHour="1000"/>
+    </demand>
+
+    <behaviour carFollowModel="Krauss" laneChangeModel="SL2015" lateralResolution="0.8">
+        <param key="minGap" value="1.0"/>
+        <param key="tau" value="0.6"/>
+        <param key="sigma" value="0.6"/>
+        <param key="impatience" value="0.8"/>
+        <param key="speedFactor" value="normc(1.1,0.15,0.7,1.5)"/>
+        <param key="lcAssertive" value="2.0"/>
+        <param key="lcCooperative" value="0.3"/>
+        <param key="lcSpeedGain" value="2.0"/>
+        <param key="lcKeepRight" value="0.3"/>
+        <param key="latAlignment" value="arbitrary"/>
+        <param key="minGapLat" value="0.3"/>
+        <param key="jmIgnoreFoeProb" value="0.1"/>
+        <param key="jmIgnoreFoeSpeed" value="5.0"/>
+        <param key="jmTimegapMinor" value="0.5"/>
+    </behaviour>
+
+    <vehicleMix>
+        <vtype id="car" share="0.85"/>
+        <vtype id="van" share="0.15"/>
+    </vehicleMix>
+
+    <!--
+      Signal phases (10 links total at junction 'center'):
+      Links 0..2: stem_nb_b (FL -> NG left turn [0], FL -> TL right turns [1, 2])
+      Links 3..5: TL_in_b (TL -> FL left turn [3], TL -> NG straight [4, 5])
+      Links 6..9: NG_in (NG -> TL straight [6, 7], NG -> FL right turns [8, 9])
+    -->
+    <signals enabled="true" amberDuration="3" allRedDuration="2">
+        <group id="NG" name="NG Approach (to TL straight &amp; to FL right)" greenDuration="25"/>
+        <group id="TL" name="TL Approach (to NG straight &amp; to FL left)" greenDuration="25"/>
+        <group id="FL" name="FL Approach (to TL right &amp; to NG left)" greenDuration="25"/>
+    </signals>
+</scenario>

@@ -3,7 +3,7 @@ import json
 import time
 import websockets
 
-SCENARIOS = ["straight_road", "three_way_intersection", "four_way_intersection", "gnt_circle"]
+SCENARIOS = ["straight_road", "three_way_intersection", "four_way_intersection", "gnt_circle", "nallagandla_junction"]
 GNT_ARMS = {"NG", "TL", "FL"}
 
 

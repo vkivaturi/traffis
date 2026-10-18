@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Nallagandla Junction – edges.
+  Speeds: roads 13.89 m/s (50 km/h), free left 5.56 m/s (20 km/h).
+  Left-hand traffic.
+  Center junction (0, 0) replaces the roundabout with signal control for:
+    - NG inbound (from west)
+    - TL inbound (from east)
+    - Stem northbound (from south)
+-->
+<edges xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/edges_file.xsd">
+    <!-- Main corridor: NG arm (4-lane road, 2 + 2) -->
+    <edge id="NG_in" from="NG_end" to="center" numLanes="2" speed="13.89" priority="3" width="3.2"/>
+    <edge id="NG_out_a" from="center" to="ng_merge" numLanes="2" speed="13.89" priority="3" width="3.2"/>
+    <edge id="NG_out_b" from="ng_merge" to="NG_end" numLanes="2" speed="13.89" priority="3" width="3.2"/>
+
+    <!-- Main corridor: TL arm (4-lane road, 2 + 2) -->
+    <!-- TL_in approaches from TL_end to tl_fl, then tl_fl to center -->
+    <edge id="TL_in_a" from="TL_end" to="tl_fl" numLanes="2" speed="13.89" priority="3" width="3.2"/>
+    <edge id="TL_in_b" from="tl_fl" to="center" numLanes="2" speed="13.89" priority="3" width="3.2"/>
+    <edge id="TL_out" from="center" to="TL_end" numLanes="2" speed="13.89" priority="3" width="3.2"/>
+
+    <!-- Free left turns -->
+    <!-- TL free left (single lane): carries TL->FL; diverges at tl_fl and merges at stem_merge -->
+    <edge id="TL_free_left" from="tl_fl" to="stem_merge" numLanes="1" speed="5.56" priority="2" width="3.2"
+          shape="45.00,-3.20 35.35,-3.20 31.01,-3.52 26.80,-4.45 22.85,-5.99 19.28,-8.07 16.20,-10.63 13.70,-13.60 11.86,-16.89 10.73,-20.39 10.35,-24.00"/>
+
+    <!-- FL free left (single lane): carries FL->NG; diverges at fl_stem and merges into NG_out_b kerb lane -->
+    <edge id="FL_free_left" from="fl_stem" to="ng_merge" numLanes="1" speed="5.56" priority="2" width="3.2"
+          shape="-8.00,-24.00 -8.68,-20.17 -10.60,-16.86 -13.54,-14.04 -17.28,-11.69 -21.62,-9.78 -26.36,-8.27 -31.27,-7.15 -36.16,-6.38 -40.80,-5.94 -45.00,-5.80"/>
+
+    <!-- Stem (South arm): 3 + 3 lanes -->
+    <edge id="stem_sb_a" from="center" to="stem_merge" numLanes="3" speed="13.89" priority="3" width="3.2"/>
+    <edge id="stem_sb_b" from="stem_merge" to="stem_S" numLanes="3" speed="13.89" priority="3" width="3.2"/>
+    <edge id="stem_nb_a" from="stem_S" to="fl_stem" numLanes="3" speed="13.89" priority="3" width="3.2"/>
+    <edge id="stem_nb_b" from="fl_stem" to="center" numLanes="3" speed="13.89" priority="3" width="3.2"/>
+
+    <!-- Bottom road: direct connection between FL_end and stem_S (no U-turn node) -->
+    <edge id="bot_wb" from="stem_S" to="FL_end" numLanes="3" speed="13.89" priority="3" width="3.2"
+          shape="0.00,-80.00 -0.46,-85.21 -1.81,-90.26 -4.02,-95.00 -7.02,-99.28 -10.72,-102.98 -15.00,-105.98 -19.74,-108.19 -24.79,-109.54 -30.00,-110.00 -150.00,-110.00"/>
+    <edge id="bot_eb" from="FL_end" to="stem_S" numLanes="3" speed="13.89" priority="3" width="3.2"
+          shape="-150.00,-110.00 -30.00,-110.00 -24.79,-109.54 -19.74,-108.19 -15.00,-105.98 -10.72,-102.98 -7.02,-99.28 -4.02,-95.00 -1.81,-90.26 -0.46,-85.21 0.00,-80.00"/>
+</edges>

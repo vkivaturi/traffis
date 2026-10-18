@@ -26,10 +26,6 @@ export const ScenarioConfigPanel: React.FC<ScenarioConfigPanelProps> = ({
   const timeLapseOption = options.find((o) => o.id === 'time_lapse');
   const isTimeLapseEnabled = Boolean(timeLapseOption?.value);
 
-  // Group status if signals active
-  const ngGroup = trafficLight?.signal_groups?.find((g) => g.id === 'NG');
-  const flTlGroup = trafficLight?.signal_groups?.find((g) => g.id === 'FL_TL');
-
   const getLampColor = (state?: string) => {
     switch (state) {
       case 'green':
@@ -92,7 +88,11 @@ export const ScenarioConfigPanel: React.FC<ScenarioConfigPanelProps> = ({
               SCENARIO CONFIG
             </div>
             <div style={{ fontSize: '0.62rem', color: '#94a3b8' }}>
-              {isSignalsEnabled ? 'Signals Active' : 'Unsignalised Merging'}
+              {signalsOption
+                ? isSignalsEnabled
+                  ? 'Signals Active'
+                  : 'Unsignalised Merging'
+                : 'Signalised Junction'}
               {isTimeLapseEnabled ? ' · Time Lapse' : ''}
             </div>
           </div>
@@ -105,12 +105,19 @@ export const ScenarioConfigPanel: React.FC<ScenarioConfigPanelProps> = ({
               borderRadius: '9999px',
               fontSize: '0.6rem',
               fontWeight: 700,
-              backgroundColor: isSignalsEnabled ? 'rgba(16, 185, 129, 0.2)' : 'rgba(100, 116, 139, 0.2)',
-              color: isSignalsEnabled ? '#34d399' : '#94a3b8',
-              border: `1px solid ${isSignalsEnabled ? 'rgba(16, 185, 129, 0.4)' : 'rgba(100, 116, 139, 0.3)'}`,
+              backgroundColor:
+                signalsOption && !isSignalsEnabled
+                  ? 'rgba(100, 116, 139, 0.2)'
+                  : 'rgba(16, 185, 129, 0.2)',
+              color: signalsOption && !isSignalsEnabled ? '#94a3b8' : '#34d399',
+              border: `1px solid ${
+                signalsOption && !isSignalsEnabled
+                  ? 'rgba(100, 116, 139, 0.3)'
+                  : 'rgba(16, 185, 129, 0.4)'
+              }`,
             }}
           >
-            {isSignalsEnabled ? 'SIGNALISED' : 'UNSIGNALISED'}
+            {signalsOption && !isSignalsEnabled ? 'UNSIGNALISED' : 'SIGNALISED'}
           </span>
           <button
             style={{
@@ -295,8 +302,8 @@ export const ScenarioConfigPanel: React.FC<ScenarioConfigPanelProps> = ({
             </div>
           )}
 
-          {/* Live Signal Telemetry when enabled */}
-          {isSignalsEnabled && trafficLight && (
+          {/* Live Signal Telemetry when enabled or signalised */}
+          {(isSignalsEnabled || (!signalsOption && Boolean(trafficLight?.signal_groups?.length))) && trafficLight && (
             <div
               style={{
                 marginTop: '10px',
@@ -322,37 +329,76 @@ export const ScenarioConfigPanel: React.FC<ScenarioConfigPanelProps> = ({
               </div>
 
               {/* Group status rows */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    fontSize: '0.66rem',
-                  }}
-                >
-                  <span style={{ color: '#e2e8f0', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <span
-                      style={{
-                        width: '8px',
-                        height: '8px',
-                        borderRadius: '50%',
-                        backgroundColor: getLampColor(ngGroup?.state),
-                        boxShadow: `0 0 6px ${getLampColor(ngGroup?.state)}`,
-                      }}
-                    />
-                    NG Entry (NG→FL & NG→TL)
-                  </span>
-                  <span
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                {trafficLight.signal_groups && trafficLight.signal_groups.length > 0 ? (
+                  trafficLight.signal_groups.map((group) => {
+                    const lampColor = getLampColor(group.state);
+                    return (
+                      <div
+                        key={group.id}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          fontSize: '0.66rem',
+                        }}
+                      >
+                        <span style={{ color: '#e2e8f0', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span
+                            style={{
+                              width: '8px',
+                              height: '8px',
+                              borderRadius: '50%',
+                              backgroundColor: lampColor,
+                              boxShadow: `0 0 6px ${lampColor}`,
+                            }}
+                          />
+                          {group.name}
+                        </span>
+                        <span
+                          style={{
+                            fontFamily: 'var(--font-mono)',
+                            fontWeight: 700,
+                            color: lampColor,
+                          }}
+                        >
+                          {group.state?.toUpperCase() ?? 'RED'}
+                        </span>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div
                     style={{
-                      fontFamily: 'var(--font-mono)',
-                      fontWeight: 700,
-                      color: getLampColor(ngGroup?.state),
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      fontSize: '0.66rem',
                     }}
                   >
-                    {ngGroup?.state?.toUpperCase() ?? 'RED'}
-                  </span>
-                </div>
+                    <span style={{ color: '#e2e8f0', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span
+                        style={{
+                          width: '8px',
+                          height: '8px',
+                          borderRadius: '50%',
+                          backgroundColor: getLampColor(trafficLight.state),
+                          boxShadow: `0 0 6px ${getLampColor(trafficLight.state)}`,
+                        }}
+                      />
+                      Active Signal
+                    </span>
+                    <span
+                      style={{
+                        fontFamily: 'var(--font-mono)',
+                        fontWeight: 700,
+                        color: getLampColor(trafficLight.state),
+                      }}
+                    >
+                      {trafficLight.state?.toUpperCase()}
+                    </span>
+                  </div>
+                )}
 
                 <div
                   style={{
@@ -360,37 +406,9 @@ export const ScenarioConfigPanel: React.FC<ScenarioConfigPanelProps> = ({
                     alignItems: 'center',
                     justifyContent: 'space-between',
                     fontSize: '0.66rem',
-                  }}
-                >
-                  <span style={{ color: '#e2e8f0', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <span
-                      style={{
-                        width: '8px',
-                        height: '8px',
-                        borderRadius: '50%',
-                        backgroundColor: getLampColor(flTlGroup?.state),
-                        boxShadow: `0 0 6px ${getLampColor(flTlGroup?.state)}`,
-                      }}
-                    />
-                    Ring FL→TL
-                  </span>
-                  <span
-                    style={{
-                      fontFamily: 'var(--font-mono)',
-                      fontWeight: 700,
-                      color: getLampColor(flTlGroup?.state),
-                    }}
-                  >
-                    {flTlGroup?.state?.toUpperCase() ?? 'RED'}
-                  </span>
-                </div>
-
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    fontSize: '0.66rem',
+                    marginTop: '2px',
+                    paddingTop: '4px',
+                    borderTop: '1px solid rgba(255, 255, 255, 0.05)',
                   }}
                 >
                   <span style={{ color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -402,7 +420,7 @@ export const ScenarioConfigPanel: React.FC<ScenarioConfigPanelProps> = ({
                         backgroundColor: '#38bdf8',
                       }}
                     />
-                    TL Free Left
+                    Free Lefts (TL→FL & FL→NG)
                   </span>
                   <span style={{ color: '#38bdf8', fontSize: '0.6rem', fontWeight: 600 }}>
                     FREE FLOW

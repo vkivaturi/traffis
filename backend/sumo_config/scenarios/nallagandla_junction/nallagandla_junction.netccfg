@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Nallagandla Junction – netconvert config. Run: netconvert -c nallagandla_junction.netccfg -->
+<configuration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/netconvertConfiguration.xsd">
+    <input>
+        <node-files value="nallagandla_junction.nod.xml"/>
+        <edge-files value="nallagandla_junction.edg.xml"/>
+        <connection-files value="nallagandla_junction.con.xml"/>
+    </input>
+    <output>
+        <output-file value="nallagandla_junction.net.xml"/>
+    </output>
+    <processing>
+        <lefthand value="true"/>
+        <no-turnarounds value="true"/>
+        <junctions.corner-detail value="5"/>
+        <offset.disable-normalization value="true"/>
+    </processing>
+    <tls_building>
+        <tls.guess value="false"/>
+    </tls_building>
+    <report>
+        <verbose value="false"/>
+    </report>
+</configuration>

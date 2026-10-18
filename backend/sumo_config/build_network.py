@@ -335,6 +335,21 @@ def build_gnt_circle():
         print(f"Successfully generated {target_dir / net}!")
 
 
+def build_nallagandla_junction():
+    target_dir = SCENARIOS_DIR / "nallagandla_junction"
+    netconvert_bin = find_sumo_binary("netconvert")
+    if not netconvert_bin:
+        raise RuntimeError("netconvert binary could not be found! Ensure SUMO is installed.")
+    cfg = "nallagandla_junction.netccfg"
+    net = "nallagandla_junction.net.xml"
+    print(f"Compiling {net} with {netconvert_bin}...")
+    result = subprocess.run([netconvert_bin, "-c", cfg], cwd=target_dir, capture_output=True, text=True)
+    if result.returncode != 0:
+        print("netconvert failed:", result.stderr)
+        sys.exit(result.returncode)
+    print(f"Successfully generated {target_dir / net}!")
+
+
 def build():
     CONFIG_DIR.mkdir(parents=True, exist_ok=True)
     SCENARIOS_DIR.mkdir(parents=True, exist_ok=True)
@@ -346,6 +361,8 @@ def build():
     build_four_way_intersection()
     print("Building scenario 4: GNT Circle...")
     build_gnt_circle()
+    print("Building scenario 5: Nallagandla Junction...")
+    build_nallagandla_junction()
     print("All road networks built successfully!")
 
 

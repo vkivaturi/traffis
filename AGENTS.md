@@ -65,6 +65,7 @@ flowchart TD
 │   │   ├── main.py               # FastAPI app, lifespan setup, REST endpoints & WebSocket route
 │   │   └── scenarios/            # BaseScenario + one module per scenario (registry.py registers them)
 │   │       ├── gnt_circle.py     # GNT Circle roundabout: O-D flows -> .rou.xml, polyline geometry, junction metrics
+│   │       ├── nallagandla_junction.py # Nallagandla Junction: 3-way signalised T-junction with free-lefts (no roundabout, no U-turn)
 │   │       └── net_geometry.py   # Reads lane/junction polylines from a compiled .net.xml
 │   └── sumo_config/              # SUMO road geometry and routes
 │       ├── build_network.py      # Python script to compile .nod.xml & .edg.xml into .net.xml
