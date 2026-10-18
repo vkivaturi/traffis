@@ -21,6 +21,8 @@ cleanup() {
     echo ""
     echo "Stopping Traffis backend and frontend..."
     kill $BACKEND_PID $FRONTEND_PID 2>/dev/null || true
+    pkill -P $BACKEND_PID sumo 2>/dev/null || true
+    killall sumo 2>/dev/null || true
     wait $BACKEND_PID $FRONTEND_PID 2>/dev/null || true
     echo "Traffis stopped successfully."
 }

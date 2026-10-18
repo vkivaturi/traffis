@@ -1222,10 +1222,15 @@ export const CanvasView: React.FC<CanvasViewProps> = ({
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
 
-  const isIntersection = scenario?.type === 'intersection' || scenario?.id === 'three_way_intersection';
-  // Curved-geometry scenarios (e.g. GNT Circle) render lane polylines from network info
+  const effectiveScenario = scenario || networkInfo?.scenario;
+  const effectiveScenarioId = effectiveScenario?.id;
+  const isIntersection =
+    effectiveScenario?.type === 'intersection' || effectiveScenarioId === 'three_way_intersection';
+  // Curved-geometry scenarios (e.g. GNT Circle, Nallagandla Junction) render lane polylines from network info
   const geometry =
-    networkInfo?.geometry && networkInfo.scenario?.id === scenario?.id ? networkInfo.geometry : null;
+    networkInfo?.geometry && (!effectiveScenarioId || networkInfo.scenario?.id === effectiveScenarioId)
+      ? networkInfo.geometry
+      : null;
   const isGeometry = !!geometry;
 
   const labelRectsRef = useRef<LabelHitRect[]>([]);
@@ -1403,9 +1408,9 @@ export const CanvasView: React.FC<CanvasViewProps> = ({
         labelRectsRef.current = renderGeometryNetwork(
           ctx, worldToScreenX, worldToScreenY, zoom, geometry, hoveredLabel?.id ?? null, trafficLight
         );
-      } else if (scenario?.id === 'four_way_intersection') {
+      } else if (effectiveScenarioId === 'four_way_intersection') {
         renderFourWayIntersection(ctx, worldToScreenX, worldToScreenY, zoom, trafficLight);
-      } else if (isIntersection || scenario?.id === 'three_way_intersection') {
+      } else if (isIntersection || effectiveScenarioId === 'three_way_intersection') {
         renderThreeWayIntersection(ctx, worldToScreenX, worldToScreenY, zoom, trafficLight);
       } else {
         renderStraightHighway(ctx, worldToScreenX, worldToScreenY, zoom, width, trafficLight);
@@ -1424,7 +1429,7 @@ export const CanvasView: React.FC<CanvasViewProps> = ({
         }
 
         // Speed tag above vehicle image (disabled in Nallagandla Junction scenario)
-        if (scenario?.id !== 'nallagandla_junction' && (zoom > 4 || vid === selectedVehicleId)) {
+        if (effectiveScenarioId !== 'nallagandla_junction' && (zoom > 4 || vid === selectedVehicleId)) {
           const badgeY = -vWidPx - 10;
           ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
           ctx.beginPath();
@@ -1580,7 +1585,7 @@ export const CanvasView: React.FC<CanvasViewProps> = ({
 
     animId = requestAnimationFrame(render);
     return () => cancelAnimationFrame(animId);
-  }, [camera, selectedVehicleId, trafficLight, isIntersection, scenario, geometry, isGeometry, hoveredLabel]);
+  }, [camera, selectedVehicleId, trafficLight, isIntersection, effectiveScenarioId, scenario, geometry, isGeometry, hoveredLabel]);
 
   // Mouse pan/zoom handlers
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -1687,6 +1692,14 @@ export const CanvasView: React.FC<CanvasViewProps> = ({
 
     if (geometry) {
       setCamera(fitGeometryCamera(w, h, geometry.bounds));
+    } else if (effectiveScenarioId === 'four_way_intersection') {
+      const fitZoom = Math.max(1.0, Math.min((w - 80) / 520, (h - 80) / 520));
+      setCamera({
+        x: 0,
+        y: 0,
+        zoom: fitZoom,
+        followingId: null,
+      });
     } else if (isIntersection) {
       const fitZoom = Math.max(1.0, Math.min((w - 80) / 520, (h - 80) / 280));
       setCamera({

@@ -201,7 +201,11 @@ async def websocket_endpoint(websocket: WebSocket):
             except json.JSONDecodeError:
                 logger.warning("Invalid JSON received over WebSocket: %s", text)
             except Exception as e:
-                logger.error("Error processing WebSocket message: %s", e)
+                logger.error("Error processing WebSocket message: %s", e, exc_info=True)
+                try:
+                    await websocket.send_text(json.dumps({"type": "error", "message": str(e)}))
+                except Exception:
+                    pass
     except WebSocketDisconnect:
         sim_manager.unregister_websocket(websocket)
     except Exception as e:

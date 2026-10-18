@@ -244,6 +244,11 @@ export function useSimulationSocket(authToken?: string) {
   }, [getToken]);
 
   const selectScenario = useCallback((scenarioId: string) => {
+    const found = scenarios.find((s) => s.id === scenarioId);
+    if (found) {
+      setActiveScenario(found);
+    }
+
     const raw = JSON.stringify({
       action: 'select_scenario',
       payload: { scenario_id: scenarioId },
@@ -261,9 +266,21 @@ export function useSimulationSocket(authToken?: string) {
         method: 'POST',
         headers,
         body: JSON.stringify({ scenario_id: scenarioId }),
-      }).catch((e) => console.warn('Failed to switch scenario via REST:', e));
+      })
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (data?.scenario) {
+            setActiveScenario(data.scenario);
+            fetch('/api/network-info', { headers })
+              .then((r) => (r.ok ? r.json() : null))
+              .then((net) => {
+                if (net) setNetworkInfo(net);
+              });
+          }
+        })
+        .catch((e) => console.warn('Failed to switch scenario via REST:', e));
     }
-  }, [getToken]);
+  }, [getToken, scenarios]);
 
   const play = useCallback(() => {
     if (state.time_limit_reached || state.sim_time >= (state.max_sim_time ?? 300)) {

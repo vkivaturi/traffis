@@ -59,6 +59,23 @@ export const App: React.FC = () => {
   const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null);
   const [soundEnabled, setSoundEnabled] = useState<boolean>(false);
 
+  // Whenever activeScenario changes, automatically update the camera to its default position
+  const prevScenarioIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (activeScenario && activeScenario.id !== prevScenarioIdRef.current) {
+      prevScenarioIdRef.current = activeScenario.id;
+      if (activeScenario.default_camera) {
+        // oxlint-disable-next-line react/set-state-in-effect
+        setCamera({
+          x: activeScenario.default_camera.x,
+          y: activeScenario.default_camera.y,
+          zoom: activeScenario.default_camera.zoom,
+          followingId: null,
+        });
+      }
+    }
+  }, [activeScenario]);
+
   // Sound effect when traffic signal changes
   const prevSignalStateRef = useRef<string | undefined>(undefined);
   useEffect(() => {

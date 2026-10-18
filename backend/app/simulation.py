@@ -3,8 +3,10 @@ import json
 import logging
 import random
 import time
+import subprocess
 from typing import Set, Dict, Any, Optional, List
 import traci
+import traci.main
 from fastapi import WebSocket
 
 from .config import settings, bandwidth_limiter
@@ -99,6 +101,42 @@ class SimulationManager:
             self.loop_task = asyncio.create_task(self._simulation_loop())
             logger.info("Simulation loop background task started.")
 
+    def _close_traci(self):
+        """Safely close active TraCI connection and ensure SUMO process is terminated."""
+        try:
+            conn = None
+            proc = None
+            try:
+                conn = traci.getConnection("default")
+                proc = getattr(conn, "_process", None)
+            except Exception:
+                pass
+
+            try:
+                traci.close(wait=False)
+            except Exception as e:
+                logger.warning("Error calling traci.close(): %s", e)
+
+            if proc is not None:
+                try:
+                    proc.terminate()
+                    proc.wait(timeout=1.0)
+                except Exception:
+                    try:
+                        proc.kill()
+                    except Exception:
+                        pass
+        except Exception as e:
+            logger.warning("Error during traci close: %s", e)
+        finally:
+            try:
+                if hasattr(traci.main, "_connections"):
+                    traci.main._connections.pop("default", None)
+                    traci.main._connections.pop("", None)
+            except Exception:
+                pass
+            self.is_initialized = False
+
     def _start_traci(self):
         """Start the headless SUMO process via TraCI using current scenario."""
         cfg_path = self.scenario.sumocfg_file
@@ -114,7 +152,7 @@ class SimulationManager:
         ]
         logger.info("Starting SUMO TraCI for scenario '%s' with command: %s", self.scenario.id, " ".join(cmd))
         self.scenario.reload_settings()
-        traci.start(cmd)
+        traci.start(cmd, stdout=subprocess.DEVNULL)
         self.step_count = 0
         self.sim_time = 0.0
         self.time_limit_reached = False
@@ -149,13 +187,7 @@ class SimulationManager:
 
         async with self.lock:
             logger.info("Switching scenario to '%s' (%s)...", target.id, target.name)
-            if self.is_initialized:
-                try:
-                    traci.close()
-                except Exception as e:
-                    logger.warning("Error closing traci during scenario switch: %s", e)
-                self.is_initialized = False
-
+            self._close_traci()
             self.scenario = target
             self._start_traci()
             self.is_initialized = True
@@ -172,12 +204,7 @@ class SimulationManager:
             needs_restart = self.scenario.set_options(options)
             if needs_restart:
                 logger.info("Scenario options changed (%s), restarting SUMO...", options)
-                if self.is_initialized:
-                    try:
-                        traci.close()
-                    except Exception as e:
-                        logger.warning("Error closing traci during options update: %s", e)
-                    self.is_initialized = False
+                self._close_traci()
                 self._start_traci()
                 self.is_initialized = True
                 self.is_running = False
@@ -208,12 +235,7 @@ class SimulationManager:
             self.loop_task = None
 
         async with self.lock:
-            if self.is_initialized:
-                try:
-                    traci.close()
-                except Exception as e:
-                    logger.warning("Error closing traci: %s", e)
-                self.is_initialized = False
+            self._close_traci()
 
     async def reset(self):
         """Reset the current simulation back to t=0."""
@@ -222,13 +244,10 @@ class SimulationManager:
 
         async with self.lock:
             logger.info("Resetting simulation for scenario '%s'...", self.scenario.id)
-            try:
-                traci.close()
-            except Exception as e:
-                logger.warning("Error while closing traci on reset: %s", e)
-            
+            self._close_traci()
             # Restart TraCI with current scenario
             self._start_traci()
+            self.is_initialized = True
             self.is_running = False
         
         # Broadcast initial empty state immediately
