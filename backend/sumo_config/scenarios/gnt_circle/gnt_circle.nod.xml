@@ -21,6 +21,10 @@
     <node id="tl_fl"      x="45.0" y="0.0"   type="priority"/>
     <node id="stem_merge" x="0.0"  y="-24.0" type="priority"/>
 
+    <!-- FL free left at the roundabout: diverges from stem NB kerb lane, merges into NG out kerb lane -->
+    <node id="fl_stem"    x="0.0"   y="-24.0" type="priority"/>
+    <node id="ng_merge"   x="-45.0" y="0.0"   type="priority"/>
+
     <!-- Bottom road: stem_S is at the top tangent of the sweeping curve into the stem -->
     <node id="stem_S"  x="0.0"    y="-80.0"  type="priority"/>
     <node id="uturn_W" x="-110.0" y="-110.0" type="priority"/>

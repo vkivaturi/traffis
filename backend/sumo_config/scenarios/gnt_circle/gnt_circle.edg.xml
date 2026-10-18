@@ -9,8 +9,10 @@
     <!-- Main corridor: NG arm (4-lane road, 2 + 2) -->
     <edge id="NG_in"  from="NG_end" to="rb_W"   numLanes="2" speed="13.89" priority="3" width="3.2"
           shape="-160.00,1.00 -10.00,1.00"/>
-    <edge id="NG_out" from="rb_W"   to="NG_end" numLanes="2" speed="13.89" priority="3" width="3.2"
-          shape="-10.00,-1.00 -160.00,-1.00"/>
+    <edge id="NG_out_a" from="rb_W"     to="ng_merge" numLanes="2" speed="13.89" priority="3" width="3.2"
+          shape="-10.00,-1.00 -45.00,-1.00"/>
+    <edge id="NG_out_b" from="ng_merge" to="NG_end"   numLanes="2" speed="13.89" priority="3" width="3.2"
+          shape="-45.00,-1.00 -160.00,-1.00"/>
 
     <!-- Main corridor: TL arm (4-lane road, 2 + 2) -->
     <edge id="TL_out" from="rb_E"   to="TL_end" numLanes="2" speed="13.89" priority="3" width="3.2"/>
@@ -19,6 +21,10 @@
     <!-- TL free left (single lane): carries TL->FL and TL->NG (via U-turn); yields at stem_merge (D-6) -->
     <edge id="TL_free_left" from="tl_fl" to="stem_merge" numLanes="1" speed="5.56" priority="2" width="3.2"
           shape="45.00,-3.20 35.35,-3.20 31.01,-3.52 26.80,-4.45 22.85,-5.99 19.28,-8.07 16.20,-10.63 13.70,-13.60 11.86,-16.89 10.73,-20.39 10.35,-24.00"/>
+
+    <!-- FL free left (single lane): carries FL->NG bypassing roundabout ring; joins NG_out_b kerb lane -->
+    <edge id="FL_free_left" from="fl_stem" to="ng_merge" numLanes="1" speed="5.56" priority="2" width="3.2"
+          shape="-8.00,-24.00 -8.68,-20.17 -10.60,-16.86 -13.54,-14.04 -17.28,-11.69 -21.62,-9.78 -26.36,-8.27 -31.27,-7.15 -36.16,-6.38 -40.80,-5.94 -45.00,-5.80"/>
 
     <!-- Roundabout ring (2 lanes, clockwise) -->
     <edge id="rb_W_N" from="rb_W" to="rb_N" numLanes="2" speed="6.94" priority="4" width="3.5"
@@ -30,10 +36,11 @@
     <edge id="rb_S_W" from="rb_S" to="rb_W" numLanes="2" speed="6.94" priority="4" width="3.5"
           shape="0.00,-10.00 -3.83,-9.24 -7.07,-7.07 -9.24,-3.83 -10.00,0.00"/>
 
-    <!-- Stem: 3 + 3 lanes (southbound split at the free-left merge) -->
+    <!-- Stem: 3 + 3 lanes (split at free-left merge/diverge points) -->
     <edge id="stem_sb_a" from="rb_S"       to="stem_merge" numLanes="3" speed="13.89" priority="3" width="3.2"/>
     <edge id="stem_sb_b" from="stem_merge" to="stem_S"     numLanes="3" speed="13.89" priority="3" width="3.2"/>
-    <edge id="stem_nb"   from="stem_S"     to="rb_S"       numLanes="3" speed="13.89" priority="3" width="3.2"/>
+    <edge id="stem_nb_a" from="stem_S"     to="fl_stem"    numLanes="3" speed="13.89" priority="3" width="3.2"/>
+    <edge id="stem_nb_b" from="fl_stem"    to="rb_S"       numLanes="3" speed="13.89" priority="3" width="3.2"/>
 
     <!-- Bottom road: curved sweeping bend connecting horizontal FL road and vertical stem -->
     <edge id="bot_wb_b" from="stem_S"  to="uturn_W" numLanes="3" speed="13.89" priority="3" width="3.2"

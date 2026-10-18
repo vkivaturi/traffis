@@ -58,12 +58,12 @@ ROUTES = {
     "r_NG_TL": "NG_in rb_W_N rb_N_E TL_out",
     "r_NG_FL": "NG_in rb_W_N rb_N_E rb_E_S stem_sb_a stem_sb_b bot_wb_b FL_out",
     "r_TL_FL": "TL_in TL_free_left stem_sb_b bot_wb_b FL_out",
-    "r_TL_NG": "TL_in TL_free_left stem_sb_b bot_wb_b bot_eb stem_nb rb_S_W NG_out",
-    "r_FL_NG": "FL_in bot_eb stem_nb rb_S_W NG_out",
-    "r_FL_TL": "FL_in bot_eb stem_nb rb_S_W rb_W_N rb_N_E TL_out",
-    "r_NG_NG": "NG_in rb_W_N rb_N_E rb_E_S rb_S_W NG_out",
-    "r_TL_TL": "TL_in TL_free_left stem_sb_b bot_wb_b bot_eb stem_nb rb_S_W rb_W_N rb_N_E TL_out",
-    "r_FL_FL": "FL_in bot_eb stem_nb rb_S_W rb_W_N rb_N_E rb_E_S stem_sb_a stem_sb_b bot_wb_b FL_out",
+    "r_TL_NG": "TL_in TL_free_left stem_sb_b bot_wb_b bot_eb stem_nb_a stem_nb_b rb_S_W NG_out_a NG_out_b",
+    "r_FL_NG": "FL_in bot_eb stem_nb_a FL_free_left NG_out_b",
+    "r_FL_TL": "FL_in bot_eb stem_nb_a stem_nb_b rb_S_W rb_W_N rb_N_E TL_out",
+    "r_NG_NG": "NG_in rb_W_N rb_N_E rb_E_S rb_S_W NG_out_a NG_out_b",
+    "r_TL_TL": "TL_in TL_free_left stem_sb_b bot_wb_b bot_eb stem_nb_a stem_nb_b rb_S_W rb_W_N rb_N_E TL_out",
+    "r_FL_FL": "FL_in bot_eb stem_nb_a stem_nb_b rb_S_W rb_W_N rb_N_E rb_E_S stem_sb_a stem_sb_b bot_wb_b FL_out",
 }
 
 # Built-in vType defaults (SPEC.md §5.2.3); lowest precedence after SUMO defaults. No trucks or buses.
@@ -81,8 +81,9 @@ BUILTIN_VTYPES: Dict[str, Dict[str, str]] = {
 RING_EDGES = ["rb_W_N", "rb_N_E", "rb_E_S", "rb_S_W"]
 ENTRY_QUEUES = [
     ("NG_in", "NG entry (ring)"),
-    ("stem_nb", "Stem entry (ring)"),
+    ("stem_nb_b", "Stem entry (ring)"),
     ("TL_in", "TL approach (free left)"),
+    ("FL_free_left", "FL approach (free left)"),
 ]
 QUEUE_ZONE_M = 100.0
 
@@ -94,18 +95,20 @@ AGGRESSIVE_IMPATIENCE = 1.0
 AGGRESSIVE_MIN_GAP = 0.3   # m  - tiny bumper gaps so aggressive vehicles squeeze into any opening
 AGGRESSIVE_TAU = 0.3       # s  - tiny following headway
 # While on these edges vehicles disregard right-of-way at the junction ahead
-# (NG entry & ring continuation at rb_W, merge at stem_merge, U-turn at uturn_W). SUMO speed mode 23 = default 31 minus bit 3.
-FORCE_EDGES = {"TL_free_left", "bot_wb_b", "NG_in", "rb_S_W"}
+# (NG entry & ring continuation at rb_W, merge at stem_merge/ng_merge, U-turn at uturn_W). SUMO speed mode 23 = default 31 minus bit 3.
+FORCE_EDGES = {"TL_free_left", "FL_free_left", "bot_wb_b", "NG_in", "rb_S_W"}
 SPEED_MODE_DEFAULT = 31
 SPEED_MODE_FORCE = 23
 
 EDGE_NAMES = {
-    "NG_in": "From Nallagandla", "NG_out": "To Nallagandla",
+    "NG_in": "From Nallagandla", "NG_out_a": "To Nallagandla (ring exit)", "NG_out_b": "To Nallagandla",
     "TL_in": "From Tellapur", "TL_out": "To Tellapur",
     "rb_W_N": "GNT Circle (W→N)", "rb_N_E": "GNT Circle (N→E)",
     "rb_E_S": "GNT Circle (E→S)", "rb_S_W": "GNT Circle (S→W)",
-    "stem_sb_a": "Stem southbound (ring exit)", "stem_sb_b": "Stem southbound", "stem_nb": "Stem northbound",
+    "stem_sb_a": "Stem southbound (ring exit)", "stem_sb_b": "Stem southbound",
+    "stem_nb_a": "Stem northbound", "stem_nb_b": "Stem northbound (ring entry)",
     "TL_free_left": "TL free left (merges into stem SB)",
+    "FL_free_left": "FL free left (merges into NG)",
     "bot_wb_b": "Bottom road westbound", "bot_eb": "Bottom road eastbound",
     "FL_in": "From Flyover", "FL_out": "To Flyover",
 }
@@ -113,9 +116,9 @@ EDGE_NAMES = {
 # Undivided carriageways: double solid centre lines (as on the 3-way intersection).
 # Broken for 12 m at X = -110 where the U-turn crosses.
 CENTRE_LINES = [
-    CentreLine(id="centre_NG", edges=["NG_in", "NG_out"], shape=[[-160.0, 0.0], [-19.2, 0.0]]),
+    CentreLine(id="centre_NG", edges=["NG_in", "NG_out_a", "NG_out_b"], shape=[[-160.0, 0.0], [-19.2, 0.0]]),
     CentreLine(id="centre_TL", edges=["TL_in", "TL_out"], shape=[[20.4, 0.0], [160.0, 0.0]]),
-    CentreLine(id="centre_stem", edges=["stem_sb_a", "stem_sb_b", "stem_nb"], shape=[[0.0, -17.1], [0.0, -80.0]]),
+    CentreLine(id="centre_stem", edges=["stem_sb_a", "stem_sb_b", "stem_nb_a", "stem_nb_b"], shape=[[0.0, -17.1], [0.0, -80.0]]),
     CentreLine(id="centre_bottom_W", edges=["FL_in", "FL_out"], shape=[[-150.0, -110.0], [-116.0, -110.0]]),
     CentreLine(id="centre_bottom_E", edges=["bot_eb", "bot_wb_b"], shape=[
         [-104.0, -110.0], [-30.0, -110.0], [-24.79, -109.54], [-19.74, -108.19],
@@ -126,21 +129,22 @@ CENTRE_LINES = [
 
 LABELS = [
     ArmLabel(id="NG", name=ARM_NAMES["NG"], x=-135.0, y=20.0,
-             description="Main road west (2 + 2 lanes): NG_in → GNT Circle, NG_out ← GNT Circle"),
+             description="Main road west (2 + 2 lanes): NG_in → GNT Circle, NG_out ← GNT Circle & FL free left"),
     ArmLabel(id="TL", name=ARM_NAMES["TL"], x=135.0, y=28.0,
              description="Main road east (2 + 2 lanes): TL_out ← GNT Circle; TL_in → single-lane free left into the stem (no ring entry)"),
     ArmLabel(id="FL", name=ARM_NAMES["FL"], x=-130.0, y=-86.0,
-             description="Bottom road west: FL_in → stem → GNT Circle; FL_out ← stem (incl. TL free left)"),
+             description="Bottom road west: FL_in → stem (free left to NG or ring to TL); FL_out ← stem (incl. TL free left)"),
 ]
 
 CALLOUTS = [
     MapCallout(text="↶ U-TURN", x=-110.0, y=-124.0),
     MapCallout(text="FREE LEFT", x=28.0, y=-34.0, align="left"),
+    MapCallout(text="FREE LEFT", x=-24.0, y=-30.0, align="right"),
 ]
 
 # Downstream ends that give way: ring entries, free-left merge into stem SB (D-6)
-YIELD_LANES_UNSIGNALISED = ["NG_in_0", "NG_in_1", "stem_nb_0", "stem_nb_1", "TL_free_left_0"]
-YIELD_LANES_SIGNALISED = ["stem_nb_0", "stem_nb_1", "TL_free_left_0"]
+YIELD_LANES_UNSIGNALISED = ["NG_in_0", "NG_in_1", "stem_nb_b_0", "stem_nb_b_1", "TL_free_left_0"]
+YIELD_LANES_SIGNALISED = ["stem_nb_b_0", "stem_nb_b_1", "TL_free_left_0"]
 YIELD_LANES = YIELD_LANES_UNSIGNALISED
 
 GNT_SIGNAL_HEADS = [
@@ -231,7 +235,7 @@ class GntCircleScenario(BaseScenario):
             ScenarioOption(
                 id="roundabout_signals",
                 label="Roundabout Signals",
-                description="Manage NG→FL, NG→TL, and FL→TL with traffic signals at GNT Circle. Free-left for TL traffic continues without a signal.",
+                description="Manage NG→FL, NG→TL, and FL→TL with traffic signals at GNT Circle. Free-lefts for TL and FL traffic continue without a signal.",
                 type="boolean",
                 value=self.signals_enabled,
                 requires_restart=True,
@@ -333,9 +337,12 @@ class GntCircleScenario(BaseScenario):
             vph = self.settings.od_demand.get(key, 0.0)
             if vph <= 0:
                 continue
+            # FL to NG traffic always uses the left-most lane (departLane="0")
+            depart_lane = "0" if key == "FL_NG" else ("1" if key == "FL_TL" else "random")
+            depart_pos_lat = "center" if key == "FL_NG" else "random"
             lines.append(
                 f'    <flow id="{key}" route="{route}" type="indian_mix" begin="0" end="100000" '
-                f'vehsPerHour="{vph:g}" departLane="random" departPosLat="random" departSpeed="desired"/>')
+                f'vehsPerHour="{vph:g}" departLane="{depart_lane}" departPosLat="{depart_pos_lat}" departSpeed="desired"/>')
         lines.append("</routes>")
 
         tmp = self.route_file.with_suffix(".xml.tmp")
@@ -599,11 +606,15 @@ class GntCircleScenario(BaseScenario):
         self._update_force_mode()
 
     def _make_aggressive(self, vid: str) -> None:
-        """TL and NG vehicles join aggressively: accept tiny gaps, ignore foes, and never wait politely."""
+        """TL and NG vehicles join aggressively: accept tiny gaps, ignore foes, and never wait politely.
+        FL_NG vehicles are locked to lane 0 (the leftmost lane) throughout their trip."""
         try:
             traci.vehicle.setImpatience(vid, AGGRESSIVE_IMPATIENCE)
             traci.vehicle.setMinGap(vid, AGGRESSIVE_MIN_GAP)
             traci.vehicle.setTau(vid, AGGRESSIVE_TAU)
+            if vid.startswith("FL_NG"):
+                # Disallow autonomous lane changes so FL_NG vehicles stay in the leftmost lane
+                traci.vehicle.setLaneChangeMode(vid, 512)
             self.aggressive_ids.add(vid)
         except traci.TraCIException as exc:
             logger.debug("could not set aggressive params on %s: %s", vid, exc)

@@ -108,6 +108,8 @@ Same conventions as other scenarios: metres, X → right, Y → up (sketch top =
 | `rb_S` | `priority` | Roundabout south node (stem entry/exit) |
 | `tl_fl` | `priority` | End of TL_in (X = +45): 2 lanes merge into the single free-left lane. **All** TL traffic goes here — no ring entry |
 | `stem_merge` | `priority` | Free left merges into stem SB kerb lane (Y = −24); free left yields |
+| `fl_stem` | `priority` | FL free left diverges from stem NB kerb lane (Y = −24) |
+| `ng_merge` | `priority` | FL free left merges into NG out kerb lane (X = −45) |
 | `stem_S` | `priority` | Top tangent of the sweeping curve into the stem (x = 0, y = −80) |
 | `uturn_W` | `priority` | U-turn opening (westbound → eastbound) |
 
@@ -117,15 +119,18 @@ Declare the ring in `<roundabout nodes="rb_W rb_N rb_E rb_S" edges="..."/>` so S
 | ID | From → To | Lanes | Purpose |
 | :--- | :--- | :--- | :--- |
 | `NG_in` | NG_end → rb_W | 2 | From NG towards roundabout |
-| `NG_out` | rb_W → NG_end | 2 | Roundabout to NG |
+| `NG_out_a` | rb_W → ng_merge | 2 | Roundabout ring exit to free-left merge |
+| `NG_out_b` | ng_merge → NG_end | 2 | Main road to NG after free-left merge |
 | `TL_in` | TL_end → tl_fl | 2 | From TL (only connects to the free left) |
 | ~~`TL_in_b`~~ | — | — | **Does not exist.** No TL entry into the ring |
 | `TL_out` | rb_E → TL_end | 2 | Roundabout to TL |
 | `rb_W_N`, `rb_N_E`, `rb_E_S`, `rb_S_W` | ring | 2 | **Clockwise** ring segments (W→N→E→S→W) |
-| `stem_sb_a` | rb_S → stem_merge | 2 | Ring exit down to the free-left merge |
-| `stem_sb_b` | stem_merge → stem_S | 2 | Stem SB after the merge (ring exit + TL free left) |
-| `stem_nb` | stem_S → rb_S | 2 | Bottom road up to roundabout |
+| `stem_sb_a` | rb_S → stem_merge | 3 | Ring exit down to the free-left merge |
+| `stem_sb_b` | stem_merge → stem_S | 3 | Stem SB after the merge (ring exit + TL free left) |
+| `stem_nb_a` | stem_S → fl_stem | 3 | Bottom road up to FL free-left diverge |
+| `stem_nb_b` | fl_stem → rb_S | 3 | Stem NB continuing to roundabout ring (lanes 1, 2) |
 | `TL_free_left` | tl_fl → stem_merge | 1 | Free left at the circle; carries TL→FL **and** TL→NG/TL→TL (U-turn bound) |
+| `FL_free_left` | fl_stem → ng_merge | 1 | Free left at the circle; carries FL→NG traffic bypassing roundabout ring |
 | `bot_wb_b` | stem_S → uturn_W | 3 | Westbound: sweeping curve + straight road to U-turn and FL |
 | `FL_out` | uturn_W → FL_end | 3 | To flyover |
 | `FL_in` | FL_end → uturn_W | 3 | From flyover |
@@ -144,16 +149,18 @@ All O-D pairs and the path each takes:
 | :--- | :--- | :--- |
 | `r_NG_TL` | NG → TL | NG_in → rb_W_N → rb_N_E → TL_out |
 | `r_NG_FL` | NG → FL | NG_in → rb_W_N → rb_N_E → rb_E_S → stem_sb_a → stem_sb_b → bot_wb_b → FL_out |
-| `r_NG_NG` | NG → NG (U) | NG_in → full ring → NG_out *(optional, low share)* |
-| `r_TL_NG` | TL → NG | TL_in → TL_free_left → stem_sb_b → bot_wb_b → **uturn** → bot_eb → stem_nb → rb_S_W *(left at circle)* → NG_out |
+| `r_NG_NG` | NG → NG (U) | NG_in → full ring → NG_out_a → NG_out_b *(optional, low share)* |
+| `r_TL_NG` | TL → NG | TL_in → TL_free_left → stem_sb_b → bot_wb_b → **uturn** → bot_eb → stem_nb_a → stem_nb_b → rb_S_W *(left at circle)* → NG_out_a → NG_out_b |
 | `r_TL_FL` | TL → FL | TL_in → TL_free_left → stem_sb_b → bot_wb_b → FL_out *(free left at the circle, no ring)* |
-| `r_TL_TL` | TL → TL (U) | TL_in → TL_free_left → stem_sb_b → bot_wb_b → uturn → bot_eb → stem_nb → rb_S_W → rb_W_N → rb_N_E → TL_out *(optional)* |
-| `r_FL_NG` | FL → NG | FL_in → bot_eb → stem_nb → rb_S_W → NG_out |
-| `r_FL_TL` | FL → TL | FL_in → bot_eb → stem_nb → rb_S_W → rb_W_N → rb_N_E → TL_out |
+| `r_TL_TL` | TL → TL (U) | TL_in → TL_free_left → stem_sb_b → bot_wb_b → uturn → bot_eb → stem_nb_a → stem_nb_b → rb_S_W → rb_W_N → rb_N_E → TL_out *(optional)* |
+| `r_FL_NG` | FL → NG | FL_in → bot_eb → stem_nb_a → **FL_free_left** → NG_out_b *(always uses leftmost lane from FL to NG)* |
+| `r_FL_TL` | FL → TL | FL_in → bot_eb → stem_nb_a → stem_nb_b → rb_S_W → rb_W_N → rb_N_E → TL_out |
 
 **In scope (v1): exactly the six O-D routes** `r_NG_TL`, `r_NG_FL`, `r_TL_FL`, `r_TL_NG`, `r_FL_NG`, `r_FL_TL`. Same-arm U-turns (`r_NG_NG`, `r_TL_TL`, `r_FL_FL`) are defined in the route file for completeness but have **0 veh/h** and are not exposed in config.
 
 The U-turn is the **mandatory path for all TL → NG traffic**. It is not a separate origin; U-turn volume = `TL_NG` flow.
+FL → NG traffic **always uses the leftmost lane (Lane 0)** on every edge from `FL_in` through `bot_eb`, `stem_nb_a`, `FL_free_left`, to `NG_out_b`.
+
 
 ### 5.1 Demand configuration — per O-D (in `scenario.xml`)
 

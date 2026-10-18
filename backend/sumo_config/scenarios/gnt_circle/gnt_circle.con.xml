@@ -24,9 +24,15 @@
     <connection from="stem_sb_b" to="bot_wb_b" fromLane="2" toLane="2" speed="13.89"/>
 
     <!-- stem_S: eastbound turns left (north) into stem -->
-    <connection from="bot_eb" to="stem_nb" fromLane="0" toLane="0" speed="13.89"/>
-    <connection from="bot_eb" to="stem_nb" fromLane="1" toLane="1" speed="13.89"/>
-    <connection from="bot_eb" to="stem_nb" fromLane="2" toLane="2" speed="13.89"/>
+    <connection from="bot_eb" to="stem_nb_a" fromLane="0" toLane="0" speed="13.89"/>
+    <connection from="bot_eb" to="stem_nb_a" fromLane="1" toLane="1" speed="13.89"/>
+    <connection from="bot_eb" to="stem_nb_a" fromLane="2" toLane="2" speed="13.89"/>
+
+    <!-- fl_stem: lane 0 splits into single-lane FL_free_left; lanes 1,2 continue to roundabout on stem_nb_b -->
+    <connection from="stem_nb_a" to="FL_free_left" fromLane="0" toLane="0" pass="true"/>
+    <connection from="stem_nb_a" to="stem_nb_b"   fromLane="1" toLane="0"/>
+    <connection from="stem_nb_a" to="stem_nb_b"   fromLane="1" toLane="1"/>
+    <connection from="stem_nb_a" to="stem_nb_b"   fromLane="2" toLane="2"/>
 
     <!-- uturn_W: through movements -->
     <connection from="bot_wb_b" to="FL_out" fromLane="0" toLane="0"/>
@@ -38,9 +44,9 @@
 
     <!-- Roundabout: both ring lanes may exit (D-1); every approach lane feeds the ring.
          Ring lane 0 = outer (kerb), lane 1 = inner (island side). -->
-    <connection from="stem_nb" to="rb_S_W" fromLane="0" toLane="0"/>
-    <connection from="stem_nb" to="rb_S_W" fromLane="1" toLane="1"/>
-    <connection from="stem_nb" to="rb_S_W" fromLane="2" toLane="1"/>
+    <connection from="stem_nb_b" to="rb_S_W" fromLane="0" toLane="0"/>
+    <connection from="stem_nb_b" to="rb_S_W" fromLane="1" toLane="1"/>
+    <connection from="stem_nb_b" to="rb_S_W" fromLane="2" toLane="1"/>
 
     <connection from="NG_in" to="rb_W_N" fromLane="0" toLane="0" pass="true"/>
     <connection from="NG_in" to="rb_W_N" fromLane="1" toLane="1" pass="true"/>
@@ -56,9 +62,14 @@
     <connection from="rb_E_S" to="rb_S_W" fromLane="0" toLane="0"/>
     <connection from="rb_E_S" to="rb_S_W" fromLane="1" toLane="1"/>
 
-    <connection from="rb_S_W" to="NG_out" fromLane="0" toLane="0"/>
-    <connection from="rb_S_W" to="NG_out" fromLane="1" toLane="1"/>
-    <connection from="rb_S_W" to="rb_W_N" fromLane="1" toLane="1" pass="true"/>
+    <connection from="rb_S_W" to="NG_out_a" fromLane="0" toLane="0"/>
+    <connection from="rb_S_W" to="NG_out_a" fromLane="1" toLane="1"/>
+    <connection from="rb_S_W" to="rb_W_N"   fromLane="1" toLane="1" pass="true"/>
+
+    <!-- ng_merge: free left merges into NG_out_b kerb lane alongside ring exit traffic -->
+    <connection from="NG_out_a"    to="NG_out_b" fromLane="0" toLane="0"/>
+    <connection from="NG_out_a"    to="NG_out_b" fromLane="1" toLane="1"/>
+    <connection from="FL_free_left" to="NG_out_b" fromLane="0" toLane="0" pass="true"/>
 
     <!-- uturn_W: aggressive median U-turn (westbound -> eastbound), 30 km/h, yields to FL_in -->
     <connection from="bot_wb_b" to="bot_eb" fromLane="2" toLane="2" speed="8.33" pass="true"/>
