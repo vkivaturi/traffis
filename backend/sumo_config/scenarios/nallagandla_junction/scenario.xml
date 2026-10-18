@@ -50,8 +50,8 @@
       Links 6..9: NG_in (NG -> TL straight [6, 7], NG -> FL right turns [8, 9])
     -->
     <signals enabled="true" amberDuration="3" allRedDuration="2">
-        <group id="NG" name="NG Approach (to TL straight &amp; to FL right)" greenDuration="25"/>
-        <group id="TL" name="TL Approach (to NG straight &amp; to FL left)" greenDuration="25"/>
+        <group id="NG" name="NG Approach (to TL straight &amp; to FL right)" greenDuration="40"/>
+        <group id="TL" name="TL Approach (to NG straight &amp; to FL left)" greenDuration="15"/>
         <group id="FL" name="FL Approach (to TL right &amp; to NG left)" greenDuration="25"/>
     </signals>
 </scenario>
