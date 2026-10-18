@@ -91,7 +91,7 @@ export const JunctionMetricsPanel: React.FC<JunctionMetricsPanelProps> = ({ metr
               {metrics.arms.map((a) => (
                 <tr key={a.id} style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
                   <td style={{ padding: '2px 4px', fontWeight: 700, color: ARM_COLORS[a.id] ?? '#e2e8f0' }} title={a.name}>
-                    {a.id} <span style={{ color: '#64748b', fontWeight: 500 }}>{a.name}</span>
+                    {a.name} ({a.id})
                   </td>
                   <td style={cellStyle}>{a.inflow}</td>
                   <td style={cellStyle}>{a.outflow}</td>

@@ -503,7 +503,7 @@ class NallagandlaJunctionScenario(BaseScenario):
         groups = [
             SignalGroupTiming(
                 id="NG",
-                name="NG Approach (to TL straight & to FL right)",
+                name="Nallagandla (NG) Approach",
                 green_duration=self.ng_green,
                 amber_duration=self.amber_duration,
                 calculated_red_duration=round(cycle - self.ng_green - self.amber_duration, 1),
@@ -512,7 +512,7 @@ class NallagandlaJunctionScenario(BaseScenario):
             ),
             SignalGroupTiming(
                 id="TL",
-                name="TL Approach (to NG straight & to FL left)",
+                name="Tellapur (TL) Approach",
                 green_duration=self.tl_green,
                 amber_duration=self.amber_duration,
                 calculated_red_duration=round(cycle - self.tl_green - self.amber_duration, 1),
@@ -521,7 +521,7 @@ class NallagandlaJunctionScenario(BaseScenario):
             ),
             SignalGroupTiming(
                 id="FL",
-                name="FL Approach (to TL right & to NG left)",
+                name="Flyover (FL) Approach",
                 green_duration=self.fl_green,
                 amber_duration=self.amber_duration,
                 calculated_red_duration=round(cycle - self.fl_green - self.amber_duration, 1),

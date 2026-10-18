@@ -516,7 +516,7 @@ class GntCircleScenario(BaseScenario):
         groups = [
             SignalGroupTiming(
                 id="NG",
-                name="NG Entry (NG→TL, NG→FL)",
+                name="Nallagandla (NG) Entry",
                 green_duration=self.ng_green_duration,
                 amber_duration=self.amber_duration,
                 calculated_red_duration=round(cycle - self.ng_green_duration - self.amber_duration, 1),

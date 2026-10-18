@@ -1423,7 +1423,8 @@ export const CanvasView: React.FC<CanvasViewProps> = ({
           ctx.setLineDash([]);
         }
 
-        if (zoom > 4 || vid === selectedVehicleId) {
+        // Speed tag above vehicle image (disabled in Nallagandla Junction scenario)
+        if (scenario?.id !== 'nallagandla_junction' && (zoom > 4 || vid === selectedVehicleId)) {
           const badgeY = -vWidPx - 10;
           ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
           ctx.beginPath();

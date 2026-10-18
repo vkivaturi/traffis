@@ -396,18 +396,18 @@ export const renderGeometryNetwork = (
     }
   }
 
-  // 8. Arm labels (NG / TL / FL) — full name on hover
+  // 8. Arm labels: Nallagandla (NG), Flyover (FL), Tellapur (TL)
   const rects: LabelHitRect[] = [];
-  ctx.font = '800 12px JetBrains Mono, monospace';
+  ctx.font = '800 11px JetBrains Mono, monospace';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   for (const lb of geo.labels) {
     const px = sx(lb.x);
     const py = sy(lb.y);
     const hovered = hoveredLabelId === lb.id;
-    const text = hovered ? `${lb.id} · ${lb.name}` : lb.id;
-    const w = ctx.measureText(text).width + 16;
-    const h = 22;
+    const text = lb.name ? `${lb.name} (${lb.id})` : lb.id;
+    const w = ctx.measureText(text).width + 20;
+    const h = 24;
     ctx.fillStyle = hovered ? 'rgba(56, 189, 248, 0.25)' : 'rgba(15, 23, 42, 0.85)';
     ctx.strokeStyle = hovered ? '#38bdf8' : 'rgba(244, 114, 182, 0.7)';
     ctx.lineWidth = 1.5;
