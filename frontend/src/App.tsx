@@ -9,6 +9,7 @@ import { VehicleInspector } from './components/VehicleInspector';
 import { LandingPage } from './components/LandingPage';
 import { AboutModal } from './components/AboutModal';
 import { JunctionMetricsPanel } from './components/JunctionMetricsPanel';
+import { ScenarioConfigPanel } from './components/ScenarioConfigPanel';
 import { SessionExpiredModal } from './components/SessionExpiredModal';
 import type { CameraState } from './types/simulation';
 import type { User } from './types/auth';
@@ -36,6 +37,7 @@ export const App: React.FC = () => {
     scenarios,
     activeScenario,
     selectScenario,
+    updateScenarioOptions,
     connected,
     updateRateHz,
     dataExchangedMB,
@@ -110,6 +112,15 @@ export const App: React.FC = () => {
       zoom: activeScenario?.default_camera?.zoom ?? (isIntersection ? 3.2 : 12),
     }));
   }, [reset, isIntersection, activeScenario?.default_camera]);
+
+  const handleUpdateOption = useCallback(
+    (optionId: string, value: boolean) => {
+      updateScenarioOptions({ [optionId]: value });
+      soundSystem.playResetSound();
+      setSelectedVehicleId(null);
+    },
+    [updateScenarioOptions]
+  );
 
   const selectedVehicle = state.vehicles.find((v) => v.id === selectedVehicleId) || null;
 
@@ -244,6 +255,15 @@ export const App: React.FC = () => {
           <JunctionMetricsPanel metrics={state.junction_metrics} />
         )}
 
+        {/* Scenario Configuration Panel (e.g. Roundabout Signals toggle) */}
+        {activeScenario?.options && activeScenario.options.length > 0 && (
+          <ScenarioConfigPanel
+            scenario={activeScenario}
+            trafficLight={state.traffic_light}
+            onUpdateOption={handleUpdateOption}
+          />
+        )}
+
         {/* Selected Vehicle Floating HUD */}
         {selectedVehicle && (
           <VehicleInspector
@@ -256,6 +276,7 @@ export const App: React.FC = () => {
               }));
             }}
             onClose={() => setSelectedVehicleId(null)}
+            style={activeScenario?.options?.length ? { right: '350px' } : undefined}
           />
         )}
       </div>

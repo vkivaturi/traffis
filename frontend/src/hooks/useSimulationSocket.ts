@@ -276,6 +276,28 @@ export function useSimulationSocket(authToken?: string) {
   const pause = useCallback(() => send('pause'), [send]);
   const reset = useCallback(() => send('reset'), [send]);
 
+  const updateScenarioOptions = useCallback((options: Record<string, unknown>) => {
+    const raw = JSON.stringify({
+      action: 'update_scenario_options',
+      payload: { options },
+    });
+    totalBytesRef.current += raw.length;
+    if (socketRef.current?.readyState === WebSocket.OPEN) {
+      socketRef.current.send(raw);
+    } else {
+      const token = getToken();
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      fetch('/api/scenario/options', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ options }),
+      }).catch((e) => console.warn('Failed to update scenario options via REST:', e));
+    }
+  }, [getToken]);
+
   const authExpired = !!authToken && (expiredToken === authToken || isTokenExpired(authToken));
 
   return {
@@ -285,6 +307,7 @@ export function useSimulationSocket(authToken?: string) {
     scenarios,
     activeScenario,
     selectScenario,
+    updateScenarioOptions,
     connected,
     latencyMs,
     updateRateHz,

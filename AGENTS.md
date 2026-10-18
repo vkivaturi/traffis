@@ -103,7 +103,7 @@ flowchart TD
         │   ├── StatsPanel.tsx    # Telemetry metrics (active count, speed, lane distribution)
         │   ├── JunctionMetricsPanel.tsx # Unsignalised junction metrics (per-arm flows, ring occupancy, U-turns, queues)
         │   ├── VehicleInspector.tsx # Floating inspector card for individual vehicle telemetry
-        │   └── (no runtime tuning UI — all parameters live in sumo_config/scenarios/<id>/scenario.xml)
+        │   └── ScenarioConfigPanel.tsx # Floating scenario config panel (e.g. toggle roundabout signals, live signal group monitor)
         └── utils/
             ├── audio.ts          # Web Audio API procedural sound synthesizer (tones for spawns, resets & signal changes)
             └── geometryRenderer.ts # Polyline network renderer (lanes/junctions/medians/island from .net.xml shapes)
@@ -136,6 +136,7 @@ flowchart TD
 | [`src/components/Controls.tsx`](file:///Users/vijay/Projects/traffis/frontend/src/components/Controls.tsx) | Bottom dock with Start/Resume, Pause, Stop (reset to t=0), simulation clock progress, and read-only Avg Speed / PCE/h. |
 | [`src/components/StatsPanel.tsx`](file:///Users/vijay/Projects/traffis/frontend/src/components/StatsPanel.tsx) | Real-time analytics bar: Active Vehicles, Average Speed (km/h), Traffic Density (veh/km), Total Departed/Arrived, and Lane Utilization bars. |
 | [`src/components/VehicleInspector.tsx`](file:///Users/vijay/Projects/traffis/frontend/src/components/VehicleInspector.tsx) | Floating HUD displayed when clicking a vehicle. Displays speed, acceleration/braking state, distance to leader vehicle, lane index, and camera "Follow" toggle. |
+| [`src/components/ScenarioConfigPanel.tsx`](file:///Users/vijay/Projects/traffis/frontend/src/components/ScenarioConfigPanel.tsx) | Floating scenario configuration panel. Allows toggling scenario-specific options (such as GNT Circle roundabout signals) with live signal group phase monitors. |
 | [`src/components/Header.tsx`](file:///Users/vijay/Projects/traffis/frontend/src/components/Header.tsx) | Top navbar with live WebSocket status badge (Connected/Connecting), tick rate indicator (~20 Hz), round-trip jitter, audio toggle, and documentation link. |
 | [`src/utils/audio.ts`](file:///Users/vijay/Projects/traffis/frontend/src/utils/audio.ts) | Pure Web Audio API synthesizers producing audio tones for spawn events, simulation reset, and UI clicks without external audio files. |
 
@@ -245,20 +246,22 @@ Sent as JSON text over the WebSocket:
 - `{"action": "pause"}`
 - `{"action": "reset"}`
 - `{"action": "select_scenario", "payload": {"scenario_id": "four_way_intersection"}}`
+- `{"action": "update_scenario_options", "payload": {"options": {"roundabout_signals": true}}}`
 
-> Inflow (veh/h), default speed, vehicle mix, origin weights, signal phases/green times and max sim time are **not** runtime-tunable. They are defined per scenario in `backend/sumo_config/scenarios/<id>/scenario.xml` (parsed by `app/scenarios/settings_loader.py`) and re-read on every reset/scenario switch.
+> Inflow (veh/h), default speed, vehicle mix, origin weights, signal phases/green times and max sim time are defined per scenario in `backend/sumo_config/scenarios/<id>/scenario.xml` (parsed by `app/scenarios/settings_loader.py`). Scenarios can expose optional runtime toggles (e.g. `roundabout_signals` in `gnt_circle`) via `get_options()` / `set_options()`, rendered in `ScenarioConfigPanel.tsx`.
 
 ### 6.2 REST Endpoints
 
 | Method | Endpoint | Description |
 | :--- | :--- | :--- |
 | `GET` | `/api/health` | Backend status, active client count, SUMO init status. |
-| `GET` | `/api/network-info` | Road dimensions, traffic light position, and lane specifications. |
+| `GET` | `/api/network-info` | Road dimensions, traffic light position, lane specifications, and signal heads. |
 | `POST` | `/api/play` | Resume simulation loop. |
 | `POST` | `/api/pause` | Pause simulation loop. |
 | `POST` | `/api/reset` | Close and restart SUMO, reset clock to $0.0\text{s}$. |
 | `GET` | `/api/scenarios` | List available scenarios. |
 | `POST` | `/api/scenario/select` | Switch scenario (`{"scenario_id": "..."}`). |
+| `POST` | `/api/scenario/options` | Update scenario options at runtime (`{"options": {"roundabout_signals": true}}`). |
 
 ---
 

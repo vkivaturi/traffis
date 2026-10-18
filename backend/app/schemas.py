@@ -34,6 +34,7 @@ class SignalGroupTiming(BaseModel):
     amber_duration: float = Field(3.0, description="Fixed amber/yellow duration (3.0s)")
     calculated_red_duration: float = Field(33.0, description="System calculated red light duration")
     is_active_green: bool = Field(False, description="Whether this signal group currently has green")
+    state: Optional[str] = Field(None, description="Current colour of this group: 'green' | 'yellow' | 'red'")
 
 class TrafficLightState(BaseModel):
     id: str = "traffic_light"
@@ -81,6 +82,15 @@ class SpawnOriginInfo(BaseModel):
     label: str
     description: str
 
+class ScenarioOption(BaseModel):
+    """User-switchable scenario option shown in the UI configuration panel (e.g. GNT roundabout signals)."""
+    id: str
+    label: str
+    description: str = ""
+    type: str = "boolean"
+    value: bool = False
+    requires_restart: bool = True  # changing it restarts SUMO at t=0 (e.g. network swap)
+
 class ScenarioMetadata(BaseModel):
     id: str
     name: str
@@ -89,6 +99,7 @@ class ScenarioMetadata(BaseModel):
     bounds: Dict[str, float]
     default_camera: Dict[str, Any]
     spawn_origins: List[SpawnOriginInfo]
+    options: List[ScenarioOption] = []
 
 class RoadArmInfo(BaseModel):
     id: str
@@ -138,6 +149,17 @@ class RoundaboutInfo(BaseModel):
     island_radius: float
     outer_radius: float
 
+class SignalHead(BaseModel):
+    """Stop line + signal lamp at the downstream end of a signalised lane (geometry scenarios)."""
+    id: str
+    group: str        # signal group id, matches TrafficLightState.signal_groups[].id
+    lane_id: str
+    label: str = ""
+    x: float          # stop-line centre (world metres)
+    y: float
+    heading: float    # travel direction in radians (math convention, world Y up)
+    width: float      # lane width (m)
+
 class NetworkGeometry(BaseModel):
     """Arbitrary polyline geometry (curved roads) read from the compiled .net.xml."""
     lanes: List[LaneShape]
@@ -148,6 +170,7 @@ class NetworkGeometry(BaseModel):
     callouts: List[MapCallout] = []
     roundabout: Optional[RoundaboutInfo] = None
     yield_lanes: List[str] = []  # lanes whose downstream end gives way (ring entries, slip merge, U-turn)
+    signal_heads: List[SignalHead] = []  # signalised stop lines (e.g. optional GNT roundabout signals)
     bounds: Dict[str, float] = {}
 
 class NetworkInfo(BaseModel):

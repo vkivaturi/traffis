@@ -166,6 +166,26 @@ class SimulationManager:
         await self._broadcast_network_info()
         await self._broadcast_current_state()
 
+    async def update_scenario_options(self, options: Dict[str, Any]) -> None:
+        """Update runtime options for the active scenario (e.g. toggle roundabout signals)."""
+        async with self.lock:
+            needs_restart = self.scenario.set_options(options)
+            if needs_restart:
+                logger.info("Scenario options changed (%s), restarting SUMO...", options)
+                if self.is_initialized:
+                    try:
+                        traci.close()
+                    except Exception as e:
+                        logger.warning("Error closing traci during options update: %s", e)
+                    self.is_initialized = False
+                self._start_traci()
+                self.is_initialized = True
+                self.is_running = False
+
+        await self._broadcast_scenario_switched()
+        await self._broadcast_network_info()
+        await self._broadcast_current_state()
+
     @property
     def default_speed_kmh(self) -> float:
         return self.scenario.settings.default_speed_kmh

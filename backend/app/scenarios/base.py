@@ -12,6 +12,7 @@ from ..schemas import (
     TrafficLightState,
     SignalGroupTiming,
     JunctionMetrics,
+    ScenarioOption,
 )
 from .settings_loader import ScenarioSettings, load_scenario_settings
 
@@ -98,6 +99,20 @@ class BaseScenario(ABC):
         return [o.id for o in self.get_metadata().spawn_origins]
 
     # ------------------------------------------------------------------ #
+    # User-switchable options (UI configuration panel)
+    # ------------------------------------------------------------------ #
+    def get_options(self) -> List[ScenarioOption]:
+        """Options shown in the UI configuration panel. Most scenarios have none."""
+        return []
+
+    def set_options(self, values: Dict[str, Any]) -> bool:
+        """Apply option values (validated). Returns True if SUMO must be restarted to take effect.
+        Called without TraCI access; the caller restarts the simulation when needed."""
+        if values:
+            raise ValueError(f"Scenario '{self.id}' has no configurable options: {sorted(values)}")
+        return False
+
+    # ------------------------------------------------------------------ #
     # Demand generation (driven by scenario.xml)
     # ------------------------------------------------------------------ #
     def get_auto_spawn_request(self) -> SpawnRequest:
@@ -159,6 +174,7 @@ class BaseScenario(ABC):
                 amber_duration=amber,
                 calculated_red_duration=round(cycle - green - amber, 1),
                 is_active_green=(curr.group == gid and curr.state == "green"),
+                state=curr.state if curr.group == gid else "red",
             ))
 
         first = groups[0] if groups else None

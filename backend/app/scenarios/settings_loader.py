@@ -10,7 +10,7 @@ import re
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 logger = logging.getLogger("scenario_settings")
 
@@ -22,6 +22,26 @@ class PhaseSettings:
     raw: str            # SUMO red/yellow/green link string
     duration: float     # seconds
     group: str = ""     # signal group id (approach) this phase belongs to
+
+
+@dataclass
+class SignalGroupSettings:
+    id: str
+    name: str
+    green: float        # seconds
+
+
+@dataclass
+class SignalPlanSettings:
+    """Optional fixed-time signal plan (`<signals>` in O-D scenario.xml, e.g. GNT Circle rb_W).
+
+    Groups get green in document order; each green is followed by amber + all-red clearance.
+    `enabled` is only the default: the UI can switch signals on/off at runtime.
+    """
+    enabled: bool = False
+    amber: float = 3.0
+    all_red: float = 2.0
+    groups: List[SignalGroupSettings] = field(default_factory=list)
 
 
 @dataclass
@@ -39,6 +59,7 @@ class ScenarioSettings:
     behaviour_models: Dict[str, str] = field(default_factory=dict)   # carFollowModel, laneChangeModel, ...
     behaviour_params: Dict[str, str] = field(default_factory=dict)   # global vType attributes
     vtype_overrides: Dict[str, Dict[str, str]] = field(default_factory=dict)
+    signal_plan: Optional[SignalPlanSettings] = None
 
 
 class ScenarioSettingsError(ValueError):
@@ -180,6 +201,39 @@ def _load_od_scenario(root: ET.Element, path: Path) -> ScenarioSettings:
             raise ScenarioSettingsError(f"{path.name}: vehicle mix shares sum to {total:.3f}, expected 1.0 ± 0.01")
         s.vehicle_mix = mix
 
+    signals = root.find("signals")
+    if signals is not None:
+        s.signal_plan = _load_signal_plan(signals, path)
+
     logger.info("Loaded O-D scenario settings from %s: %d OD flows (%.0f veh/h total), %d vtypes",
                 path, len(s.od_demand), sum(s.od_demand.values()), len(mix))
     return s
+
+
+def _positive(el: ET.Element, attr: str, default: float, path: Path, allow_zero: bool = False) -> float:
+    try:
+        v = float(el.get(attr, default))
+    except ValueError:
+        raise ScenarioSettingsError(f"{path.name}: <{el.tag}> has non-numeric {attr}")
+    if v < 0 or (v == 0 and not allow_zero):
+        raise ScenarioSettingsError(f"{path.name}: <{el.tag}> {attr} must be {'>= 0' if allow_zero else '> 0'} (got {v})")
+    return v
+
+
+def _load_signal_plan(el: ET.Element, path: Path) -> SignalPlanSettings:
+    """`<signals enabled="false" amberDuration="3" allRedDuration="2"><group id=.. greenDuration=../></signals>`."""
+    enabled = el.get("enabled", "false").strip().lower()
+    if enabled not in ("true", "false"):
+        raise ScenarioSettingsError(f"{path.name}: <signals enabled> must be 'true' or 'false'")
+    plan = SignalPlanSettings(
+        enabled=enabled == "true",
+        amber=_positive(el, "amberDuration", 3.0, path, allow_zero=True),
+        all_red=_positive(el, "allRedDuration", 2.0, path, allow_zero=True),
+    )
+    for g in el.findall("group"):
+        gid = g.get("id", "")
+        if not _ATTR_NAME.match(gid):
+            raise ScenarioSettingsError(f"{path.name}: signal <group> with invalid id '{gid}'")
+        plan.groups.append(SignalGroupSettings(
+            id=gid, name=g.get("name", gid), green=_positive(g, "greenDuration", 30.0, path)))
+    return plan

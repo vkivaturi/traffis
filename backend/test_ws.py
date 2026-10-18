@@ -54,12 +54,33 @@ async def test_full_flow():
                   f"default_speed={state.get('default_speed_kmh')} max_t={state.get('max_sim_time')} {tl_desc}")
             assert n_vehs(state) > 0, "No vehicles spawned from scenario.xml inflow"
             if is_gnt:
-                assert tl is None, "gnt_circle must not report a traffic light"
+                assert tl is None, "gnt_circle must not report a traffic light by default"
                 assert GNT_ARMS <= seen_origins, f"Vehicles not seen from all arms: {seen_origins}"
                 assert jm is not None, "No junction_metrics received"
                 print(f"Junction: ring={jm['roundabout_occupancy']} uturns={jm['uturn_count']} "
                       f"inflow={ {a['id']: a['inflow'] for a in jm['arms']} } "
                       f"queues={ {q['id']: q['halting'] for q in jm['entry_queues']} }")
+
+                # Verify optional roundabout signals toggle
+                print("Testing GNT roundabout signals toggle...")
+                await ws.send(json.dumps({"action": "update_scenario_options", "payload": {"options": {"roundabout_signals": True}}}))
+                sw2 = await recv_type("scenario_switched")
+                assert sw2["scenario"]["options"][0]["value"] is True
+                net2 = await recv_type("network_info")
+                assert len(net2["data"]["geometry"].get("signal_heads") or []) == 3
+                st_sig = await recv_type("state")
+                assert st_sig["traffic_light"] is not None and st_sig["traffic_light"]["id"] == "gnt_rb_W"
+                print(f"Roundabout signals verified: active phase={st_sig['traffic_light']['phase_name']}")
+
+                # Restore unsignalised default
+                await ws.send(json.dumps({"action": "update_scenario_options", "payload": {"options": {"roundabout_signals": False}}}))
+                sw3 = await recv_type("scenario_switched")
+                assert sw3["scenario"]["options"][0]["value"] is False
+                net3 = await recv_type("network_info")
+                assert len(net3["data"]["geometry"].get("signal_heads") or []) == 0
+                st_nosig = await recv_type("state")
+                assert st_nosig.get("traffic_light") is None
+                print("Roundabout signals disabled: restored unsignalised merging.")
 
             # PAUSE: clock must freeze
             await ws.send(json.dumps({"action": "pause"}))

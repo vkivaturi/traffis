@@ -5,6 +5,11 @@
   demand      : vehicles/hour per O-D direction (>= 0, no upper cap; 0 disables).
   behaviour   : global (simulation-level) SUMO vType attributes applied to ALL vehicle types.
   vehicleMix  : shares (must sum to 1.0) + optional per-vtype attribute overrides.
+  signals     : OPTIONAL fixed-time signals at the GNT Circle NG entry (node rb_W, SPEC.md §6.1).
+                enabled = default only; the UI "Roundabout signals" toggle overrides it at runtime.
+                Groups get green in this order, each followed by amber + all-red clearance.
+                NG = NG->TL and NG->FL entering the ring (one shared signal), FL_TL = ring traffic
+                FL->TL continuing past rb_W. FL->NG and the TL free left are never signalled.
 -->
 <scenario id="gnt_circle" maxSimTime="300">
     <demand>
@@ -39,4 +44,9 @@
         <vtype id="car" share="0.60"/>
         <vtype id="van" share="0.10"/>
     </vehicleMix>
+
+    <signals enabled="false" amberDuration="3" allRedDuration="2">
+        <group id="NG" name="NG entry (NG→TL, NG→FL)" greenDuration="35"/>
+        <group id="FL_TL" name="Ring FL→TL" greenDuration="15"/>
+    </signals>
 </scenario>

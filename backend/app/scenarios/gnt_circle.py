@@ -9,7 +9,7 @@ import os
 import random
 from collections import defaultdict
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Any
 from xml.sax.saxutils import quoteattr
 
 import traci
@@ -19,6 +19,7 @@ from .net_geometry import NetGeometry, load_net_geometry
 from .settings_loader import ScenarioSettingsError
 from ..schemas import (
     ScenarioMetadata,
+    ScenarioOption,
     SpawnOriginInfo,
     NetworkInfo,
     NetworkGeometry,
@@ -29,11 +30,14 @@ from ..schemas import (
     RoadArmInfo,
     SpawnRequest,
     TrafficLightState,
+    SignalGroupTiming,
+    SignalHead,
     JunctionMetrics,
     ArmFlowMetrics,
     ODMetrics,
     EntryQueue,
 )
+from dataclasses import dataclass
 
 logger = logging.getLogger("scenario_gnt_circle")
 
@@ -135,7 +139,51 @@ CALLOUTS = [
 ]
 
 # Downstream ends that give way: ring entries, free-left merge into stem SB (D-6)
-YIELD_LANES = ["NG_in_0", "NG_in_1", "stem_nb_0", "stem_nb_1", "TL_free_left_0"]
+YIELD_LANES_UNSIGNALISED = ["NG_in_0", "NG_in_1", "stem_nb_0", "stem_nb_1", "TL_free_left_0"]
+YIELD_LANES_SIGNALISED = ["stem_nb_0", "stem_nb_1", "TL_free_left_0"]
+YIELD_LANES = YIELD_LANES_UNSIGNALISED
+
+GNT_SIGNAL_HEADS = [
+    SignalHead(
+        id="sig_NG_0",
+        group="NG",
+        lane_id="NG_in_0",
+        label="NG Entry (TL/FL)",
+        x=-18.56,
+        y=5.80,
+        heading=0.0,
+        width=3.2,
+    ),
+    SignalHead(
+        id="sig_NG_1",
+        group="NG",
+        lane_id="NG_in_1",
+        label="NG Entry (TL/FL)",
+        x=-18.56,
+        y=2.60,
+        heading=0.0,
+        width=3.2,
+    ),
+    SignalHead(
+        id="sig_FL_TL",
+        group="FL_TL",
+        lane_id="rb_S_W_1",
+        label="Ring FL→TL",
+        x=-11.60,
+        y=-0.50,
+        heading=1.5708,
+        width=3.5,
+    ),
+]
+
+
+@dataclass
+class GntPhase:
+    name: str
+    state: str
+    raw: str
+    duration: float
+    group: str
 
 
 def _od_key(veh_id: str) -> Optional[str]:
@@ -157,23 +205,90 @@ class GntCircleScenario(BaseScenario):
 
     def __init__(self, sumocfg_file: str):
         self.tl_id = ""
-        cfg_dir = Path(sumocfg_file).parent
-        self.net_file = cfg_dir / "gnt_circle.net.xml"
-        self.route_file = cfg_dir / "gnt_circle.rou.xml"
+        self.cfg_dir = Path(sumocfg_file).parent
+        self.unsignalised_net = self.cfg_dir / "gnt_circle.net.xml"
+        self.signalised_net = self.cfg_dir / "gnt_circle_signals.net.xml"
+        self.route_file = self.cfg_dir / "gnt_circle.rou.xml"
+        self.signals_enabled = False
+        self._phases: List[GntPhase] = []
         self._geometry: Optional[NetGeometry] = None
         self._geometry_mtime = 0.0
         self._network_info: Optional[NetworkInfo] = None
         self._reset_metrics()
         super().__init__(sumocfg_file)
+        if self.settings.signal_plan:
+            self.signals_enabled = self.settings.signal_plan.enabled
+        self._build_phases()
         self._validate_and_write_routes()
         self.bounds = self.geometry.bounds(margin=10.0)
 
-    # ------------------------------------------------------------------ #
-    # scenario.xml -> gnt_circle.rou.xml
-    # ------------------------------------------------------------------ #
+    @property
+    def net_file(self) -> Path:
+        return self.signalised_net if self.signals_enabled else self.unsignalised_net
+
+    def get_options(self) -> List[ScenarioOption]:
+        return [
+            ScenarioOption(
+                id="roundabout_signals",
+                label="Roundabout Signals",
+                description="Manage NG→FL, NG→TL, and FL→TL with traffic signals at GNT Circle. Free-left for TL traffic continues without a signal.",
+                type="boolean",
+                value=self.signals_enabled,
+                requires_restart=True,
+            )
+        ]
+
+    def set_options(self, values: Dict[str, Any]) -> bool:
+        if "roundabout_signals" in values:
+            new_val = bool(values["roundabout_signals"])
+            self._signals_user_set = True
+            if new_val != self.signals_enabled:
+                self.signals_enabled = new_val
+                self.tl_id = "gnt_rb_W" if self.signals_enabled else ""
+                self._geometry = None
+                self._network_info = None
+                self._build_phases()
+                return True
+        return False
+
     def reload_settings(self) -> None:
         super().reload_settings()
+        if not getattr(self, "_signals_user_set", False) and self.settings.signal_plan:
+            self.signals_enabled = self.settings.signal_plan.enabled
+        self._build_phases()
         self._validate_and_write_routes()
+
+    def _build_phases(self) -> None:
+        plan = self.settings.signal_plan
+        amber = plan.amber if plan else 3.0
+        all_red = plan.all_red if plan else 2.0
+        ng_green = 35.0
+        fl_tl_green = 15.0
+        if plan and plan.groups:
+            for g in plan.groups:
+                if g.id == "NG":
+                    ng_green = g.green
+                elif g.id == "FL_TL":
+                    fl_tl_green = g.green
+        self.ng_green_duration = ng_green
+        self.fl_tl_green_duration = fl_tl_green
+        self.amber_duration = amber
+        self.all_red_duration = all_red
+
+        phases = [
+            GntPhase(name="NG Entry Green", state="green", raw="GGrGG", duration=ng_green, group="NG"),
+            GntPhase(name="NG Entry Amber", state="yellow", raw="GGryy", duration=amber, group="NG"),
+        ]
+        if all_red > 0:
+            phases.append(GntPhase(name="All-Red Clearance", state="red", raw="GGrrr", duration=all_red, group=""))
+        phases.extend([
+            GntPhase(name="Ring FL→TL Green", state="green", raw="GGGrr", duration=fl_tl_green, group="FL_TL"),
+            GntPhase(name="Ring FL→TL Amber", state="yellow", raw="GGyrr", duration=amber, group="FL_TL"),
+        ])
+        if all_red > 0:
+            phases.append(GntPhase(name="All-Red Clearance", state="red", raw="GGrrr", duration=all_red, group=""))
+        self._phases = phases
+        self.tl_id = "gnt_rb_W" if self.signals_enabled else ""
 
     def _validate_and_write_routes(self) -> None:
         s = self.settings
@@ -228,8 +343,11 @@ class GntCircleScenario(BaseScenario):
         os.replace(tmp, self.route_file)
 
     def extra_sumo_args(self) -> List[str]:
+        args = ["-n", str(self.net_file)]
         lat = self.settings.behaviour_models.get("lateralResolution")
-        return ["--lateral-resolution", lat] if lat else []
+        if lat:
+            args.extend(["--lateral-resolution", lat])
+        return args
 
     # ------------------------------------------------------------------ #
     # Geometry
@@ -252,6 +370,7 @@ class GntCircleScenario(BaseScenario):
         return ScenarioMetadata(
             id=self.id, name=self.name, description=self.description, type=self.type,
             bounds=self.bounds, default_camera=self.default_camera, spawn_origins=origins,
+            options=self.get_options(),
         )
 
     def _ring_radii(self, geo: NetGeometry) -> tuple[float, float]:
@@ -286,14 +405,16 @@ class GntCircleScenario(BaseScenario):
                         x_start=-150.0, y_start=-110.0, x_end=0.0, y_end=-110.0,
                         num_lanes_inbound=3, num_lanes_outbound=3),
         ]
+        yield_lanes = YIELD_LANES_SIGNALISED if self.signals_enabled else YIELD_LANES_UNSIGNALISED
+        signal_heads = GNT_SIGNAL_HEADS if self.signals_enabled else []
         self._network_info = NetworkInfo(
             scenario=self.get_metadata(),
             road_length=round(geo.total_edge_length, 1),
             num_lanes=len(geo.lanes),
             num_lanes_per_dir=3,
             lane_width=3.2,
-            traffic_light_x=0.0,
-            traffic_light_y=0.0,
+            traffic_light_x=-18.56,
+            traffic_light_y=4.20,
             lanes=lanes,
             arms=arms,
             geometry=NetworkGeometry(
@@ -304,7 +425,8 @@ class GntCircleScenario(BaseScenario):
                 labels=LABELS,
                 callouts=CALLOUTS,
                 roundabout=RoundaboutInfo(x=0.0, y=0.0, island_radius=island_r, outer_radius=outer_r),
-                yield_lanes=YIELD_LANES,
+                yield_lanes=yield_lanes,
+                signal_heads=signal_heads,
                 bounds=self.bounds,
             ),
         )
@@ -335,16 +457,78 @@ class GntCircleScenario(BaseScenario):
         return _od_key(veh_id) or self.enrich_vehicle_direction(lane_id, angle, x, y)
 
     # ------------------------------------------------------------------ #
-    # No traffic signals anywhere (SPEC.md §1)
+    # Traffic Signals (optional at rb_W)
     # ------------------------------------------------------------------ #
     def apply_traffic_light_state(self) -> None:
-        pass
+        if not self.signals_enabled or not self._phases:
+            return
+        raw = self._phases[self.current_phase_idx].raw
+        try:
+            traci.trafficlight.setRedYellowGreenState(self.tl_id, raw)
+        except Exception as e:
+            logger.debug("Could not set GNT traffic light state: %s", e)
 
     def update_traffic_light(self, dt: float) -> None:
-        pass
+        if not self.signals_enabled or not self._phases:
+            return
+        self.phase_timer += dt
+        if self.phase_timer >= self._phases[self.current_phase_idx].duration:
+            self.phase_timer = 0.0
+            self.current_phase_idx = (self.current_phase_idx + 1) % len(self._phases)
+            self.apply_traffic_light_state()
 
     def get_traffic_light_data(self) -> Optional[TrafficLightState]:
-        return None
+        if not self.signals_enabled or not self._phases:
+            return None
+
+        curr = self._phases[self.current_phase_idx]
+        nxt = self._phases[(self.current_phase_idx + 1) % len(self._phases)]
+        cycle = sum(p.duration for p in self._phases)
+
+        ng_active = curr.group == "NG"
+        fl_tl_active = curr.group == "FL_TL"
+
+        ng_state = curr.state if ng_active else "red"
+        fl_tl_state = curr.state if fl_tl_active else "red"
+
+        groups = [
+            SignalGroupTiming(
+                id="NG",
+                name="NG Entry (NG→TL, NG→FL)",
+                green_duration=self.ng_green_duration,
+                amber_duration=self.amber_duration,
+                calculated_red_duration=round(cycle - self.ng_green_duration - self.amber_duration, 1),
+                is_active_green=(ng_active and curr.state == "green"),
+                state=ng_state,
+            ),
+            SignalGroupTiming(
+                id="FL_TL",
+                name="Roundabout Ring (FL→TL)",
+                green_duration=self.fl_tl_green_duration,
+                amber_duration=self.amber_duration,
+                calculated_red_duration=round(cycle - self.fl_tl_green_duration - self.amber_duration, 1),
+                is_active_green=(fl_tl_active and curr.state == "green"),
+                state=fl_tl_state,
+            ),
+        ]
+
+        return TrafficLightState(
+            id=self.tl_id,
+            x=-18.56,
+            y=4.20,
+            state=curr.state,
+            raw_state=curr.raw,
+            mode="auto",
+            green_duration=self.ng_green_duration,
+            yellow_duration=self.amber_duration,
+            red_duration=round(cycle - self.ng_green_duration - self.amber_duration, 1),
+            phase_timer=round(self.phase_timer, 2),
+            phase_remaining=max(0.0, round(curr.duration - self.phase_timer, 1)),
+            next_state=nxt.state,
+            phase_index=self.current_phase_idx,
+            phase_name=curr.name,
+            signal_groups=groups,
+        )
 
     # ------------------------------------------------------------------ #
     # Metrics (SPEC.md §9)
@@ -366,9 +550,16 @@ class GntCircleScenario(BaseScenario):
         self.forcing_ids: set[str] = set()
 
     def reset_state(self) -> None:
-        """Called right after traci.start(): reset counters and cache free-flow route times."""
+        """Called right after traci.start(): reset counters, phase timer, and cache free-flow route times."""
         super().reset_state()
         self._reset_metrics()
+        self.current_phase_idx = 0
+        self.phase_timer = 0.0
+        if self.signals_enabled:
+            self.tl_id = "gnt_rb_W"
+            self.apply_traffic_light_state()
+        else:
+            self.tl_id = ""
         for key, route in OD_ROUTES.items():
             total = 0.0
             for edge in ROUTES[route].split():

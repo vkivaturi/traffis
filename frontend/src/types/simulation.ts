@@ -36,6 +36,7 @@ export interface SignalGroupTiming {
   amber_duration: number;
   calculated_red_duration: number;
   is_active_green: boolean;
+  state?: TrafficSignalColor;
 }
 
 export interface TrafficLightData {
@@ -88,6 +89,15 @@ export interface SpawnOriginInfo {
   description: string;
 }
 
+export interface ScenarioOption {
+  id: string;
+  label: string;
+  description?: string;
+  type: 'boolean' | string;
+  value: boolean;
+  requires_restart?: boolean;
+}
+
 export interface ScenarioMetadata {
   id: string;
   name: string;
@@ -105,6 +115,7 @@ export interface ScenarioMetadata {
     zoom: number;
   };
   spawn_origins: SpawnOriginInfo[];
+  options?: ScenarioOption[];
 }
 
 export interface RoadArmInfo {
@@ -176,6 +187,17 @@ export interface RoundaboutInfo {
   outer_radius: number;
 }
 
+export interface SignalHead {
+  id: string;
+  group: string;
+  lane_id: string;
+  label?: string;
+  x: number;
+  y: number;
+  heading: number;
+  width: number;
+}
+
 export interface NetworkGeometry {
   lanes: LaneShape[];
   connectors?: LaneShape[]; // internal junction lanes (turn paths), asphalt only
@@ -185,6 +207,7 @@ export interface NetworkGeometry {
   callouts?: MapCallout[];
   roundabout?: RoundaboutInfo | null;
   yield_lanes: string[];
+  signal_heads?: SignalHead[];
   bounds: { min_x: number; max_x: number; min_y: number; max_y: number };
 }
 

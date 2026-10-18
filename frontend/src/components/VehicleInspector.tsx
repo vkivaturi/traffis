@@ -9,6 +9,7 @@ interface VehicleInspectorProps {
   isFollowing: boolean;
   onFollow: () => void;
   onClose: () => void;
+  style?: React.CSSProperties;
 }
 
 export const VehicleInspector: React.FC<VehicleInspectorProps> = ({
@@ -16,6 +17,7 @@ export const VehicleInspector: React.FC<VehicleInspectorProps> = ({
   isFollowing,
   onFollow,
   onClose,
+  style,
 }) => {
   if (!vehicle) return null;
 
@@ -49,6 +51,7 @@ export const VehicleInspector: React.FC<VehicleInspectorProps> = ({
         zIndex: 25,
         border: '1px solid rgba(56, 189, 248, 0.3)',
         boxShadow: '0 8px 32px rgba(0, 0, 0, 0.6), var(--glow-cyan)',
+        ...style,
       }}
     >
       {/* Header */}

@@ -1401,7 +1401,7 @@ export const CanvasView: React.FC<CanvasViewProps> = ({
       // 2. Render Road Network according to active scenario
       if (geometry) {
         labelRectsRef.current = renderGeometryNetwork(
-          ctx, worldToScreenX, worldToScreenY, zoom, geometry, hoveredLabel?.id ?? null
+          ctx, worldToScreenX, worldToScreenY, zoom, geometry, hoveredLabel?.id ?? null, trafficLight
         );
       } else if (scenario?.id === 'four_way_intersection') {
         renderFourWayIntersection(ctx, worldToScreenX, worldToScreenY, zoom, trafficLight);

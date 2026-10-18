@@ -151,6 +151,19 @@ async def select_scenario(req: dict, user: dict = Depends(get_current_user)):
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
+@app.post("/api/scenario/options")
+async def update_scenario_options_endpoint(req: dict, user: dict = Depends(get_current_user)):
+    options = req.get("options") or req
+    try:
+        await sim_manager.update_scenario_options(options)
+        return {
+            "status": "ok",
+            "scenario": sim_manager.scenario.get_metadata().model_dump(),
+            "network_info": sim_manager.get_network_info().model_dump(),
+        }
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     user = verify_ws_token(websocket)
@@ -182,6 +195,9 @@ async def websocket_endpoint(websocket: WebSocket):
                     scenario_id = payload.get("scenario_id")
                     if scenario_id:
                         await sim_manager.select_scenario(scenario_id)
+                elif action in ("update_scenario_options", "set_scenario_options"):
+                    options = payload.get("options") or {}
+                    await sim_manager.update_scenario_options(options)
             except json.JSONDecodeError:
                 logger.warning("Invalid JSON received over WebSocket: %s", text)
             except Exception as e:

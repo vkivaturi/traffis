@@ -2,7 +2,7 @@
 // POLYLINE NETWORK RENDERER (GNT Circle & other curved-geometry scenarios)
 // Draws lanes, junctions, centre lines, island, markings straight from .net.xml shapes.
 // ----------------------------------------------------
-import type { NetworkGeometry, LaneShape, Point } from '../types/simulation';
+import type { NetworkGeometry, LaneShape, Point, TrafficLightData } from '../types/simulation';
 
 type ToScreen = (v: number) => number;
 
@@ -92,6 +92,7 @@ export const renderGeometryNetwork = (
   zoom: number,
   geo: NetworkGeometry,
   hoveredLabelId: string | null,
+  trafficLight?: TrafficLightData,
 ): LabelHitRect[] => {
   ctx.save();
   ctx.lineJoin = 'round';
@@ -266,6 +267,131 @@ export const renderGeometryNetwork = (
         ctx.lineTo(sx(bx - ux * 1.6), sy(by - uy * 1.6));
         ctx.closePath();
         ctx.fill();
+      }
+    }
+  }
+
+  // 7b. Roundabout Traffic Signals (optional at GNT Circle rb_W)
+  if (geo.signal_heads && geo.signal_heads.length > 0) {
+    for (const head of geo.signal_heads) {
+      const hw = head.width / 2;
+      const nx = -Math.sin(head.heading);
+      const ny = Math.cos(head.heading);
+
+      // Stop Line across the lane
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.95)';
+      ctx.lineWidth = Math.max(2, 0.35 * zoom);
+      ctx.beginPath();
+      ctx.moveTo(sx(head.x - nx * hw), sy(head.y - ny * hw));
+      ctx.lineTo(sx(head.x + nx * hw), sy(head.y + ny * hw));
+      ctx.stroke();
+
+      // Determine signal state for this group
+      const grp = trafficLight?.signal_groups?.find((g) => g.id === head.group);
+      const headState = grp?.state ?? (grp?.is_active_green ? 'green' : (trafficLight?.state ?? 'red'));
+
+      // Roadside Signal Post
+      const postDistM = hw + 1.2;
+      const postWx = head.x - nx * postDistM;
+      const postWy = head.y - ny * postDistM;
+      const postSx = sx(postWx);
+      const postSy = sy(postWy);
+
+      ctx.save();
+      ctx.translate(postSx, postSy);
+      // World heading to canvas screen angle (screen Y is inverted)
+      ctx.rotate(-head.heading);
+
+      const hW = Math.max(10, Math.min(18, 2.8 * zoom));
+      const hH = Math.max(24, Math.min(46, 7.2 * zoom));
+      const lampR = Math.max(2.2, Math.min(4.5, 0.7 * zoom));
+
+      // Dark housing box with subtle shadow
+      ctx.fillStyle = '#090d16';
+      ctx.strokeStyle = '#334155';
+      ctx.lineWidth = Math.max(1, 0.15 * zoom);
+      ctx.beginPath();
+      ctx.roundRect(-hW / 2, -hH / 2, hW, hH, Math.max(2, 0.4 * zoom));
+      ctx.fill();
+      ctx.stroke();
+
+      const spacing = hH * 0.28;
+
+      // RED lamp (top)
+      const redActive = headState === 'red';
+      ctx.fillStyle = redActive ? '#ef4444' : '#450a0a';
+      if (redActive) {
+        ctx.shadowColor = '#ef4444';
+        ctx.shadowBlur = Math.max(4, 1.2 * zoom);
+      }
+      ctx.beginPath();
+      ctx.arc(0, -spacing, lampR, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+
+      // YELLOW lamp (mid)
+      const yellowActive = headState === 'yellow';
+      ctx.fillStyle = yellowActive ? '#f59e0b' : '#451a03';
+      if (yellowActive) {
+        ctx.shadowColor = '#f59e0b';
+        ctx.shadowBlur = Math.max(4, 1.2 * zoom);
+      }
+      ctx.beginPath();
+      ctx.arc(0, 0, lampR, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+
+      // GREEN lamp (bottom)
+      const greenActive = headState === 'green';
+      ctx.fillStyle = greenActive ? '#10b981' : '#064e3b';
+      if (greenActive) {
+        ctx.shadowColor = '#10b981';
+        ctx.shadowBlur = Math.max(4, 1.2 * zoom);
+      }
+      ctx.beginPath();
+      ctx.arc(0, spacing, lampR, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+
+      ctx.restore();
+
+      // Micro badge label when zoomed in
+      if (zoom > 1.8 && head.id === 'sig_NG_0') {
+        const badgeText = `NG SIGNAL: ${headState.toUpperCase()}`;
+        ctx.font = '800 10px JetBrains Mono, monospace';
+        const bw = ctx.measureText(badgeText).width + 12;
+        const bh = 18;
+        const bx = postSx;
+        const by = postSy - hH / 2 - 12;
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
+        ctx.strokeStyle = headState === 'green' ? '#10b981' : (headState === 'yellow' ? '#f59e0b' : '#ef4444');
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.roundRect(bx - bw / 2, by - bh / 2, bw, bh, 4);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = '#f8fafc';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(badgeText, bx, by + 1);
+      } else if (zoom > 1.8 && head.id === 'sig_FL_TL') {
+        const badgeText = `RING FL→TL: ${headState.toUpperCase()}`;
+        ctx.font = '800 10px JetBrains Mono, monospace';
+        const bw = ctx.measureText(badgeText).width + 12;
+        const bh = 18;
+        const bx = postSx - 20;
+        const by = postSy - hH / 2 - 12;
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
+        ctx.strokeStyle = headState === 'green' ? '#10b981' : (headState === 'yellow' ? '#f59e0b' : '#ef4444');
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.roundRect(bx - bw / 2, by - bh / 2, bw, bh, 4);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = '#f8fafc';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(badgeText, bx, by + 1);
       }
     }
   }

@@ -285,6 +285,16 @@ Tuning: lower `minGap`/`tau` or add edges to `FORCE_EDGES` for more forcing; set
 4. **U-turn**: U-turning vehicles **yield** to eastbound `FL_in` traffic (`bot_eb` major, uturn minor).
 5. No pedestrian crossings in v1.
 
+### 6.1 Optional Roundabout Signals (UI-Switchable)
+Users can optionally enable traffic signals at GNT Circle via the UI Scenario Configuration panel (`roundabout_signals` option):
+- **Controlled movements**:
+  - `NG_in → rb_W_N`: Carries **both NG → FL and NG → TL** traffic into the roundabout. Both movements share the same signal head at stop lines `X = -18.56` (both are green together, or both are red together).
+  - `rb_S_W → rb_W_N`: Carries **FL → TL** circulating traffic continuing past `rb_W` on the ring (alternates with NG entry).
+- **Uncontrolled movements (no signals)**:
+  - `rb_S_W → NG_out` (FL → NG exit): Stays free-flowing green at all times (`GG`).
+  - `TL_free_left` (TL → FL and TL → NG U-turn bound): Completely bypasses the roundabout and continues without a signal.
+- **Default state**: Disabled (`false`). When disabled, all traffic merges unsignalised at the roundabout as described in §6.
+
 ---
 
 ## 7. Backend Requirements

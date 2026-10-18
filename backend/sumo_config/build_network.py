@@ -319,16 +319,20 @@ def build_four_way_intersection():
 
 def build_gnt_circle():
     # GNT Circle XML (nodes/edges/connections) is hand-authored per SPEC.md; only compile it.
+    # Two variants share the same inputs: the default unsignalised network and the optional
+    # signalised one (gnt_circle_signals.nod.xml patches rb_W to a traffic light, SPEC.md §6.1).
     target_dir = SCENARIOS_DIR / "gnt_circle"
     netconvert_bin = find_sumo_binary("netconvert")
     if not netconvert_bin:
         raise RuntimeError("netconvert binary could not be found! Ensure SUMO is installed.")
-    print(f"Compiling gnt_circle.net.xml with {netconvert_bin}...")
-    result = subprocess.run([netconvert_bin, "-c", "gnt_circle.netccfg"], cwd=target_dir, capture_output=True, text=True)
-    if result.returncode != 0:
-        print("netconvert failed:", result.stderr)
-        sys.exit(result.returncode)
-    print(f"Successfully generated {target_dir / 'gnt_circle.net.xml'}!")
+    for cfg, net in (("gnt_circle.netccfg", "gnt_circle.net.xml"),
+                     ("gnt_circle_signals.netccfg", "gnt_circle_signals.net.xml")):
+        print(f"Compiling {net} with {netconvert_bin}...")
+        result = subprocess.run([netconvert_bin, "-c", cfg], cwd=target_dir, capture_output=True, text=True)
+        if result.returncode != 0:
+            print("netconvert failed:", result.stderr)
+            sys.exit(result.returncode)
+        print(f"Successfully generated {target_dir / net}!")
 
 
 def build():

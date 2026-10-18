@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  GNT Circle – OPTIONAL roundabout signals (SPEC.md §6.1). Node PATCH file:
+  loaded after gnt_circle.nod.xml by gnt_circle_signals.netccfg, it only turns the
+  ring node rb_W into a traffic light. Everything else (edges, connections, free left,
+  U-turn) is shared with the unsignalised network.
+  rb_W controls: NG_in -> rb_W_N (group NG: NG->TL and NG->FL) and
+                 rb_S_W -> rb_W_N (group FL_TL: ring traffic FL->TL).
+  rb_S_W -> NG_out (FL->NG) is never stopped. The TL free left (tl_fl / stem_merge) has no signal.
+  Phases are driven at runtime via TraCI from scenario.xml <signals> (gnt_circle.py).
+-->
+<nodes xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/nodes_file.xsd">
+    <node id="rb_W" x="-10.0" y="0.0" type="traffic_light" tl="gnt_rb_W"/>
+</nodes>

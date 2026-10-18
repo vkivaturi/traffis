@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- GNT Circle WITH roundabout signals at rb_W (optional variant, SPEC.md §6.1).
+     Run: netconvert -c gnt_circle_signals.netccfg
+     Same inputs as gnt_circle.netccfg plus gnt_circle_signals.nod.xml, which patches rb_W to type traffic_light. -->
+<configuration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/netconvertConfiguration.xsd">
+    <input>
+        <node-files value="gnt_circle.nod.xml,gnt_circle_signals.nod.xml"/>
+        <edge-files value="gnt_circle.edg.xml"/>
+        <connection-files value="gnt_circle.con.xml"/>
+    </input>
+    <output>
+        <output-file value="gnt_circle_signals.net.xml"/>
+    </output>
+    <processing>
+        <lefthand value="true"/>
+        <no-turnarounds value="true"/>
+        <junctions.corner-detail value="5"/>
+        <offset.disable-normalization value="true"/>
+    </processing>
+    <tls_building>
+        <tls.guess value="false"/>
+    </tls_building>
+    <report>
+        <verbose value="false"/>
+    </report>
+</configuration>
