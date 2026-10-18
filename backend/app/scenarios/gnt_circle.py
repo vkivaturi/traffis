@@ -214,6 +214,7 @@ class GntCircleScenario(BaseScenario):
         self.signalised_net = self.cfg_dir / "gnt_circle_signals.net.xml"
         self.route_file = self.cfg_dir / "gnt_circle.rou.xml"
         self.signals_enabled = False
+        self.time_lapse_enabled = False
         self._phases: List[GntPhase] = []
         self._geometry: Optional[NetGeometry] = None
         self._geometry_mtime = 0.0
@@ -239,10 +240,22 @@ class GntCircleScenario(BaseScenario):
                 type="boolean",
                 value=self.signals_enabled,
                 requires_restart=True,
-            )
+            ),
+            ScenarioOption(
+                id="time_lapse",
+                label="Time Lapse Simulation",
+                description="Fast-forward backend simulation in 50s jumps, streaming 10s interactive intervals to the UI with live metrics.",
+                type="boolean",
+                value=self.time_lapse_enabled,
+                requires_restart=False,
+            ),
         ]
 
     def set_options(self, values: Dict[str, Any]) -> bool:
+        needs_restart = False
+        if "time_lapse" in values:
+            self.time_lapse_enabled = bool(values["time_lapse"])
+            self._network_info = None
         if "roundabout_signals" in values:
             new_val = bool(values["roundabout_signals"])
             self._signals_user_set = True
@@ -252,8 +265,8 @@ class GntCircleScenario(BaseScenario):
                 self._geometry = None
                 self._network_info = None
                 self._build_phases()
-                return True
-        return False
+                needs_restart = True
+        return needs_restart
 
     def reload_settings(self) -> None:
         super().reload_settings()

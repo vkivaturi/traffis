@@ -246,9 +246,9 @@ Sent as JSON text over the WebSocket:
 - `{"action": "pause"}`
 - `{"action": "reset"}`
 - `{"action": "select_scenario", "payload": {"scenario_id": "four_way_intersection"}}`
-- `{"action": "update_scenario_options", "payload": {"options": {"roundabout_signals": true}}}`
+- `{"action": "update_scenario_options", "payload": {"options": {"roundabout_signals": true, "time_lapse": true}}}`
 
-> Inflow (veh/h), default speed, vehicle mix, origin weights, signal phases/green times and max sim time are defined per scenario in `backend/sumo_config/scenarios/<id>/scenario.xml` (parsed by `app/scenarios/settings_loader.py`). Scenarios can expose optional runtime toggles (e.g. `roundabout_signals` in `gnt_circle`) via `get_options()` / `set_options()`, rendered in `ScenarioConfigPanel.tsx`.
+> Inflow (veh/h), default speed, vehicle mix, origin weights, signal phases/green times and max sim time are defined per scenario in `backend/sumo_config/scenarios/<id>/scenario.xml` (parsed by `app/scenarios/settings_loader.py`). Scenarios can expose optional runtime toggles (e.g. `roundabout_signals` and `time_lapse` in `gnt_circle`) via `get_options()` / `set_options()`, rendered in `ScenarioConfigPanel.tsx`.
 
 ### 6.2 REST Endpoints
 

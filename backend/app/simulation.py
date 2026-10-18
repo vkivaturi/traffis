@@ -548,11 +548,31 @@ class SimulationManager:
         )
 
         step_counter = 0
+        time_lapse_streaming_steps = 0
+        JUMP_SIM_SECONDS = 50.0
+        SHOW_SIM_SECONDS = 10.0
+
         while True:
             t0 = time.monotonic()
             try:
                 if self.is_running and self.is_initialized:
                     async with self.lock:
+                        # Check if scenario has time-lapse enabled
+                        is_time_lapse = getattr(self.scenario, "time_lapse_enabled", False)
+                        if is_time_lapse and time_lapse_streaming_steps <= 0:
+                            # 1. Jump forward 50 seconds quickly in the backend (no UI broadcast during jump)
+                            steps_to_jump = int(round(JUMP_SIM_SECONDS / settings.STEP_LENGTH))
+                            target_sim_time = min(self.sim_time + JUMP_SIM_SECONDS, self.max_sim_time)
+                            while self.sim_time < target_sim_time and not self.time_limit_reached:
+                                self._do_step()
+                                step_counter += 1
+                                # Yield control briefly every 200 steps so we don't starve event loop
+                                if step_counter % 200 == 0:
+                                    await asyncio.sleep(0)
+
+                            # Reset streaming step window (10 seconds simulation time)
+                            time_lapse_streaming_steps = int(round(SHOW_SIM_SECONDS / settings.STEP_LENGTH))
+
                         # Demand generation at the scenario.xml inflow rate (veh/hr)
                         vph = self.scenario.settings.vehicles_per_hour
                         if vph > 0:
@@ -565,9 +585,12 @@ class SimulationManager:
                                     auto_req = self.scenario.get_auto_spawn_request()
                                     self._insert_vehicle(auto_req)
 
-                        # Advance SUMO simulation
-                        self._do_step()
-                        step_counter += 1
+                        # Advance SUMO simulation one step
+                        if not self.time_limit_reached:
+                            self._do_step()
+                            step_counter += 1
+                            if is_time_lapse and time_lapse_streaming_steps > 0:
+                                time_lapse_streaming_steps -= 1
 
                         should_broadcast = (step_counter % broadcast_step_interval == 0) or self.time_limit_reached
                         if should_broadcast and self.active_websockets:
