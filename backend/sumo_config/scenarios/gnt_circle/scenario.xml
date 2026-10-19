@@ -43,9 +43,4 @@
         <vtype id="car" share="0.85"/>
         <vtype id="van" share="0.15"/>
     </vehicleMix>
-
-    <signals enabled="false" amberDuration="3" allRedDuration="2">
-        <group id="NG" name="NG entry (NG→TL, NG→FL)" greenDuration="30"/>
-        <group id="FL_TL" name="Ring FL→TL" greenDuration="30"/>
-    </signals>
 </scenario>

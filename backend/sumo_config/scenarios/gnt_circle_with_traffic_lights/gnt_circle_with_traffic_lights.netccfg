@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- GNT Circle With Traffic Lights – netconvert config.
+     Run: netconvert -c gnt_circle_with_traffic_lights.netccfg -->
+<configuration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/netconvertConfiguration.xsd">
+    <input>
+        <node-files value="gnt_circle_with_traffic_lights.nod.xml"/>
+        <edge-files value="gnt_circle_with_traffic_lights.edg.xml"/>
+        <connection-files value="gnt_circle_with_traffic_lights.con.xml"/>
+    </input>
+    <output>
+        <output-file value="gnt_circle_with_traffic_lights.net.xml"/>
+    </output>
+    <processing>
+        <lefthand value="true"/>
+        <no-turnarounds value="true"/>
+        <junctions.corner-detail value="5"/>
+        <offset.disable-normalization value="true"/>
+    </processing>
+    <tls_building>
+        <tls.guess value="false"/>
+    </tls_building>
+    <report>
+        <verbose value="false"/>
+    </report>
+</configuration>

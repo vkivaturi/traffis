@@ -3,7 +3,14 @@ import json
 import time
 import websockets
 
-SCENARIOS = ["straight_road", "three_way_intersection", "four_way_intersection", "gnt_circle", "nallagandla_junction"]
+SCENARIOS = [
+    "straight_road",
+    "three_way_intersection",
+    "four_way_intersection",
+    "gnt_circle",
+    "gnt_circle_with_traffic_lights",
+    "nallagandla_junction",
+]
 GNT_ARMS = {"NG", "TL", "FL"}
 
 
@@ -36,15 +43,17 @@ async def test_full_flow():
             await ws.send(json.dumps({"action": "play"}))
             state = None
             is_gnt = scenario_id == "gnt_circle"
+            is_gnt_tl = scenario_id == "gnt_circle_with_traffic_lights"
+            is_roundabout = is_gnt or is_gnt_tl
             seen_origins = set()
             jm = None
-            deadline = time.time() + (20.0 if is_gnt else 8.0)
+            deadline = time.time() + (20.0 if is_roundabout else 8.0)
             while time.time() < deadline:
                 state = await recv_type("state")
                 # compact tuple direction field carries the OD key, e.g. "TL_NG"
                 seen_origins |= {str(v[13])[:2] for v in state.get("compact_vehicles") or []}
                 jm = state.get("junction_metrics") or jm  # sent at 1 Hz
-                if n_vehs(state) > 0 and state["sim_time"] > 3 and (not is_gnt or GNT_ARMS <= seen_origins):
+                if n_vehs(state) > 0 and state["sim_time"] > 3 and (not is_roundabout or GNT_ARMS <= seen_origins):
                     break
             tl = state.get("traffic_light")
             tl_desc = (f"tl={tl['state']} ({tl.get('phase_name')}) "
@@ -54,33 +63,17 @@ async def test_full_flow():
                   f"default_speed={state.get('default_speed_kmh')} max_t={state.get('max_sim_time')} {tl_desc}")
             assert n_vehs(state) > 0, "No vehicles spawned from scenario.xml inflow"
             if is_gnt:
-                assert tl is None, "gnt_circle must not report a traffic light by default"
+                assert tl is None, "gnt_circle must not report a traffic light"
                 assert GNT_ARMS <= seen_origins, f"Vehicles not seen from all arms: {seen_origins}"
                 assert jm is not None, "No junction_metrics received"
                 print(f"Junction: ring={jm['roundabout_occupancy']} uturns={jm['uturn_count']} "
                       f"inflow={ {a['id']: a['inflow'] for a in jm['arms']} } "
                       f"queues={ {q['id']: q['halting'] for q in jm['entry_queues']} }")
-
-                # Verify optional roundabout signals toggle
-                print("Testing GNT roundabout signals toggle...")
-                await ws.send(json.dumps({"action": "update_scenario_options", "payload": {"options": {"roundabout_signals": True}}}))
-                sw2 = await recv_type("scenario_switched")
-                assert sw2["scenario"]["options"][0]["value"] is True
-                net2 = await recv_type("network_info")
-                assert len(net2["data"]["geometry"].get("signal_heads") or []) == 3
-                st_sig = await recv_type("state")
-                assert st_sig["traffic_light"] is not None and st_sig["traffic_light"]["id"] == "gnt_rb_W"
-                print(f"Roundabout signals verified: active phase={st_sig['traffic_light']['phase_name']}")
-
-                # Restore unsignalised default
-                await ws.send(json.dumps({"action": "update_scenario_options", "payload": {"options": {"roundabout_signals": False}}}))
-                sw3 = await recv_type("scenario_switched")
-                assert sw3["scenario"]["options"][0]["value"] is False
-                net3 = await recv_type("network_info")
-                assert len(net3["data"]["geometry"].get("signal_heads") or []) == 0
-                st_nosig = await recv_type("state")
-                assert st_nosig.get("traffic_light") is None
-                print("Roundabout signals disabled: restored unsignalised merging.")
+            elif is_gnt_tl:
+                assert tl is not None and tl["id"] == "gnt_rb_W", "gnt_circle_with_traffic_lights must have traffic light gnt_rb_W"
+                assert GNT_ARMS <= seen_origins, f"Vehicles not seen from all arms: {seen_origins}"
+                assert jm is not None, "No junction_metrics received"
+                print(f"Junction with signals: active phase={tl['phase_name']} ring={jm['roundabout_occupancy']}")
 
             # PAUSE: clock must freeze
             await ws.send(json.dumps({"action": "pause"}))

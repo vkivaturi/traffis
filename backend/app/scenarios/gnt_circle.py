@@ -196,24 +196,19 @@ def _od_key(veh_id: str) -> Optional[str]:
     return key if key in OD_ROUTES else None
 
 
-class GntCircleScenario(BaseScenario):
-    id = "gnt_circle"
-    name = "GNT Circle"
-    description = ("Unsignalised clockwise roundabout on the Nallagandla ⇄ Tellapur corridor with a "
-                   "stem to the Flyover road, a TL single-lane free left at the circle and a U-turn "
-                   "(left-hand traffic, Indian mixed traffic)")
+class _BaseGntCircleScenario(BaseScenario):
     type = "roundabout"
     default_camera = {"x": -30.0, "y": -45.0, "zoom": 2.7}
     demand_from_route_file = True
     apply_default_speed_limit = False
+    signals_enabled: bool = False
+    tl_id: str = ""
 
     def __init__(self, sumocfg_file: str):
-        self.tl_id = ""
         self.cfg_dir = Path(sumocfg_file).parent
-        self.unsignalised_net = self.cfg_dir / "gnt_circle.net.xml"
-        self.signalised_net = self.cfg_dir / "gnt_circle_signals.net.xml"
-        self.route_file = self.cfg_dir / "gnt_circle.rou.xml"
-        self.signals_enabled = False
+        net_cand = self.cfg_dir / f"{self.id}.net.xml"
+        self.net_file_path = net_cand if net_cand.exists() else self.cfg_dir / (Path(sumocfg_file).stem + ".net.xml")
+        self.route_file = self.cfg_dir / f"{self.id}.rou.xml"
         self.time_lapse_enabled = False
         self._phases: List[GntPhase] = []
         self._geometry: Optional[NetGeometry] = None
@@ -221,26 +216,16 @@ class GntCircleScenario(BaseScenario):
         self._network_info: Optional[NetworkInfo] = None
         self._reset_metrics()
         super().__init__(sumocfg_file)
-        if self.settings.signal_plan:
-            self.signals_enabled = self.settings.signal_plan.enabled
         self._build_phases()
         self._validate_and_write_routes()
         self.bounds = self.geometry.bounds(margin=10.0)
 
     @property
     def net_file(self) -> Path:
-        return self.signalised_net if self.signals_enabled else self.unsignalised_net
+        return self.net_file_path
 
     def get_options(self) -> List[ScenarioOption]:
         return [
-            ScenarioOption(
-                id="roundabout_signals",
-                label="Roundabout Signals",
-                description="Manage NG→FL, NG→TL, and FL→TL with traffic signals at GNT Circle. Free-lefts for TL and FL traffic continue without a signal.",
-                type="boolean",
-                value=self.signals_enabled,
-                requires_restart=True,
-            ),
             ScenarioOption(
                 id="time_lapse",
                 label="Time Lapse Simulation",
@@ -252,30 +237,21 @@ class GntCircleScenario(BaseScenario):
         ]
 
     def set_options(self, values: Dict[str, Any]) -> bool:
-        needs_restart = False
         if "time_lapse" in values:
             self.time_lapse_enabled = bool(values["time_lapse"])
             self._network_info = None
-        if "roundabout_signals" in values:
-            new_val = bool(values["roundabout_signals"])
-            self._signals_user_set = True
-            if new_val != self.signals_enabled:
-                self.signals_enabled = new_val
-                self.tl_id = "gnt_rb_W" if self.signals_enabled else ""
-                self._geometry = None
-                self._network_info = None
-                self._build_phases()
-                needs_restart = True
-        return needs_restart
+        return False
 
     def reload_settings(self) -> None:
         super().reload_settings()
-        if not getattr(self, "_signals_user_set", False) and self.settings.signal_plan:
-            self.signals_enabled = self.settings.signal_plan.enabled
         self._build_phases()
         self._validate_and_write_routes()
 
     def _build_phases(self) -> None:
+        if not self.signals_enabled:
+            self._phases = []
+            self.tl_id = ""
+            return
         plan = self.settings.signal_plan
         amber = plan.amber if plan else 3.0
         all_red = plan.all_red if plan else 2.0
@@ -305,19 +281,20 @@ class GntCircleScenario(BaseScenario):
         if all_red > 0:
             phases.append(GntPhase(name="All-Red Clearance", state="red", raw="GrGrrr", duration=all_red, group=""))
         self._phases = phases
-        self.tl_id = "gnt_rb_W" if self.signals_enabled else ""
+        self.tl_id = "gnt_rb_W"
 
     def _validate_and_write_routes(self) -> None:
         s = self.settings
         unknown = sorted(set(s.od_demand) - set(OD_ROUTES))
         if unknown:
             raise ScenarioSettingsError(
-                f"gnt_circle scenario.xml: unknown OD key(s) {unknown}; allowed: {sorted(OD_ROUTES)}")
+                f"{self.id} scenario.xml: unknown OD key(s) {unknown}; allowed: {sorted(OD_ROUTES)}")
         unknown_vt = sorted(set(s.vehicle_mix) - set(BUILTIN_VTYPES))
         if unknown_vt:
             raise ScenarioSettingsError(
-                f"gnt_circle scenario.xml: unknown vtype(s) {unknown_vt}; allowed: {sorted(BUILTIN_VTYPES)}")
+                f"{self.id} scenario.xml: unknown vtype(s) {unknown_vt}; allowed: {sorted(BUILTIN_VTYPES)}")
         self._write_route_file()
+
 
     def _resolved_vtypes(self) -> Dict[str, Dict[str, str]]:
         """Precedence: per-vtype override > global <behaviour> param > built-in default > SUMO default."""
@@ -704,3 +681,24 @@ class GntCircleScenario(BaseScenario):
             uturn_count=self.uturn_count,
             teleports=self.teleports,
         )
+
+
+class GntCircleScenario(_BaseGntCircleScenario):
+    id = "gnt_circle"
+    name = "GNT Circle"
+    description = ("Unsignalised clockwise roundabout on the Nallagandla ⇄ Tellapur corridor with a "
+                   "stem to the Flyover road, a TL single-lane free left at the circle and a U-turn "
+                   "(left-hand traffic, Indian mixed traffic)")
+    signals_enabled = False
+    tl_id = ""
+
+
+class GntCircleWithTrafficLightsScenario(_BaseGntCircleScenario):
+    id = "gnt_circle_with_traffic_lights"
+    name = "GNT Circle With Traffic Lights"
+    description = ("Clockwise roundabout on the Nallagandla ⇄ Tellapur corridor with traffic lights "
+                   "at the Nallagandla entry and Flyover ring continuation, free lefts, and a U-turn "
+                   "(left-hand traffic, Indian mixed traffic)")
+    signals_enabled = True
+    tl_id = "gnt_rb_W"
+

@@ -42,8 +42,7 @@ export const ScenarioConfigPanel: React.FC<ScenarioConfigPanelProps> = ({
     return null;
   }
 
-  const signalsOption = options.find((o) => o.id === 'roundabout_signals');
-  const isSignalsEnabled = Boolean(signalsOption?.value);
+  const isSignalised = Boolean(trafficLight && trafficLight.signal_groups && trafficLight.signal_groups.length > 0);
 
   const timeLapseOption = options.find((o) => o.id === 'time_lapse');
   const isTimeLapseEnabled = Boolean(timeLapseOption?.value);
@@ -94,22 +93,6 @@ export const ScenarioConfigPanel: React.FC<ScenarioConfigPanelProps> = ({
         <Sliders size={15} color={isOpen ? '#4a2c11' : '#5c3a21'} />
         <span>CONFIG</span>
 
-        {signalsOption && (
-          <span
-            style={{
-              padding: '1px 6px',
-              borderRadius: '9999px',
-              fontSize: '0.62rem',
-              fontWeight: 700,
-              backgroundColor: isSignalsEnabled ? '#ecfdf5' : '#f1f5f9',
-              color: isSignalsEnabled ? '#059669' : '#64748b',
-              border: `1px solid ${isSignalsEnabled ? '#a7f3d0' : '#e2e8f0'}`,
-            }}
-          >
-            {isSignalsEnabled ? 'SIGNALS' : 'ROUNDABOUT'}
-          </span>
-        )}
-
         {isOpen ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
       </button>
 
@@ -151,12 +134,12 @@ export const ScenarioConfigPanel: React.FC<ScenarioConfigPanelProps> = ({
                   width: '26px',
                   height: '26px',
                   borderRadius: '6px',
-                  backgroundColor: isSignalsEnabled ? '#ecfdf5' : '#eff6ff',
-                  border: `1px solid ${isSignalsEnabled ? '#a7f3d0' : '#bfdbfe'}`,
+                  backgroundColor: isSignalised ? '#ecfdf5' : '#eff6ff',
+                  border: `1px solid ${isSignalised ? '#a7f3d0' : '#bfdbfe'}`,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  color: isSignalsEnabled ? '#059669' : '#2563eb',
+                  color: isSignalised ? '#059669' : '#2563eb',
                 }}
               >
                 <Sliders size={14} />
@@ -166,11 +149,7 @@ export const ScenarioConfigPanel: React.FC<ScenarioConfigPanelProps> = ({
                   SCENARIO CONFIG
                 </div>
                 <div style={{ fontSize: '0.64rem', color: '#64748b' }}>
-                  {signalsOption
-                    ? isSignalsEnabled
-                      ? 'Signals Active'
-                      : 'Unsignalised Merging'
-                    : 'Signalised Junction'}
+                  {isSignalised ? 'Signalised Junction' : 'Unsignalised Junction'}
                   {isTimeLapseEnabled ? ' · Time Lapse' : ''}
                 </div>
               </div>
@@ -183,19 +162,12 @@ export const ScenarioConfigPanel: React.FC<ScenarioConfigPanelProps> = ({
                   borderRadius: '9999px',
                   fontSize: '0.62rem',
                   fontWeight: 700,
-                  backgroundColor:
-                    signalsOption && !isSignalsEnabled
-                      ? '#f1f5f9'
-                      : '#ecfdf5',
-                  color: signalsOption && !isSignalsEnabled ? '#475569' : '#059669',
-                  border: `1px solid ${
-                    signalsOption && !isSignalsEnabled
-                      ? '#cbd5e1'
-                      : '#a7f3d0'
-                  }`,
+                  backgroundColor: !isSignalised ? '#f1f5f9' : '#ecfdf5',
+                  color: !isSignalised ? '#475569' : '#059669',
+                  border: `1px solid ${!isSignalised ? '#cbd5e1' : '#a7f3d0'}`,
                 }}
               >
-                {signalsOption && !isSignalsEnabled ? 'UNSIGNALISED' : 'SIGNALISED'}
+                {isSignalised ? 'SIGNALISED' : 'UNSIGNALISED'}
               </span>
               <button
                 type="button"
@@ -219,85 +191,6 @@ export const ScenarioConfigPanel: React.FC<ScenarioConfigPanelProps> = ({
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            {/* Roundabout Signals Toggle Card */}
-            {signalsOption && (
-              <div
-                style={{
-                  backgroundColor: '#f8fafc',
-                  border: '1px solid #e2e8f0',
-                  borderRadius: '8px',
-                  padding: '10px 12px',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <div>
-                    <div style={{ fontWeight: 700, color: '#0f172a', fontSize: '0.8rem' }}>
-                      {signalsOption.label}
-                    </div>
-                    <div style={{ fontSize: '0.66rem', color: '#64748b', marginTop: '2px' }}>
-                      Control roundabout conflicts via traffic lights
-                    </div>
-                  </div>
-
-                  <button
-                    type="button"
-                    role="switch"
-                    aria-checked={isSignalsEnabled}
-                    onClick={() => onUpdateOption(signalsOption.id, !isSignalsEnabled)}
-                    style={{
-                      width: '42px',
-                      height: '24px',
-                      borderRadius: '12px',
-                      backgroundColor: isSignalsEnabled ? '#10b981' : '#cbd5e1',
-                      border: 'none',
-                      cursor: 'pointer',
-                      position: 'relative',
-                      padding: '2px',
-                      transition: 'background-color 0.2s ease',
-                      flexShrink: 0,
-                    }}
-                  >
-                    <div
-                      style={{
-                        width: '20px',
-                        height: '20px',
-                        borderRadius: '50%',
-                        backgroundColor: '#ffffff',
-                        transform: isSignalsEnabled ? 'translateX(18px)' : 'translateX(0px)',
-                        transition: 'transform 0.2s ease',
-                        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.2)',
-                      }}
-                    />
-                  </button>
-                </div>
-
-                <div
-                  style={{
-                    marginTop: '10px',
-                    paddingTop: '8px',
-                    borderTop: '1px solid #e2e8f0',
-                    fontSize: '0.68rem',
-                    color: '#475569',
-                    lineHeight: 1.5,
-                  }}
-                >
-                  {isSignalsEnabled ? (
-                    <>
-                      <div style={{ color: '#2563eb', fontWeight: 600, marginBottom: '4px' }}>
-                        Active Signal Plan:
-                      </div>
-                      <div>• <b>NG→FL & NG→TL:</b> Share one signal (both green or both red)</div>
-                      <div>• <b>FL→TL:</b> Managed ring traffic continuation</div>
-                      <div>• <b>TL Free Left:</b> Continuous flow (no signal)</div>
-                    </>
-                  ) : (
-                    <div style={{ color: '#64748b' }}>
-                      All traffic merges according to roundabout priority rules.
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
 
             {/* Time Lapse Toggle Card */}
             {timeLapseOption && (
@@ -384,8 +277,8 @@ export const ScenarioConfigPanel: React.FC<ScenarioConfigPanelProps> = ({
               </div>
             )}
 
-            {/* Live Signal Telemetry when enabled or signalised */}
-            {(isSignalsEnabled || (!signalsOption && Boolean(trafficLight?.signal_groups?.length))) && trafficLight && (
+            {/* Live Signal Telemetry when signalised */}
+            {isSignalised && trafficLight && (
               <div
                 style={{
                   marginTop: '4px',
@@ -511,19 +404,21 @@ export const ScenarioConfigPanel: React.FC<ScenarioConfigPanelProps> = ({
             )}
 
             {/* Restart note */}
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '5px',
-                marginTop: '4px',
-                fontSize: '0.62rem',
-                color: '#64748b',
-              }}
-            >
-              <ShieldAlert size={11} />
-              <span>Toggling resets simulation clock to t=0 to reconfigure road network.</span>
-            </div>
+            {options.some((o) => o.requires_restart) && (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  marginTop: '4px',
+                  fontSize: '0.62rem',
+                  color: '#64748b',
+                }}
+              >
+                <ShieldAlert size={11} />
+                <span>Toggling resets simulation clock to t=0 to reconfigure road network.</span>
+              </div>
+            )}
           </div>
         </div>
       )}

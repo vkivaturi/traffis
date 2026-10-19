@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  GNT Circle With Traffic Lights – explicit connections.
+  Left-hand net: lane 0 = kerb side, highest index = median side.
+-->
+<connections xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/connections_file.xsd">
+    <!-- tl_fl: TL's 2 lanes merge into the single free-left lane -->
+    <connection from="TL_in" to="TL_free_left" fromLane="0" toLane="0"/>
+    <connection from="TL_in" to="TL_free_left" fromLane="1" toLane="0"/>
+
+    <!-- stem_merge: free left joins the stem SB kerb (left-most) lane, yielding to ring exit traffic (D-6) -->
+    <connection from="stem_sb_a"    to="stem_sb_b" fromLane="0" toLane="0"/>
+    <connection from="stem_sb_a"    to="stem_sb_b" fromLane="1" toLane="1"/>
+    <connection from="stem_sb_a"    to="stem_sb_b" fromLane="2" toLane="2"/>
+    <connection from="TL_free_left" to="stem_sb_b" fromLane="0" toLane="0" pass="true"/>
+
+    <!-- stem_S: stem SB turns right (west) onto the bottom road -->
+    <connection from="stem_sb_b" to="bot_wb_b" fromLane="0" toLane="0" speed="13.89"/>
+    <connection from="stem_sb_b" to="bot_wb_b" fromLane="1" toLane="1" speed="13.89"/>
+    <connection from="stem_sb_b" to="bot_wb_b" fromLane="2" toLane="2" speed="13.89"/>
+
+    <!-- stem_S: eastbound turns left (north) into stem -->
+    <connection from="bot_eb" to="stem_nb_a" fromLane="0" toLane="0" speed="13.89"/>
+    <connection from="bot_eb" to="stem_nb_a" fromLane="1" toLane="1" speed="13.89"/>
+    <connection from="bot_eb" to="stem_nb_a" fromLane="2" toLane="2" speed="13.89"/>
+
+    <!-- fl_stem: lane 0 splits into single-lane FL_free_left AND continues to stem_nb_b; lanes 1,2 continue to stem_nb_b -->
+    <connection from="stem_nb_a" to="FL_free_left" fromLane="0" toLane="0" pass="true"/>
+    <connection from="stem_nb_a" to="stem_nb_b"   fromLane="0" toLane="0"/>
+    <connection from="stem_nb_a" to="stem_nb_b"   fromLane="1" toLane="1"/>
+    <connection from="stem_nb_a" to="stem_nb_b"   fromLane="2" toLane="2"/>
+
+    <!-- uturn_W: through movements -->
+    <connection from="bot_wb_b" to="FL_out" fromLane="0" toLane="0"/>
+    <connection from="bot_wb_b" to="FL_out" fromLane="1" toLane="1"/>
+    <connection from="bot_wb_b" to="FL_out" fromLane="2" toLane="2"/>
+    <connection from="FL_in" to="bot_eb" fromLane="0" toLane="0"/>
+    <connection from="FL_in" to="bot_eb" fromLane="1" toLane="1"/>
+    <connection from="FL_in" to="bot_eb" fromLane="2" toLane="2"/>
+
+    <!-- Roundabout:
+         At rb_S: stem_nb_b approach feeds rb_S_W (lane 0 -> outer lane 0, lanes 1,2 -> inner lane 1).
+         At rb_W: NG_in lane 0 enters rb_W_N lane 0 (dedicated NG->TL arc).
+                  NG_in lane 1 enters rb_W_N lane 1 (for NG->FL).
+                  rb_S_W lane 0 continues to rb_W_N lane 1.
+                  rb_S_W lane 1 continues to rb_W_N lane 2.
+         At rb_N: rb_W_N lanes 0,1,2 continue to rb_N_E lanes 0,1,2.
+         At rb_E: rb_N_E lane 0 exits to TL_out lane 0 (dedicated NG->TL exit).
+                  rb_N_E lane 1 exits to TL_out lane 1 (FL->TL exit) and continues to rb_E_S lane 0 (NG->FL).
+                  rb_N_E lane 2 continues to rb_E_S lane 1 (NG->FL). -->
+    <connection from="stem_nb_b" to="rb_S_W" fromLane="0" toLane="0"/>
+    <connection from="stem_nb_b" to="rb_S_W" fromLane="1" toLane="1"/>
+    <connection from="stem_nb_b" to="rb_S_W" fromLane="2" toLane="1"/>
+
+    <connection from="NG_in" to="rb_W_N" fromLane="0" toLane="0" pass="true"/>
+    <connection from="NG_in" to="rb_W_N" fromLane="1" toLane="1" pass="true"/>
+
+    <connection from="rb_W_N" to="rb_N_E" fromLane="0" toLane="0"/>
+    <connection from="rb_W_N" to="rb_N_E" fromLane="1" toLane="1"/>
+    <connection from="rb_W_N" to="rb_N_E" fromLane="2" toLane="2"/>
+
+    <connection from="rb_N_E" to="TL_out" fromLane="0" toLane="0"/>
+    <connection from="rb_N_E" to="TL_out" fromLane="1" toLane="1"/>
+    <connection from="rb_N_E" to="rb_E_S" fromLane="0" toLane="0"/>
+    <connection from="rb_N_E" to="rb_E_S" fromLane="1" toLane="1"/>
+    <connection from="rb_N_E" to="rb_E_S" fromLane="2" toLane="1"/>
+
+    <connection from="rb_E_S" to="stem_sb_a" fromLane="0" toLane="0"/>
+    <connection from="rb_E_S" to="stem_sb_a" fromLane="0" toLane="1"/>
+    <connection from="rb_E_S" to="stem_sb_a" fromLane="1" toLane="2"/>
+    <connection from="rb_E_S" to="rb_S_W" fromLane="0" toLane="0"/>
+    <connection from="rb_E_S" to="rb_S_W" fromLane="1" toLane="1"/>
+
+    <connection from="rb_S_W" to="NG_out_a" fromLane="0" toLane="0"/>
+    <connection from="rb_S_W" to="NG_out_a" fromLane="1" toLane="1"/>
+    <connection from="rb_S_W" to="rb_W_N"   fromLane="0" toLane="1" pass="true"/>
+    <connection from="rb_S_W" to="rb_W_N"   fromLane="1" toLane="2" pass="true"/>
+
+    <!-- ng_merge: free left merges into NG_out_b kerb lane alongside ring exit traffic -->
+    <connection from="NG_out_a"    to="NG_out_b" fromLane="0" toLane="0"/>
+    <connection from="NG_out_a"    to="NG_out_b" fromLane="1" toLane="1"/>
+    <connection from="FL_free_left" to="NG_out_b" fromLane="0" toLane="0" pass="true"/>
+
+    <!-- uturn_W: aggressive median U-turn (westbound -> eastbound), 30 km/h, yields to FL_in -->
+    <connection from="bot_wb_b" to="bot_eb" fromLane="2" toLane="2" speed="8.33" pass="true"/>
+</connections>

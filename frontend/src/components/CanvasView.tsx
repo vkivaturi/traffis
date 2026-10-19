@@ -1226,7 +1226,7 @@ export const CanvasView: React.FC<CanvasViewProps> = ({
       ? networkInfo.geometry
       : null;
   const isGeometry = !!geometry;
-  const isRoundabout = effectiveScenarioId === 'gnt_circle' || !!geometry?.roundabout;
+  const isRoundabout = effectiveScenarioId === 'gnt_circle' || effectiveScenarioId === 'gnt_circle_with_traffic_lights' || !!geometry?.roundabout;
 
   const labelRectsRef = useRef<LabelHitRect[]>([]);
   const [hoveredLabel, setHoveredLabel] = useState<{ id: string; x: number; y: number; alignRight: boolean } | null>(null);

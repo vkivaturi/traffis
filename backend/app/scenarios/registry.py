@@ -7,7 +7,7 @@ from .base import BaseScenario
 from .straight_road import StraightRoadScenario
 from .three_way_intersection import ThreeWayIntersectionScenario
 from .four_way_intersection import FourWayIntersectionScenario
-from .gnt_circle import GntCircleScenario
+from .gnt_circle import GntCircleScenario, GntCircleWithTrafficLightsScenario
 from .nallagandla_junction import NallagandlaJunctionScenario
 from ..schemas import ScenarioMetadata, ScenarioGroup
 from ..config import SUMO_CONFIG_DIR, SCENARIO_GROUPS_FILE
@@ -46,7 +46,7 @@ class ScenarioRegistry:
                 "id": "nallagandla_tellapur",
                 "name": "Nallagandla Tellapur Junction",
                 "description": "Suburban arterial junctions connecting Nallagandla, Tellapur, and Lingampalli Flyover.",
-                "scenarios": ["gnt_circle", "nallagandla_junction"],
+                "scenarios": ["gnt_circle", "gnt_circle_with_traffic_lights", "nallagandla_junction"],
             },
             {
                 "id": "other_scenarios",
@@ -127,12 +127,14 @@ def init_registry():
     three_way_cfg = SUMO_CONFIG_DIR / "scenarios" / "three_way_intersection" / "intersection.sumocfg"
     four_way_cfg = SUMO_CONFIG_DIR / "scenarios" / "four_way_intersection" / "intersection.sumocfg"
     gnt_circle_cfg = SUMO_CONFIG_DIR / "scenarios" / "gnt_circle" / "gnt_circle.sumocfg"
+    gnt_circle_tl_cfg = SUMO_CONFIG_DIR / "scenarios" / "gnt_circle_with_traffic_lights" / "gnt_circle_with_traffic_lights.sumocfg"
     nallagandla_cfg = SUMO_CONFIG_DIR / "scenarios" / "nallagandla_junction" / "nallagandla_junction.sumocfg"
 
     registry.register(StraightRoadScenario(sumocfg_file=str(straight_cfg)))
     registry.register(ThreeWayIntersectionScenario(sumocfg_file=str(three_way_cfg)))
     registry.register(FourWayIntersectionScenario(sumocfg_file=str(four_way_cfg)))
     registry.register(GntCircleScenario(sumocfg_file=str(gnt_circle_cfg)))
+    registry.register(GntCircleWithTrafficLightsScenario(sumocfg_file=str(gnt_circle_tl_cfg)))
     registry.register(NallagandlaJunctionScenario(sumocfg_file=str(nallagandla_cfg)))
 
 init_registry()

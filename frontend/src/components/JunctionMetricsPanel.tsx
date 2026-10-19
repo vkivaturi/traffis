@@ -23,7 +23,7 @@ const headStyle: React.CSSProperties = {
 
 export const JunctionMetricsPanel: React.FC<JunctionMetricsPanelProps> = ({ metrics, scenarioId }) => {
   const [collapsed, setCollapsed] = useState(false);
-  const isRoundabout = scenarioId === 'gnt_circle' || (!scenarioId && metrics.roundabout_occupancy > 0);
+  const isRoundabout = scenarioId === 'gnt_circle' || scenarioId === 'gnt_circle_with_traffic_lights' || (!scenarioId && metrics.roundabout_occupancy > 0);
 
   return (
     <div

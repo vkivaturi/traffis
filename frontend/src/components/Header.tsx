@@ -84,6 +84,15 @@ export const Header: React.FC<HeaderProps> = ({
             spawn_origins: [],
           },
           {
+            id: 'gnt_circle_with_traffic_lights',
+            name: 'GNT Circle With Traffic Lights',
+            description: '',
+            type: 'roundabout',
+            bounds: { min_x: 0, max_x: 0, min_y: 0, max_y: 0 },
+            default_camera: { x: 0, y: 0, zoom: 1 },
+            spawn_origins: [],
+          },
+          {
             id: 'nallagandla_junction',
             name: 'Nallagandla Junction',
             description: '',

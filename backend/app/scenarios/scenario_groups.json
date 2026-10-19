@@ -5,6 +5,7 @@
     "description": "Suburban arterial junctions connecting Nallagandla, Tellapur, and Lingampalli Flyover.",
     "scenarios": [
       "gnt_circle",
+      "gnt_circle_with_traffic_lights",
       "nallagandla_junction"
     ]
   },

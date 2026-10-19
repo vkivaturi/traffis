@@ -26,7 +26,7 @@ export const VehicleInspector: React.FC<VehicleInspectorProps> = ({
   const isBraking = vehicle.acceleration < -0.5;
   const isAccelerating = vehicle.acceleration > 0.5;
   const isWest = vehicle.angle > 180 || vehicle.direction === 'west' || vehicle.y > 0;
-  const isRoundabout = scenarioId === 'gnt_circle';
+  const isRoundabout = scenarioId === 'gnt_circle' || scenarioId === 'gnt_circle_with_traffic_lights';
 
   // O-D scenarios (e.g. GNT Circle) send the trip key, e.g. "TL_NG", as the direction
   const odMatch = /^([A-Z]{2})_([A-Z]{2})$/.exec(vehicle.direction ?? '');
