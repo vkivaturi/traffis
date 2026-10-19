@@ -8,6 +8,7 @@ import {
   Clock,
   Layers,
   Download,
+  FileText,
   AlertCircle,
   BarChart3,
   RefreshCw,
@@ -30,6 +31,15 @@ const DEFAULT_METRICS: MetricDefinition[] = [
   { key: 'avg_travel_time_s', label: 'Avg Travel Time', unit: 's', description: 'Average corridor traversal duration from origin to destination', higher_is_better: false, format: 'decimal1' },
 ];
 
+const GNT_ROUTE_SPEED_METRICS: MetricDefinition[] = [
+  { key: 'speed_NG_TL', label: 'NG → TL Speed', unit: 'km/h', description: 'Average vehicle journey speed from Nallagandla to Tellapur', higher_is_better: true, format: 'decimal1' },
+  { key: 'speed_NG_FL', label: 'NG → FL Speed', unit: 'km/h', description: 'Average vehicle journey speed from Nallagandla to Lingampalli Flyover', higher_is_better: true, format: 'decimal1' },
+  { key: 'speed_TL_FL', label: 'TL → FL Speed', unit: 'km/h', description: 'Average vehicle journey speed from Tellapur to Lingampalli Flyover', higher_is_better: true, format: 'decimal1' },
+  { key: 'speed_TL_NG', label: 'TL → NG Speed', unit: 'km/h', description: 'Average vehicle journey speed from Tellapur to Nallagandla', higher_is_better: true, format: 'decimal1' },
+  { key: 'speed_FL_NG', label: 'FL → NG Speed', unit: 'km/h', description: 'Average vehicle journey speed from Lingampalli Flyover to Nallagandla', higher_is_better: true, format: 'decimal1' },
+  { key: 'speed_FL_TL', label: 'FL → TL Speed', unit: 'km/h', description: 'Average vehicle journey speed from Lingampalli Flyover to Tellapur', higher_is_better: true, format: 'decimal1' },
+];
+
 export interface ComparisonResult {
   scenario_id: string;
   scenario_name: string;
@@ -49,6 +59,7 @@ export interface ComparisonResult {
   roundabout_occupancy: number | null;
   uturn_count: number | null;
   teleports: number;
+  [key: string]: unknown;
 }
 
 interface CompareSimulationsPageProps {
@@ -81,7 +92,7 @@ export const CompareSimulationsPage: React.FC<CompareSimulationsPageProps> = ({
         name: 'Nallagandla Tellapur Junction',
         description: 'Suburban arterial junctions connecting Nallagandla, Tellapur, and Lingampalli Flyover.',
         scenarios: scenarios.filter(s => ['gnt_circle', 'gnt_circle_with_traffic_lights', 'nallagandla_junction'].includes(s.id)),
-        metrics: DEFAULT_METRICS,
+        metrics: [...DEFAULT_METRICS, ...GNT_ROUTE_SPEED_METRICS],
       },
       {
         id: 'other_scenarios',
@@ -235,6 +246,12 @@ export const CompareSimulationsPage: React.FC<CompareSimulationsPageProps> = ({
       const val = (result as unknown as Record<string, number | null>)[key];
       return val !== undefined && val !== null ? val : null;
     }
+    const lowerKey = key.toLowerCase();
+    for (const [k, v] of Object.entries(result)) {
+      if (k.toLowerCase() === lowerKey && typeof v === 'number') {
+        return v;
+      }
+    }
     return null;
   };
 
@@ -249,20 +266,40 @@ export const CompareSimulationsPage: React.FC<CompareSimulationsPageProps> = ({
     return `${val.toFixed(1)}${metric.unit ? ` ${metric.unit}` : ''}`;
   };
 
-  const getBestValueForMetric = (metric: MetricDefinition, resList: ComparisonResult[]): number | null => {
-    if (metric.higher_is_better === null || metric.higher_is_better === undefined || resList.length === 0) {
+  const getMetricRank = (metric: MetricDefinition, currentVal: number | null, resList: ComparisonResult[]): number | null => {
+    if (
+      metric.higher_is_better === null ||
+      metric.higher_is_better === undefined ||
+      currentVal === null ||
+      isNaN(currentVal) ||
+      resList.length === 0
+    ) {
       return null;
     }
+
     const validValues = resList
       .map(r => getMetricValue(r, metric.key))
       .filter((v): v is number => v !== null && !isNaN(v));
-    if (validValues.length === 0) return null;
-    return metric.higher_is_better ? Math.max(...validValues) : Math.min(...validValues);
-  };
 
-  const isBest = (val: number | null, bestVal: number | null): boolean => {
-    if (val === null || bestVal === null) return false;
-    return Math.abs(val - bestVal) < 0.001;
+    if (validValues.length === 0) return null;
+
+    // Deduplicate values for tie handling
+    const uniqueValues: number[] = [];
+    for (const val of validValues) {
+      if (!uniqueValues.some(u => Math.abs(u - val) < 0.001)) {
+        uniqueValues.push(val);
+      }
+    }
+
+    // Sort: highest is rank 1 if higher_is_better is true, lowest is rank 1 if false
+    if (metric.higher_is_better) {
+      uniqueValues.sort((a, b) => b - a);
+    } else {
+      uniqueValues.sort((a, b) => a - b);
+    }
+
+    const rankIdx = uniqueValues.findIndex(u => Math.abs(u - currentVal) < 0.001);
+    return rankIdx >= 0 ? rankIdx + 1 : null;
   };
 
   // Export results to CSV using standardized group metrics
@@ -296,6 +333,239 @@ export const CompareSimulationsPage: React.FC<CompareSimulationsPageProps> = ({
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  };
+
+  // Export results as formatted PDF report (landscape executive format)
+  const handleExportPDF = () => {
+    if (results.length === 0) return;
+
+    const currentGroup = groups.find(g => g.id === selectedGroupId);
+    const groupName = currentGroup?.name || selectedGroupId;
+    const nowStr = new Date().toLocaleString();
+
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      alert('Please allow popups to export the comparison report as PDF.');
+      return;
+    }
+
+    const htmlContent = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Traffis Comparison Report - ${groupName}</title>
+  <style>
+    @page {
+      size: A4 landscape;
+      margin: 12mm;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      color: #0f172a;
+      background: #ffffff;
+      margin: 0;
+      padding: 12px;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    .header-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      border-bottom: 2px solid #4a2c11;
+      padding-bottom: 12px;
+      margin-bottom: 16px;
+    }
+    .brand-title {
+      font-size: 20px;
+      font-weight: 800;
+      color: #4a2c11;
+      letter-spacing: -0.02em;
+    }
+    .brand-sub {
+      font-size: 11px;
+      color: #64748b;
+      margin-top: 2px;
+    }
+    .report-meta {
+      font-size: 10px;
+      color: #475569;
+      text-align: right;
+      line-height: 1.4;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 11px;
+      page-break-inside: auto;
+    }
+    tr {
+      page-break-inside: avoid;
+      page-break-after: auto;
+    }
+    th {
+      background-color: #f8fafc;
+      color: #0f172a;
+      font-weight: 700;
+      text-align: left;
+      padding: 8px 10px;
+      border: 1px solid #cbd5e1;
+      font-size: 10px;
+      white-space: nowrap;
+    }
+    td {
+      padding: 8px 10px;
+      border: 1px solid #e2e8f0;
+      vertical-align: middle;
+      white-space: nowrap;
+    }
+    .scenario-cell {
+      font-weight: 700;
+      color: #0f172a;
+      background-color: #fcfcfd;
+    }
+    .scenario-id {
+      font-size: 9px;
+      color: #64748b;
+      font-weight: 400;
+      margin-top: 1px;
+    }
+    .metric-val {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
+    .rank-pill {
+      display: inline-block;
+      margin-left: 5px;
+      padding: 1px 4px;
+      border-radius: 3px;
+      font-size: 9px;
+      font-weight: 700;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
+    .rank-1 {
+      background-color: #dcfce7;
+      color: #15803d;
+      border: 1px solid #bbf7d0;
+    }
+    .rank-2 {
+      background-color: #f1f5f9;
+      color: #334155;
+      border: 1px solid #cbd5e1;
+    }
+    .rank-3 {
+      background-color: #faf5ef;
+      color: #92400e;
+      border: 1px solid #fed7aa;
+    }
+    .rank-other {
+      background-color: #f8fafc;
+      color: #64748b;
+      border: 1px solid #e2e8f0;
+    }
+    .footer-bar {
+      margin-top: 16px;
+      border-top: 1px solid #e2e8f0;
+      padding-top: 8px;
+      display: flex;
+      justify-content: space-between;
+      font-size: 9px;
+      color: #94a3b8;
+    }
+    .no-print-bar {
+      margin-bottom: 16px;
+      padding: 10px 14px;
+      background: #faf5ef;
+      border: 1px solid #e8ddd0;
+      border-radius: 6px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+    }
+    .print-btn {
+      background: #4a2c11;
+      color: #ffffff;
+      border: none;
+      padding: 6px 14px;
+      border-radius: 4px;
+      font-weight: 700;
+      cursor: pointer;
+      font-size: 12px;
+    }
+    @media print {
+      .no-print-bar {
+        display: none !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="no-print-bar">
+    <span>Ready to export. Click <strong>Print / Save as PDF</strong> and choose <em>Destination: Save as PDF</em> in the dialog.</span>
+    <button class="print-btn" onclick="window.print()">Print / Save as PDF</button>
+  </div>
+
+  <div class="header-bar">
+    <div>
+      <div class="brand-title">TRAFFIS — Simulation Benchmark Report</div>
+      <div class="brand-sub">Corridor Performance & Network Comparison</div>
+    </div>
+    <div class="report-meta">
+      <div><strong>Group:</strong> ${groupName}</div>
+      <div><strong>Duration:</strong> ${durationSeconds}.0s window</div>
+      <div><strong>Date:</strong> ${nowStr}</div>
+      <div><strong>Generated by:</strong> ${user?.name || 'Authorized Engineer'}</div>
+    </div>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="min-width: 140px;">Scenario</th>
+        ${groupMetrics.map(m => `<th>${m.label}${m.unit ? ` (${m.unit})` : ''}</th>`).join('')}
+      </tr>
+    </thead>
+    <tbody>
+      ${results.map(r => {
+        return `
+          <tr>
+            <td class="scenario-cell">
+              <div>${r.scenario_name}</div>
+              <div class="scenario-id">${r.scenario_id}</div>
+            </td>
+            ${groupMetrics.map(m => {
+              const val = getMetricValue(r, m.key);
+              const rank = getMetricRank(m, val, results);
+              const rankClass = rank === 1 ? 'rank-1' : rank === 2 ? 'rank-2' : rank === 3 ? 'rank-3' : 'rank-other';
+              const rankBadge = rank !== null ? `<span class="rank-pill ${rankClass}">#${rank}</span>` : '';
+              return `<td><span class="metric-val">${formatMetricDisplay(val, m)}</span>${rankBadge}</td>`;
+            }).join('')}
+          </tr>
+        `;
+      }).join('')}
+    </tbody>
+  </table>
+
+  <div class="footer-bar">
+    <div>Traffis Microscopic Traffic Simulation Platform • Eclipse SUMO TraCI Physics Engine</div>
+    <div>Page 1 of 1</div>
+  </div>
+
+  <script>
+    window.onload = function() {
+      setTimeout(function() {
+        window.print();
+      }, 250);
+    };
+  </script>
+</body>
+</html>
+    `;
+
+    printWindow.document.open();
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
   };
 
   return (
@@ -986,6 +1256,26 @@ export const CompareSimulationsPage: React.FC<CompareSimulationsPageProps> = ({
 
                 <button
                   type="button"
+                  onClick={handleExportPDF}
+                  className="btn-secondary"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '8px 14px',
+                    fontSize: '0.82rem',
+                    fontWeight: 700,
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                  }}
+                  title="Export comparative simulation benchmark report as PDF"
+                >
+                  <FileText size={14} />
+                  <span>Export as PDF</span>
+                </button>
+
+                <button
+                  type="button"
                   onClick={handleRunComparison}
                   className="btn-secondary"
                   style={{
@@ -1005,37 +1295,6 @@ export const CompareSimulationsPage: React.FC<CompareSimulationsPageProps> = ({
               </div>
             </div>
 
-            {/* KPI Summary Cards for Standardized Group Metrics */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px', marginBottom: '22px' }}>
-              {groupMetrics
-                .filter(m => m.higher_is_better !== null && m.higher_is_better !== undefined)
-                .slice(0, 4)
-                .map((m, idx) => {
-                  const bestVal = getBestValueForMetric(m, results);
-                  const topScenario = results.find(r => isBest(getMetricValue(r, m.key), bestVal));
-                  const colors = [
-                    { bg: '#f0fdf4', border: '#bbf7d0', title: '#166534', value: '#15803d' },
-                    { bg: '#eff6ff', border: '#bfdbfe', title: '#1e40af', value: '#1d4ed8' },
-                    { bg: '#faf5ef', border: '#e8ddd0', title: '#5c3a21', value: '#4a2c11' },
-                    { bg: '#fffbeb', border: '#fde68a', title: '#92400e', value: '#b45309' },
-                  ][idx % 4];
-
-                  return (
-                    <div key={m.key} style={{ padding: '16px', borderRadius: '10px', backgroundColor: colors.bg, border: `1px solid ${colors.border}` }}>
-                      <div style={{ fontSize: '0.68rem', fontWeight: 700, color: colors.title, textTransform: 'uppercase' }}>
-                        {m.higher_is_better ? `Highest ${m.label}` : `Lowest ${m.label}`} {m.unit ? `(${m.unit})` : ''}
-                      </div>
-                      <div style={{ fontSize: '1.4rem', fontWeight: 800, color: colors.value, marginTop: '4px' }}>
-                        {bestVal !== null ? formatMetricDisplay(bestVal, m) : '—'}
-                      </div>
-                      <div style={{ fontSize: '0.72rem', color: colors.title, marginTop: '2px', fontWeight: 600 }}>
-                        {topScenario?.scenario_name || '—'}
-                      </div>
-                    </div>
-                  );
-                })}
-            </div>
-
             {/* Results Table */}
             <div
               style={{
@@ -1044,48 +1303,96 @@ export const CompareSimulationsPage: React.FC<CompareSimulationsPageProps> = ({
                 backgroundColor: '#ffffff',
                 overflowX: 'auto',
                 boxShadow: 'var(--shadow-sm)',
+                position: 'relative',
               }}
             >
               <table
                 style={{
                   width: '100%',
-                  borderCollapse: 'collapse',
+                  borderCollapse: 'separate',
+                  borderSpacing: 0,
                   textAlign: 'left',
                   fontSize: '0.82rem',
                 }}
               >
                 <thead>
-                  <tr style={{ backgroundColor: '#f8fafc', borderBottom: '2px solid #e2e8f0' }}>
-                    <th style={{ padding: '14px 18px', fontWeight: 800, color: '#0f172a', minWidth: '220px' }}>
-                      Scenario (1st Column)
+                  <tr style={{ backgroundColor: '#f8fafc' }}>
+                    <th
+                      style={{
+                        position: 'sticky',
+                        left: 0,
+                        zIndex: 4,
+                        backgroundColor: '#f8fafc',
+                        padding: '14px 18px',
+                        fontWeight: 800,
+                        color: '#0f172a',
+                        minWidth: '240px',
+                        maxWidth: '280px',
+                        borderBottom: '2px solid #e2e8f0',
+                        borderRight: '1px solid #e2e8f0',
+                        boxShadow: '3px 0 6px -2px rgba(0, 0, 0, 0.08)',
+                      }}
+                    >
+                      Scenario
                     </th>
                     {groupMetrics.map((m) => (
                       <th
                         key={m.key}
-                        style={{ padding: '14px 14px', fontWeight: 700, color: '#334155', minWidth: '120px' }}
+                        style={{
+                          padding: '14px 14px',
+                          fontWeight: 700,
+                          color: '#334155',
+                          minWidth: '130px',
+                          borderBottom: '2px solid #e2e8f0',
+                          whiteSpace: 'nowrap',
+                        }}
                         title={m.description || m.label}
                       >
                         {m.label} {m.unit ? `(${m.unit})` : ''}
                       </th>
                     ))}
-                    <th style={{ padding: '14px 18px', fontWeight: 700, color: '#334155', minWidth: '130px', textAlign: 'right' }}>
+                    <th
+                      style={{
+                        padding: '14px 18px',
+                        fontWeight: 700,
+                        color: '#334155',
+                        minWidth: '110px',
+                        textAlign: 'right',
+                        borderBottom: '2px solid #e2e8f0',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
                       Action
                     </th>
                   </tr>
                 </thead>
                 <tbody>
                   {results.map((r, idx) => {
+                    const rowBg = idx % 2 === 0 ? '#ffffff' : '#fcfcfd';
+                    const isLast = idx === results.length - 1;
                     return (
                       <tr
                         key={r.scenario_id}
                         style={{
-                          borderBottom: idx === results.length - 1 ? 'none' : '1px solid #f1f5f9',
-                          backgroundColor: idx % 2 === 0 ? '#ffffff' : '#fcfcfd',
+                          backgroundColor: rowBg,
                           transition: 'background-color 0.15s ease',
                         }}
                       >
-                        {/* 1st Column: Scenario Name */}
-                        <td style={{ padding: '16px 18px' }}>
+                        {/* 1st Column: Scenario Name (Sticky on horizontal scroll) */}
+                        <td
+                          style={{
+                            position: 'sticky',
+                            left: 0,
+                            zIndex: 2,
+                            backgroundColor: rowBg,
+                            padding: '16px 18px',
+                            minWidth: '240px',
+                            maxWidth: '280px',
+                            borderBottom: isLast ? 'none' : '1px solid #f1f5f9',
+                            borderRight: '1px solid #e2e8f0',
+                            boxShadow: '3px 0 6px -2px rgba(0, 0, 0, 0.08)',
+                          }}
+                        >
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                             <div
                               style={{
@@ -1093,13 +1400,14 @@ export const CompareSimulationsPage: React.FC<CompareSimulationsPageProps> = ({
                                 height: '8px',
                                 borderRadius: '50%',
                                 backgroundColor: idx === 0 ? '#10b981' : '#3b82f6',
+                                flexShrink: 0,
                               }}
                             />
-                            <div>
-                              <div style={{ fontWeight: 800, color: '#0f172a', fontSize: '0.88rem' }}>
+                            <div style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                              <div style={{ fontWeight: 800, color: '#0f172a', fontSize: '0.88rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                 {r.scenario_name}
                               </div>
-                              <div style={{ fontSize: '0.7rem', color: '#64748b' }}>
+                              <div style={{ fontSize: '0.7rem', color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                 {r.scenario_id}
                               </div>
                             </div>
@@ -1109,27 +1417,50 @@ export const CompareSimulationsPage: React.FC<CompareSimulationsPageProps> = ({
                         {/* Standardized Common Group Metrics */}
                         {groupMetrics.map((m) => {
                           const val = getMetricValue(r, m.key);
-                          const bestVal = getBestValueForMetric(m, results);
-                          const isTop = isBest(val, bestVal);
+                          const rank = getMetricRank(m, val, results);
+                          const isRank1 = rank === 1;
 
                           return (
-                            <td key={m.key} style={{ padding: '16px 14px', fontFamily: 'var(--font-mono)' }}>
-                              <span style={{ fontWeight: isTop ? 700 : 500, color: isTop ? '#15803d' : '#0f172a' }}>
+                            <td
+                              key={m.key}
+                              style={{
+                                padding: '16px 14px',
+                                fontFamily: 'var(--font-mono)',
+                                borderBottom: isLast ? 'none' : '1px solid #f1f5f9',
+                                whiteSpace: 'nowrap',
+                              }}
+                            >
+                              <span style={{ fontWeight: isRank1 ? 700 : 500, color: isRank1 ? '#15803d' : '#0f172a' }}>
                                 {formatMetricDisplay(val, m)}
                               </span>
-                              {isTop && (
+                              {rank !== null && (
                                 <span
+                                  title={`Rank ${rank} of ${results.length} (${m.label})`}
                                   style={{
                                     marginLeft: '6px',
                                     padding: '1px 5px',
                                     borderRadius: '4px',
-                                    fontSize: '0.6rem',
+                                    fontSize: '0.62rem',
                                     fontWeight: 700,
-                                    backgroundColor: '#dcfce7',
-                                    color: '#15803d',
+                                    fontFamily: 'var(--font-mono)',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    backgroundColor:
+                                      rank === 1 ? '#dcfce7' :
+                                      rank === 2 ? '#f1f5f9' :
+                                      rank === 3 ? '#faf5ef' : '#f8fafc',
+                                    color:
+                                      rank === 1 ? '#15803d' :
+                                      rank === 2 ? '#334155' :
+                                      rank === 3 ? '#92400e' : '#64748b',
+                                    border: `1px solid ${
+                                      rank === 1 ? '#bbf7d0' :
+                                      rank === 2 ? '#cbd5e1' :
+                                      rank === 3 ? '#fed7aa' : '#e2e8f0'
+                                    }`,
                                   }}
                                 >
-                                  BEST
+                                  #{rank}
                                 </span>
                               )}
                             </td>
@@ -1137,7 +1468,14 @@ export const CompareSimulationsPage: React.FC<CompareSimulationsPageProps> = ({
                         })}
 
                         {/* Action: Open in Simulator */}
-                        <td style={{ padding: '16px 18px', textAlign: 'right' }}>
+                        <td
+                          style={{
+                            padding: '16px 18px',
+                            textAlign: 'right',
+                            borderBottom: isLast ? 'none' : '1px solid #f1f5f9',
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
                           <button
                             type="button"
                             onClick={() => onLaunchSimulator(r.scenario_id)}

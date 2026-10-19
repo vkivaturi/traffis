@@ -72,6 +72,54 @@
         "description": "Average corridor traversal duration from origin to destination",
         "higher_is_better": false,
         "format": "decimal1"
+      },
+      {
+        "key": "speed_NG_TL",
+        "label": "NG → TL Speed",
+        "unit": "km/h",
+        "description": "Average vehicle journey speed from Nallagandla to Tellapur",
+        "higher_is_better": true,
+        "format": "decimal1"
+      },
+      {
+        "key": "speed_NG_FL",
+        "label": "NG → FL Speed",
+        "unit": "km/h",
+        "description": "Average vehicle journey speed from Nallagandla to Lingampalli Flyover",
+        "higher_is_better": true,
+        "format": "decimal1"
+      },
+      {
+        "key": "speed_TL_FL",
+        "label": "TL → FL Speed",
+        "unit": "km/h",
+        "description": "Average vehicle journey speed from Tellapur to Lingampalli Flyover",
+        "higher_is_better": true,
+        "format": "decimal1"
+      },
+      {
+        "key": "speed_TL_NG",
+        "label": "TL → NG Speed",
+        "unit": "km/h",
+        "description": "Average vehicle journey speed from Tellapur to Nallagandla",
+        "higher_is_better": true,
+        "format": "decimal1"
+      },
+      {
+        "key": "speed_FL_NG",
+        "label": "FL → NG Speed",
+        "unit": "km/h",
+        "description": "Average vehicle journey speed from Lingampalli Flyover to Nallagandla",
+        "higher_is_better": true,
+        "format": "decimal1"
+      },
+      {
+        "key": "speed_FL_TL",
+        "label": "FL → TL Speed",
+        "unit": "km/h",
+        "description": "Average vehicle journey speed from Lingampalli Flyover to Tellapur",
+        "higher_is_better": true,
+        "format": "decimal1"
       }
     ]
   },

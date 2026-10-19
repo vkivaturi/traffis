@@ -274,7 +274,7 @@ class SimulationManager:
         total_arrived = state_msg.stats.total_arrived
         completion_rate = round((total_arrived / total_spawned * 100.0), 1) if total_spawned > 0 else 0.0
 
-        return {
+        bench_result = {
             "scenario_id": self.scenario.id,
             "scenario_name": self.scenario.name,
             "scenario_type": self.scenario.type,
@@ -294,6 +294,22 @@ class SimulationManager:
             "uturn_count": jm.uturn_count if jm else None,
             "teleports": jm.teleports if jm else 0,
         }
+
+        # Populate route-level speed metrics (e.g. speed_NG_TL, speed_NG_FL, ...)
+        if jm and jm.od:
+            for od_entry in jm.od:
+                spd = od_entry.avg_speed_kmh
+                if spd is None and state_msg.compact_vehicles:
+                    active_spds = [
+                        cv[3] * 3.6 for cv in state_msg.compact_vehicles
+                        if str(cv[0]).split(".", 1)[0] == od_entry.key or str(cv[0]).startswith(f"{od_entry.key}_")
+                    ]
+                    if active_spds:
+                        spd = round(sum(active_spds) / len(active_spds), 1)
+                bench_result[f"speed_{od_entry.key}"] = spd
+                bench_result[f"speed_{od_entry.key.lower()}"] = spd
+
+        return bench_result
 
     async def stop(self):
         """Stop simulation loop and close TraCI."""
@@ -714,10 +730,13 @@ class SimulationManager:
         await ws.send_text(net_info_payload)
         async with self.lock:
             if self.is_initialized:
-                state_msg = self._collect_current_state()
-                state_payload = state_msg.model_dump_json(exclude_none=True)
-                bandwidth_limiter.record(len(state_payload.encode("utf-8")))
-                await ws.send_text(state_payload)
+                try:
+                    state_msg = self._collect_current_state()
+                    state_payload = state_msg.model_dump_json(exclude_none=True)
+                    bandwidth_limiter.record(len(state_payload.encode("utf-8")))
+                    await ws.send_text(state_payload)
+                except Exception as ex:
+                    logger.warning("Could not send initial state to ws: %s", ex)
 
     def unregister_websocket(self, ws: WebSocket):
         self.active_websockets.discard(ws)
