@@ -116,6 +116,15 @@ export interface ScenarioMetadata {
   };
   spawn_origins: SpawnOriginInfo[];
   options?: ScenarioOption[];
+  group?: string;
+  group_id?: string;
+}
+
+export interface ScenarioGroup {
+  id: string;
+  name: string;
+  description?: string;
+  scenarios: ScenarioMetadata[];
 }
 
 export interface RoadArmInfo {
@@ -225,6 +234,7 @@ export interface ODMetrics {
   arrived: number;
   throughput_vph: number;
   avg_travel_time_s?: number | null; // mean depart -> arrival time of completed trips
+  avg_speed_kmh?: number | null;      // mean speed in km/h
 }
 
 export interface EntryQueue {
@@ -236,7 +246,7 @@ export interface EntryQueue {
 export interface JunctionMetrics {
   arms: ArmFlowMetrics[];
   od: ODMetrics[];
-  entry_queues: EntryQueue[];
+  entry_queues?: EntryQueue[];
   roundabout_occupancy: number;
   uturn_count: number;
   teleports: number;

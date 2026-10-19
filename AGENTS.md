@@ -260,7 +260,8 @@ Sent as JSON text over the WebSocket:
 | `POST` | `/api/play` | Resume simulation loop. |
 | `POST` | `/api/pause` | Pause simulation loop. |
 | `POST` | `/api/reset` | Close and restart SUMO, reset clock to $0.0\text{s}$. |
-| `GET` | `/api/scenarios` | List available scenarios. |
+| `GET` | `/api/scenarios` | List available scenarios (supports `?grouped=true`). |
+| `GET` | `/api/scenarios/groups` | List scenarios organized by group according to `scenario_groups.json`. |
 | `POST` | `/api/scenario/select` | Switch scenario (`{"scenario_id": "..."}`). |
 | `POST` | `/api/scenario/options` | Update scenario options at runtime (`{"options": {"roundabout_signals": true}}`). |
 

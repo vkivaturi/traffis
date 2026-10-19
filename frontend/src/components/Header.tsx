@@ -11,7 +11,7 @@ import {
   Info,
   LogOut,
 } from 'lucide-react';
-import type { SimulationState, ScenarioMetadata } from '../types/simulation';
+import type { SimulationState, ScenarioMetadata, ScenarioGroup } from '../types/simulation';
 import type { User } from '../types/auth';
 
 interface HeaderProps {
@@ -22,6 +22,7 @@ interface HeaderProps {
   soundEnabled: boolean;
   onToggleSound: () => void;
   scenarios: ScenarioMetadata[];
+  scenarioGroups?: ScenarioGroup[];
   activeScenarioId: string;
   onSelectScenario: (scenarioId: string) => void;
   user?: User | null;
@@ -35,6 +36,7 @@ export const Header: React.FC<HeaderProps> = ({
   soundEnabled,
   onToggleSound,
   scenarios,
+  scenarioGroups,
   activeScenarioId,
   onSelectScenario,
   user,
@@ -44,6 +46,89 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   const currentScenario = scenarios.find((s) => s.id === activeScenarioId) || scenarios[0];
   const isIntersection = currentScenario?.type === 'intersection' || activeScenarioId.includes('intersection');
+
+  // Group scenarios according to backend scenarioGroups or scenario.group metadata
+  const groups = React.useMemo(() => {
+    if (scenarioGroups && scenarioGroups.length > 0) {
+      return scenarioGroups;
+    }
+    if (scenarios && scenarios.length > 0) {
+      // Group by s.group if present
+      const map = new Map<string, { id: string; name: string; scenarios: ScenarioMetadata[] }>();
+      for (const s of scenarios) {
+        const groupName = s.group || 'Other scenarios';
+        const groupId =
+          s.group_id ||
+          (groupName.toLowerCase().includes('nallagandla')
+            ? 'nallagandla_tellapur'
+            : 'other_scenarios');
+        if (!map.has(groupId)) {
+          map.set(groupId, { id: groupId, name: groupName, scenarios: [] });
+        }
+        map.get(groupId)!.scenarios.push(s);
+      }
+      return Array.from(map.values());
+    }
+    return [
+      {
+        id: 'nallagandla_tellapur',
+        name: 'Nallagandla Tellapur Junction',
+        scenarios: [
+          {
+            id: 'gnt_circle',
+            name: 'GNT Circle (Roundabout)',
+            description: '',
+            type: 'roundabout',
+            bounds: { min_x: 0, max_x: 0, min_y: 0, max_y: 0 },
+            default_camera: { x: 0, y: 0, zoom: 1 },
+            spawn_origins: [],
+          },
+          {
+            id: 'nallagandla_junction',
+            name: 'Nallagandla Junction',
+            description: '',
+            type: 'intersection',
+            bounds: { min_x: 0, max_x: 0, min_y: 0, max_y: 0 },
+            default_camera: { x: 0, y: 0, zoom: 1 },
+            spawn_origins: [],
+          },
+        ],
+      },
+      {
+        id: 'other_scenarios',
+        name: 'Other scenarios',
+        scenarios: [
+          {
+            id: 'four_way_intersection',
+            name: '4-Way Crossroads',
+            description: '',
+            type: 'intersection',
+            bounds: { min_x: 0, max_x: 0, min_y: 0, max_y: 0 },
+            default_camera: { x: 0, y: 0, zoom: 1 },
+            spawn_origins: [],
+          },
+          {
+            id: 'three_way_intersection',
+            name: '3-Way Intersection',
+            description: '',
+            type: 'intersection',
+            bounds: { min_x: 0, max_x: 0, min_y: 0, max_y: 0 },
+            default_camera: { x: 0, y: 0, zoom: 1 },
+            spawn_origins: [],
+          },
+          {
+            id: 'straight_road',
+            name: 'Straight Road (Highway)',
+            description: '',
+            type: 'straight',
+            bounds: { min_x: 0, max_x: 0, min_y: 0, max_y: 0 },
+            default_camera: { x: 0, y: 0, zoom: 1 },
+            spawn_origins: [],
+          },
+        ],
+      },
+    ];
+  }, [scenarioGroups, scenarios]);
 
   return (
     <header
@@ -177,35 +262,33 @@ export const Header: React.FC<HeaderProps> = ({
                 appearance: 'none',
               }}
             >
-              {scenarios.length > 0 ? (
-                scenarios.map((s) => (
-                  <option
-                    key={s.id}
-                    value={s.id}
-                    style={{ backgroundColor: '#ffffff', color: '#0f172a' }}
-                  >
-                    {s.name}
-                  </option>
-                ))
-              ) : (
-                <>
-                  <option value="gnt_circle" style={{ backgroundColor: '#ffffff', color: '#0f172a' }}>
-                    GNT Circle (Roundabout)
-                  </option>
-                  <option value="nallagandla_junction" style={{ backgroundColor: '#ffffff', color: '#0f172a' }}>
-                    Nallagandla Junction
-                  </option>
-                  <option value="four_way_intersection" style={{ backgroundColor: '#ffffff', color: '#0f172a' }}>
-                    4-Way Crossroads
-                  </option>
-                  <option value="three_way_intersection" style={{ backgroundColor: '#ffffff', color: '#0f172a' }}>
-                    3-Way Intersection
-                  </option>
-                  <option value="straight_road" style={{ backgroundColor: '#ffffff', color: '#0f172a' }}>
-                    Straight Road (Highway)
-                  </option>
-                </>
-              )}
+              {groups.map((grp) => (
+                <optgroup
+                  key={grp.id}
+                  label={grp.name}
+                  style={{
+                    backgroundColor: '#f1f5f9',
+                    color: '#475569',
+                    fontWeight: 700,
+                    fontSize: '0.74rem',
+                  }}
+                >
+                  {grp.scenarios.map((s) => (
+                    <option
+                      key={s.id}
+                      value={s.id}
+                      style={{
+                        backgroundColor: '#ffffff',
+                        color: '#0f172a',
+                        fontWeight: 600,
+                        fontSize: '0.82rem',
+                      }}
+                    >
+                      {s.name}
+                    </option>
+                  ))}
+                </optgroup>
+              ))}
             </select>
           </div>
           <ChevronDown

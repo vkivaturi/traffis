@@ -218,7 +218,7 @@ class NallagandlaJunctionScenario(BaseScenario):
     name = "Nallagandla Junction"
     description = ("Signalised 3-way T-junction on the Nallagandla ⇄ Tellapur corridor with "
                    "traffic lights for all directions, dedicated free-left turns (TL→FL & FL→NG), "
-                   "and direct connection to Flyover road (no roundabout, no U-turn).")
+                   "and direct connection to Flyover road.")
     type = "intersection"
     default_camera = {"x": 0.0, "y": -35.0, "zoom": 3.0}
     demand_from_route_file = True
@@ -561,6 +561,7 @@ class NallagandlaJunctionScenario(BaseScenario):
         self.depart_time: Dict[str, float] = {}
         self.teleports = 0
         self.free_flow_s: Dict[str, float] = {}
+        self.route_length_m: Dict[str, float] = {}
 
     def reset_state(self) -> None:
         super().reset_state()
@@ -570,10 +571,14 @@ class NallagandlaJunctionScenario(BaseScenario):
         self.apply_traffic_light_state()
         for key, route in OD_ROUTES.items():
             total = 0.0
+            total_len = 0.0
             for edge in ROUTES[route].split():
                 lane = f"{edge}_0"
-                total += traci.lane.getLength(lane) / max(0.1, traci.lane.getMaxSpeed(lane))
+                length = traci.lane.getLength(lane)
+                total_len += length
+                total += length / max(0.1, traci.lane.getMaxSpeed(lane))
             self.free_flow_s[key] = total
+            self.route_length_m[key] = total_len
 
     def on_step(self) -> None:
         now = traci.simulation.getTime()
@@ -627,21 +632,26 @@ class NallagandlaJunctionScenario(BaseScenario):
             )
             for arm, name in ARM_NAMES.items()
         ]
-        od = [
-            ODMetrics(
-                key=key,
-                configured_vph=self.settings.od_demand.get(key, 0.0),
-                arrived=self.od_arrived[key],
-                throughput_vph=round(self.od_arrived[key] * 3600.0 / sim_time, 0) if sim_time > 0 else 0.0,
-                avg_travel_time_s=(round(self.od_travel_sum[key] / self.od_arrived[key], 1)
-                                   if self.od_arrived[key] else None),
+        od = []
+        for key in OD_ROUTES:
+            arrived = self.od_arrived[key]
+            avg_time = (round(self.od_travel_sum[key] / arrived, 1) if arrived else None)
+            route_len = self.route_length_m.get(key, 0.0)
+            avg_spd = (round((route_len / avg_time) * 3.6, 1) if (avg_time and avg_time > 0 and route_len > 0) else None)
+            od.append(
+                ODMetrics(
+                    key=key,
+                    configured_vph=self.settings.od_demand.get(key, 0.0),
+                    arrived=arrived,
+                    throughput_vph=round(arrived * 3600.0 / sim_time, 0) if sim_time > 0 else 0.0,
+                    avg_travel_time_s=avg_time,
+                    avg_speed_kmh=avg_spd,
+                )
             )
-            for key in OD_ROUTES
-        ]
         return JunctionMetrics(
             arms=arms,
             od=od,
-            entry_queues=[EntryQueue(id=e, label=lbl, halting=self._queue_length(e)) for e, lbl in ENTRY_QUEUES],
+            entry_queues=[],
             roundabout_occupancy=0,
             uturn_count=0,
             teleports=self.teleports,

@@ -3,6 +3,7 @@ import type {
   SimulationState,
   NetworkInfo,
   ScenarioMetadata,
+  ScenarioGroup,
 } from '../types/simulation';
 
 const INITIAL_STATE: SimulationState = {
@@ -56,6 +57,7 @@ export function useSimulationSocket(authToken?: string) {
   // Token the server rejected or that is already expired. Derived below, so it clears when the user signs in again.
   const [expiredToken, setExpiredToken] = useState<string | null>(null);
   const [networkInfo, setNetworkInfo] = useState<NetworkInfo | null>(null);
+  const [scenarioGroups, setScenarioGroups] = useState<ScenarioGroup[]>([]);
   const [scenarios, setScenarios] = useState<ScenarioMetadata[]>([]);
   const [activeScenario, setActiveScenario] = useState<ScenarioMetadata | null>(null);
   const [connected, setConnected] = useState<boolean>(false);
@@ -188,17 +190,29 @@ export function useSimulationSocket(authToken?: string) {
     connectRef.current = connect;
   }, [connect]);
 
-  // Load available scenarios
+  // Load available scenarios and grouping information
   useEffect(() => {
     let active = true;
-    fetch('/api/scenarios')
-      .then((res) => (res.ok ? res.json() : []))
-      .then((data: ScenarioMetadata[]) => {
-        if (active && data.length > 0) {
-          setScenarios(data);
+    fetch('/api/scenarios/groups')
+      .then((res) => (res.ok ? res.json() : Promise.reject(new Error('Failed to load groups'))))
+      .then((groups: ScenarioGroup[]) => {
+        if (active && Array.isArray(groups) && groups.length > 0) {
+          setScenarioGroups(groups);
+          const allScenarios = groups.flatMap((g) => g.scenarios);
+          setScenarios(allScenarios);
         }
       })
-      .catch((e) => console.warn('Failed to load scenarios:', e));
+      .catch((e) => {
+        console.warn('Could not load scenario groups, falling back to /api/scenarios:', e);
+        fetch('/api/scenarios')
+          .then((res) => (res.ok ? res.json() : []))
+          .then((data: ScenarioMetadata[]) => {
+            if (active && data.length > 0) {
+              setScenarios(data);
+            }
+          })
+          .catch((err) => console.warn('Failed to load scenarios:', err));
+      });
     return () => {
       active = false;
     };
@@ -322,6 +336,7 @@ export function useSimulationSocket(authToken?: string) {
     authExpired,
     networkInfo,
     scenarios,
+    scenarioGroups,
     activeScenario,
     selectScenario,
     updateScenarioOptions,

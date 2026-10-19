@@ -6,6 +6,7 @@ const ARM_NAMES: Record<string, string> = { NG: 'Nallagandla', TL: 'Tellapur', F
 
 interface VehicleInspectorProps {
   vehicle: Vehicle | null;
+  scenarioId?: string;
   isFollowing: boolean;
   onFollow: () => void;
   onClose: () => void;
@@ -14,6 +15,7 @@ interface VehicleInspectorProps {
 
 export const VehicleInspector: React.FC<VehicleInspectorProps> = ({
   vehicle,
+  scenarioId,
   isFollowing,
   onFollow,
   onClose,
@@ -24,12 +26,13 @@ export const VehicleInspector: React.FC<VehicleInspectorProps> = ({
   const isBraking = vehicle.acceleration < -0.5;
   const isAccelerating = vehicle.acceleration > 0.5;
   const isWest = vehicle.angle > 180 || vehicle.direction === 'west' || vehicle.y > 0;
+  const isRoundabout = scenarioId === 'gnt_circle';
 
   // O-D scenarios (e.g. GNT Circle) send the trip key, e.g. "TL_NG", as the direction
   const odMatch = /^([A-Z]{2})_([A-Z]{2})$/.exec(vehicle.direction ?? '');
   const odTag = odMatch ? `${odMatch[1]} → ${odMatch[2]}` : null;
   const odName = odMatch
-    ? `${ARM_NAMES[odMatch[1]] ?? odMatch[1]} → ${ARM_NAMES[odMatch[2]] ?? odMatch[2]}${vehicle.direction === 'TL_NG' ? ' (via U-turn)' : ''}`
+    ? `${ARM_NAMES[odMatch[1]] ?? odMatch[1]} → ${ARM_NAMES[odMatch[2]] ?? odMatch[2]}${vehicle.direction === 'TL_NG' && isRoundabout ? ' (via U-turn)' : ''}`
     : null;
 
   const dirName = odName ?? (isWest ? 'Westbound (1000m → 0m)' : 'Eastbound (0m → 1000m)');

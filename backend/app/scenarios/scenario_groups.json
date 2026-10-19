@@ -1,0 +1,21 @@
+[
+  {
+    "id": "nallagandla_tellapur",
+    "name": "Nallagandla Tellapur Junction",
+    "description": "Suburban arterial junctions connecting Nallagandla, Tellapur, and Lingampalli Flyover.",
+    "scenarios": [
+      "gnt_circle",
+      "nallagandla_junction"
+    ]
+  },
+  {
+    "id": "other_scenarios",
+    "name": "Other scenarios",
+    "description": "General road networks and urban intersections.",
+    "scenarios": [
+      "straight_road",
+      "three_way_intersection",
+      "four_way_intersection"
+    ]
+  }
+]

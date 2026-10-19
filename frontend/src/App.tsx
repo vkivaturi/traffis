@@ -34,6 +34,7 @@ export const App: React.FC = () => {
     authExpired,
     networkInfo,
     scenarios,
+    scenarioGroups,
     activeScenario,
     selectScenario,
     updateScenarioOptions,
@@ -244,6 +245,7 @@ export const App: React.FC = () => {
         soundEnabled={soundEnabled}
         onToggleSound={handleToggleSound}
         scenarios={scenarios}
+        scenarioGroups={scenarioGroups}
         activeScenarioId={currentScenarioId}
         onSelectScenario={handleSelectScenario}
         user={user}
@@ -275,15 +277,16 @@ export const App: React.FC = () => {
           networkInfo={networkInfo}
         />
 
-        {/* Unsignalised junction metrics (GNT Circle): per-arm flows, ring occupancy, U-turns */}
+        {/* Corridor junction metrics: per-arm flows, throughput, time & speed */}
         {state.junction_metrics && state.scenario_id === activeScenario?.id && (
-          <JunctionMetricsPanel metrics={state.junction_metrics} />
+          <JunctionMetricsPanel metrics={state.junction_metrics} scenarioId={state.scenario_id} />
         )}
 
         {/* Selected Vehicle Floating HUD */}
         {selectedVehicle && (
           <VehicleInspector
             vehicle={selectedVehicle}
+            scenarioId={state.scenario_id}
             isFollowing={camera.followingId === selectedVehicle.id}
             onFollow={() => {
               setCamera((c) => ({
@@ -309,6 +312,7 @@ export const App: React.FC = () => {
         scenario={activeScenario}
         trafficLight={state.traffic_light}
         onUpdateOption={handleUpdateOption}
+        dataExchangedMB={dataExchangedMB}
       />
 
       {/* 4. Open-Source Attribution Credits Footer */}

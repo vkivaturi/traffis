@@ -5,6 +5,7 @@ from pydantic import BaseModel
 
 BACKEND_DIR = Path(__file__).resolve().parent.parent
 SUMO_CONFIG_DIR = BACKEND_DIR / "sumo_config"
+SCENARIO_GROUPS_FILE = BACKEND_DIR / "app" / "scenarios" / "scenario_groups.json"
 
 def resolve_sumo_home() -> str:
     env_home = os.environ.get("SUMO_HOME")

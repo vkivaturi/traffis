@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { ChevronDown, ChevronUp, CircleDot, Undo2, Hourglass, AlertTriangle } from 'lucide-react';
+import { ChevronDown, ChevronUp, CircleDot, Undo2, AlertTriangle } from 'lucide-react';
 import type { JunctionMetrics } from '../types/simulation';
 
 interface JunctionMetricsPanelProps {
   metrics: JunctionMetrics;
+  scenarioId?: string;
 }
 
 const ARM_COLORS: Record<string, string> = { NG: '#2563eb', TL: '#059669', FL: '#d97706' };
@@ -20,8 +21,9 @@ const headStyle: React.CSSProperties = {
   textAlign: 'right',
 };
 
-export const JunctionMetricsPanel: React.FC<JunctionMetricsPanelProps> = ({ metrics }) => {
+export const JunctionMetricsPanel: React.FC<JunctionMetricsPanelProps> = ({ metrics, scenarioId }) => {
   const [collapsed, setCollapsed] = useState(false);
+  const isRoundabout = scenarioId === 'gnt_circle' || (!scenarioId && metrics.roundabout_occupancy > 0);
 
   return (
     <div
@@ -31,7 +33,7 @@ export const JunctionMetricsPanel: React.FC<JunctionMetricsPanelProps> = ({ metr
         position: 'absolute',
         top: '64px',
         left: '16px',
-        width: '310px',
+        width: '330px',
         padding: '12px 14px',
         zIndex: 12,
         fontSize: '0.76rem',
@@ -55,61 +57,71 @@ export const JunctionMetricsPanel: React.FC<JunctionMetricsPanelProps> = ({ metr
             }}
           />
           <span style={{ fontWeight: 800, color: '#0f172a', letterSpacing: '0.04em', fontSize: '0.78rem' }}>
-            JUNCTION FLOW METRICS
+            {isRoundabout ? 'ROUNDABOUT FLOW METRICS' : 'JUNCTION FLOW METRICS'}
           </span>
+          {!isRoundabout && metrics.teleports > 0 && (
+            <span
+              title="Deadlock teleports automatically cleared"
+              style={{ fontSize: '0.68rem', color: '#dc2626', display: 'inline-flex', alignItems: 'center', gap: '2px' }}
+            >
+              <AlertTriangle size={11} /> {metrics.teleports}
+            </span>
+          )}
         </div>
         {collapsed ? <ChevronDown size={14} color="#64748b" /> : <ChevronUp size={14} color="#64748b" />}
       </div>
 
-      {/* Headline counters */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: '10px' }}>
-        <div
-          style={{
-            padding: '8px 10px',
-            backgroundColor: '#f8fafc',
-            borderRadius: '6px',
-            border: '1px solid #e2e8f0',
-          }}
-          title="Active vehicles circulating on the roundabout ring"
-        >
-          <div style={{ color: '#059669', display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.66rem', fontWeight: 700 }}>
-            <CircleDot size={12} color="#059669" /> RING CONGESTION
+      {/* Headline counters: Only shown for GNT Circle roundabout scenario */}
+      {isRoundabout && (
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: '10px' }}>
+          <div
+            style={{
+              padding: '8px 10px',
+              backgroundColor: '#f8fafc',
+              borderRadius: '6px',
+              border: '1px solid #e2e8f0',
+            }}
+            title="Active vehicles circulating on the roundabout ring"
+          >
+            <div style={{ color: '#059669', display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.66rem', fontWeight: 700 }}>
+              <CircleDot size={12} color="#059669" /> RING CONGESTION
+            </div>
+            <div style={{ fontSize: '1.15rem', fontWeight: 800, fontFamily: 'var(--font-mono)', marginTop: '2px', color: '#0f172a' }}>
+              {metrics.roundabout_occupancy} <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 500 }}>veh</span>
+            </div>
           </div>
-          <div style={{ fontSize: '1.15rem', fontWeight: 800, fontFamily: 'var(--font-mono)', marginTop: '2px', color: '#0f172a' }}>
-            {metrics.roundabout_occupancy} <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 500 }}>veh</span>
-          </div>
-        </div>
 
-        <div
-          style={{
-            padding: '8px 10px',
-            backgroundColor: '#f8fafc',
-            borderRadius: '6px',
-            border: '1px solid #e2e8f0',
-          }}
-          title="Vehicles routed via the bottom-road median U-turn (Tellapur → Nallagandla)"
-        >
-          <div style={{ color: '#b45309', display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.66rem', fontWeight: 700 }}>
-            <Undo2 size={12} color="#d97706" /> U-TURN FLOW
-          </div>
-          <div style={{ fontSize: '1.15rem', fontWeight: 800, fontFamily: 'var(--font-mono)', marginTop: '2px', color: '#0f172a' }}>
-            {metrics.uturn_count}
-            {metrics.teleports > 0 && (
-              <span
-                title="Deadlock teleports automatically cleared"
-                style={{ marginLeft: '6px', fontSize: '0.68rem', color: '#dc2626' }}
-              >
-                <AlertTriangle size={10} /> {metrics.teleports}
-              </span>
-            )}
+          <div
+            style={{
+              padding: '8px 10px',
+              backgroundColor: '#f8fafc',
+              borderRadius: '6px',
+              border: '1px solid #e2e8f0',
+            }}
+            title="Vehicles routed via the bottom-road median U-turn (Tellapur → Nallagandla)"
+          >
+            <div style={{ color: '#b45309', display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.66rem', fontWeight: 700 }}>
+              <Undo2 size={12} color="#d97706" /> U-TURN FLOW
+            </div>
+            <div style={{ fontSize: '1.15rem', fontWeight: 800, fontFamily: 'var(--font-mono)', marginTop: '2px', color: '#0f172a' }}>
+              {metrics.uturn_count}
+              {metrics.teleports > 0 && (
+                <span
+                  title="Deadlock teleports automatically cleared"
+                  style={{ marginLeft: '6px', fontSize: '0.68rem', color: '#dc2626' }}
+                >
+                  <AlertTriangle size={10} /> {metrics.teleports}
+                </span>
+              )}
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {!collapsed && (
         <>
           {/* Per-arm inflow / outflow / delay */}
-          <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '12px' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: isRoundabout ? '12px' : '10px' }}>
             <thead>
               <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
                 <th style={{ ...headStyle, textAlign: 'left' }}>Road Arm</th>
@@ -134,29 +146,59 @@ export const JunctionMetricsPanel: React.FC<JunctionMetricsPanelProps> = ({ metr
             </tbody>
           </table>
 
-          {/* O-D route throughput */}
-          <div style={{ marginTop: '12px', color: '#64748b', fontWeight: 700, fontSize: '0.64rem', letterSpacing: '0.04em' }}>
-            CORRIDOR ROUTES (ACTUAL / DEMAND VEH/H)
+          {/* O-D route throughput, average travel time & average speed */}
+          <div
+            style={{
+              marginTop: '12px',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              color: '#64748b',
+              fontWeight: 700,
+              fontSize: '0.62rem',
+              letterSpacing: '0.04em',
+            }}
+          >
+            <span>CORRIDOR ROUTE</span>
+            <span>FLOW (VEH/H) • TIME • SPEED</span>
           </div>
           {metrics.od.map((o) => {
             const pct = o.configured_vph > 0 ? Math.min(100, (o.throughput_vph / o.configured_vph) * 100) : 0;
             return (
               <div
                 key={o.key}
-                style={{ marginTop: '6px' }}
+                style={{ marginTop: '7px' }}
                 title={`${o.arrived} vehicles arrived at destination`}
               >
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.71rem' }}>
                   <span style={{ fontWeight: 600, color: ARM_COLORS[o.key.slice(0, 2)] ?? '#0f172a' }}>
                     {odLabel(o.key)}
-                    {o.key === 'TL_NG' && <span style={{ color: '#64748b', fontWeight: 500 }}> (U-turn)</span>}
+                    {o.key === 'TL_NG' && isRoundabout && (
+                      <span style={{ color: '#64748b', fontWeight: 500 }}> (U-turn)</span>
+                    )}
                   </span>
-                  <span style={{ fontFamily: 'var(--font-mono)', color: '#0f172a' }}>
-                    {o.throughput_vph} / {o.configured_vph}
-                    <span style={{ color: '#64748b', marginLeft: '6px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontFamily: 'var(--font-mono)' }}>
+                    <span style={{ color: '#0f172a', fontWeight: 600 }} title="Actual throughput / Configured demand (veh/h)">
+                      {o.throughput_vph}/{o.configured_vph}
+                    </span>
+                    <span style={{ color: '#64748b', fontSize: '0.67rem' }} title="Average journey travel time">
                       {o.avg_travel_time_s != null ? `${o.avg_travel_time_s.toFixed(0)}s` : '—'}
                     </span>
-                  </span>
+                    <span
+                      style={{
+                        color: '#047857',
+                        fontWeight: 700,
+                        fontSize: '0.67rem',
+                        backgroundColor: '#ecfdf5',
+                        padding: '1px 5px',
+                        borderRadius: '3px',
+                        border: '1px solid #d1fae5',
+                      }}
+                      title="Average route speed in km/h"
+                    >
+                      {o.avg_speed_kmh != null ? `${Math.round(o.avg_speed_kmh)} km/h` : '—'}
+                    </span>
+                  </div>
                 </div>
                 <div style={{ height: '4px', borderRadius: '2px', backgroundColor: '#e2e8f0', overflow: 'hidden', marginTop: '3px' }}>
                   <div
@@ -171,49 +213,6 @@ export const JunctionMetricsPanel: React.FC<JunctionMetricsPanelProps> = ({ metr
               </div>
             );
           })}
-
-          {/* Entry queues */}
-          <div
-            style={{
-              marginTop: '12px',
-              color: '#64748b',
-              fontWeight: 700,
-              fontSize: '0.64rem',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
-              letterSpacing: '0.04em',
-            }}
-          >
-            <Hourglass size={11} /> WAITING ENTRY QUEUES (LAST 100M)
-          </div>
-          <div style={{ display: 'flex', gap: '6px', marginTop: '6px' }}>
-            {metrics.entry_queues.map((q) => (
-              <div
-                key={q.id}
-                style={{
-                  flex: 1,
-                  padding: '6px 8px',
-                  borderRadius: '6px',
-                  backgroundColor: q.halting > 10 ? '#fef2f2' : '#f8fafc',
-                  border: `1px solid ${q.halting > 10 ? '#fecaca' : '#e2e8f0'}`,
-                }}
-                title={q.id}
-              >
-                <div style={{ fontSize: '0.64rem', color: '#64748b' }}>{q.label}</div>
-                <div
-                  style={{
-                    fontFamily: 'var(--font-mono)',
-                    fontWeight: 800,
-                    fontSize: '0.98rem',
-                    color: q.halting > 10 ? '#dc2626' : '#0f172a',
-                  }}
-                >
-                  {q.halting}
-                </div>
-              </div>
-            ))}
-          </div>
         </>
       )}
     </div>

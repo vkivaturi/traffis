@@ -1226,6 +1226,7 @@ export const CanvasView: React.FC<CanvasViewProps> = ({
       ? networkInfo.geometry
       : null;
   const isGeometry = !!geometry;
+  const isRoundabout = effectiveScenarioId === 'gnt_circle' || !!geometry?.roundabout;
 
   const labelRectsRef = useRef<LabelHitRect[]>([]);
   const [hoveredLabel, setHoveredLabel] = useState<{ id: string; x: number; y: number; alignRight: boolean } | null>(null);
@@ -1829,7 +1830,7 @@ export const CanvasView: React.FC<CanvasViewProps> = ({
             style={{ padding: '3px 8px', fontSize: '0.72rem' }}
             onClick={() => jumpTo(0, 0, 12)}
           >
-            GNT Circle
+            {isRoundabout ? 'GNT Circle' : 'Junction'}
           </button>
           <button
             className="btn-secondary"
@@ -1845,13 +1846,15 @@ export const CanvasView: React.FC<CanvasViewProps> = ({
           >
             Free Left
           </button>
-          <button
-            className="btn-secondary"
-            style={{ padding: '3px 8px', fontSize: '0.72rem' }}
-            onClick={() => jumpTo(-110, -110, 7)}
-          >
-            U-Turn
-          </button>
+          {isRoundabout && (
+            <button
+              className="btn-secondary"
+              style={{ padding: '3px 8px', fontSize: '0.72rem' }}
+              onClick={() => jumpTo(-110, -110, 7)}
+            >
+              U-Turn
+            </button>
+          )}
         </div>
       ) : isIntersection ? (
         <div

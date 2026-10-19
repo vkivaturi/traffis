@@ -1,5 +1,5 @@
 import React from 'react';
-import { Play, Pause, RotateCcw, Gauge, Activity, Clock, AlertCircle } from 'lucide-react';
+import { Play, Pause, RotateCcw, Gauge, Activity, Clock, AlertCircle, ArrowDownUp } from 'lucide-react';
 import type { SimulationStats, ScenarioMetadata, TrafficLightData } from '../types/simulation';
 import { ScenarioConfigPanel } from './ScenarioConfigPanel';
 
@@ -15,6 +15,7 @@ interface ControlsProps {
   scenario?: ScenarioMetadata | null;
   trafficLight?: TrafficLightData;
   onUpdateOption?: (optionId: string, value: boolean) => void;
+  dataExchangedMB?: number;
 }
 
 const baseBtn: React.CSSProperties = {
@@ -48,6 +49,7 @@ export const Controls: React.FC<ControlsProps> = ({
   scenario,
   trafficLight,
   onUpdateOption,
+  dataExchangedMB,
 }) => {
   const isLimitReached = !!timeLimitReached || simTime >= maxSimTime;
   const hasStarted = simTime > 0;
@@ -140,46 +142,95 @@ export const Controls: React.FC<ControlsProps> = ({
         )}
       </div>
 
-      {/* Simulation elapsed clock */}
-      <div
-        id="metric-sim-time"
-        style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: '240px', flex: '0 1 340px' }}
-      >
-        {isLimitReached ? <AlertCircle size={18} color="#dc2626" /> : <Clock size={18} color="#64748b" />}
-        <div style={{ flex: 1 }}>
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              fontSize: '0.72rem',
-              color: '#64748b',
-              fontWeight: 700,
-              textTransform: 'uppercase',
-              letterSpacing: '0.04em',
-            }}
-          >
-            <span>{isLimitReached ? 'Run Complete' : 'Elapsed Time'}</span>
-            <span style={{ fontFamily: 'var(--font-mono)', color: '#0f172a' }}>
-              {fmtTime(simTime)} / {fmtTime(maxSimTime)}
-            </span>
-          </div>
-          <div
-            style={{
-              height: '4px',
-              borderRadius: '2px',
-              backgroundColor: '#e2e8f0',
-              marginTop: '5px',
-              overflow: 'hidden',
-            }}
-          >
+      {/* Center Group: Simulation elapsed clock + Network Bytes Transferred */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flex: '0 1 auto', flexWrap: 'wrap' }}>
+        <div
+          id="metric-sim-time"
+          style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: '220px', width: '260px' }}
+        >
+          {isLimitReached ? <AlertCircle size={18} color="#dc2626" /> : <Clock size={18} color="#64748b" />}
+          <div style={{ flex: 1 }}>
             <div
               style={{
-                width: `${progress}%`,
-                height: '100%',
-                backgroundColor: isLimitReached ? '#dc2626' : '#4a2c11',
-                transition: 'width 0.2s linear',
+                display: 'flex',
+                justifyContent: 'space-between',
+                fontSize: '0.72rem',
+                color: '#64748b',
+                fontWeight: 700,
+                textTransform: 'uppercase',
+                letterSpacing: '0.04em',
               }}
-            />
+            >
+              <span>{isLimitReached ? 'Run Complete' : 'Elapsed Time'}</span>
+              <span style={{ fontFamily: 'var(--font-mono)', color: '#0f172a' }}>
+                {fmtTime(simTime)} / {fmtTime(maxSimTime)}
+              </span>
+            </div>
+            <div
+              style={{
+                height: '4px',
+                borderRadius: '2px',
+                backgroundColor: '#e2e8f0',
+                marginTop: '5px',
+                overflow: 'hidden',
+              }}
+            >
+              <div
+                style={{
+                  width: `${progress}%`,
+                  height: '100%',
+                  backgroundColor: isLimitReached ? '#dc2626' : '#4a2c11',
+                  transition: 'width 0.2s linear',
+                }}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Network bytes transferred widget */}
+        <div
+          id="metric-network-data"
+          title="Overall network bytes transferred as part of this simulation run"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '9px',
+            padding: '6px 14px',
+            backgroundColor: '#f8fafc',
+            borderRadius: '8px',
+            border: '1px solid #e2e8f0',
+          }}
+        >
+          <ArrowDownUp size={16} color="#635bff" />
+          <div>
+            <div
+              style={{
+                fontSize: '0.62rem',
+                color: '#64748b',
+                fontWeight: 700,
+                textTransform: 'uppercase',
+                letterSpacing: '0.04em',
+                lineHeight: 1,
+              }}
+            >
+              Network Data
+            </div>
+            <div
+              style={{
+                fontSize: '0.98rem',
+                fontWeight: 800,
+                color: '#0f172a',
+                fontFamily: 'var(--font-mono)',
+                marginTop: '3px',
+                lineHeight: 1,
+              }}
+            >
+              {dataExchangedMB != null
+                ? dataExchangedMB >= 1
+                  ? `${dataExchangedMB.toFixed(2)} MB`
+                  : `${Math.round(dataExchangedMB * 1024)} KB`
+                : '0 KB'}
+            </div>
           </div>
         </div>
       </div>

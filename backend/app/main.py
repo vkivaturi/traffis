@@ -132,9 +132,17 @@ async def reset_simulation(user: dict = Depends(get_current_user)):
     return {"status": "ok", "action": "reset", "sim_time": 0.0, "time_limit_reached": False}
 
 @app.get("/api/scenarios")
-async def list_scenarios():
+async def list_scenarios(grouped: bool = False):
     from .scenarios.registry import registry
+    if grouped:
+        return registry.list_groups()
     return registry.list_all()
+
+@app.get("/api/scenarios/groups")
+@app.get("/api/scenario-groups")
+async def list_scenario_groups():
+    from .scenarios.registry import registry
+    return registry.list_groups()
 
 @app.get("/api/scenario/current")
 async def get_current_scenario():

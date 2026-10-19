@@ -100,6 +100,14 @@ class ScenarioMetadata(BaseModel):
     default_camera: Dict[str, Any]
     spawn_origins: List[SpawnOriginInfo]
     options: List[ScenarioOption] = []
+    group: Optional[str] = None
+    group_id: Optional[str] = None
+
+class ScenarioGroup(BaseModel):
+    id: str
+    name: str
+    description: Optional[str] = None
+    scenarios: List[ScenarioMetadata] = []
 
 class RoadArmInfo(BaseModel):
     id: str
@@ -198,6 +206,7 @@ class ODMetrics(BaseModel):
     arrived: int = 0
     throughput_vph: float = 0.0
     avg_travel_time_s: Optional[float] = None  # mean depart -> arrival time of completed trips
+    avg_speed_kmh: Optional[float] = None      # average journey speed in km/h
 
 class EntryQueue(BaseModel):
     id: str                   # edge id, e.g. "NG_in"
@@ -207,7 +216,7 @@ class EntryQueue(BaseModel):
 class JunctionMetrics(BaseModel):
     arms: List[ArmFlowMetrics]
     od: List[ODMetrics]
-    entry_queues: List[EntryQueue]
+    entry_queues: List[EntryQueue] = []
     roundabout_occupancy: int = 0
     uturn_count: int = 0
     teleports: int = 0
