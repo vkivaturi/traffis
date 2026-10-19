@@ -91,8 +91,8 @@ export const GoogleSignInModal: React.FC<GoogleSignInModalProps> = ({
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: 'rgba(3, 7, 18, 0.82)',
-        backdropFilter: 'blur(12px)',
+        backgroundColor: 'rgba(15, 23, 42, 0.4)',
+        backdropFilter: 'blur(8px)',
         padding: '20px',
         animation: 'fadeIn 0.2s ease-out',
       }}
@@ -105,10 +105,10 @@ export const GoogleSignInModal: React.FC<GoogleSignInModalProps> = ({
         style={{
           width: '100%',
           maxWidth: '440px',
-          background: 'linear-gradient(180deg, rgba(17, 24, 39, 0.96) 0%, rgba(10, 15, 29, 0.98) 100%)',
-          border: '1px solid rgba(255, 255, 255, 0.12)',
-          borderRadius: '16px',
-          boxShadow: '0 25px 60px -15px rgba(0, 0, 0, 0.7), 0 0 30px rgba(56, 189, 248, 0.15)',
+          backgroundColor: '#ffffff',
+          border: '1px solid #e2e8f0',
+          borderRadius: '12px',
+          boxShadow: 'var(--shadow-lg)',
           overflow: 'hidden',
         }}
       >
@@ -119,7 +119,7 @@ export const GoogleSignInModal: React.FC<GoogleSignInModalProps> = ({
             alignItems: 'center',
             justifyContent: 'space-between',
             padding: '20px 24px 16px',
-            borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+            borderBottom: '1px solid #e2e8f0',
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -129,10 +129,11 @@ export const GoogleSignInModal: React.FC<GoogleSignInModalProps> = ({
                 height: '38px',
                 borderRadius: '10px',
                 background: '#ffffff',
+                border: '1px solid #e2e8f0',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)',
+                boxShadow: 'var(--shadow-sm)',
               }}
             >
               {/* Google G Logo */}
@@ -156,10 +157,10 @@ export const GoogleSignInModal: React.FC<GoogleSignInModalProps> = ({
               </svg>
             </div>
             <div>
-              <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#f8fafc' }}>
+              <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#0f172a' }}>
                 Sign in with Google
               </h3>
-              <p style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
+              <p style={{ fontSize: '0.75rem', color: '#64748b' }}>
                 to access the Traffis Simulation Studio
               </p>
             </div>
@@ -184,9 +185,9 @@ export const GoogleSignInModal: React.FC<GoogleSignInModalProps> = ({
                 gap: '8px',
                 padding: '10px 14px',
                 borderRadius: '8px',
-                backgroundColor: 'rgba(244, 63, 94, 0.12)',
-                border: '1px solid rgba(244, 63, 94, 0.3)',
-                color: '#fb7185',
+                backgroundColor: '#fef2f2',
+                border: '1px solid #fecaca',
+                color: '#dc2626',
                 fontSize: '0.78rem',
                 marginBottom: '16px',
               }}
@@ -212,18 +213,18 @@ export const GoogleSignInModal: React.FC<GoogleSignInModalProps> = ({
                   width: '36px',
                   height: '36px',
                   borderRadius: '50%',
-                  border: '3px solid rgba(56, 189, 248, 0.2)',
-                  borderTopColor: '#38bdf8',
+                  border: '3px solid #e2e8f0',
+                  borderTopColor: '#4a2c11',
                   animation: 'spin 0.8s linear infinite',
                 }}
               />
-              <span style={{ fontSize: '0.88rem', color: '#94a3b8', fontWeight: 500 }}>
+              <span style={{ fontSize: '0.88rem', color: '#64748b', fontWeight: 500 }}>
                 Authenticating with Google OAuth...
               </span>
             </div>
           ) : !isCustomMode ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '18px', alignItems: 'center' }}>
-              <p style={{ fontSize: '0.84rem', color: '#94a3b8', textAlign: 'center', lineHeight: 1.5 }}>
+              <p style={{ fontSize: '0.84rem', color: '#475569', textAlign: 'center', lineHeight: 1.5 }}>
                 Sign in with your verified Google Account to launch the interactive microscopic traffic simulator.
               </p>
 
@@ -234,9 +235,9 @@ export const GoogleSignInModal: React.FC<GoogleSignInModalProps> = ({
                   justifyContent: 'center',
                   width: '100%',
                   padding: '12px 0',
-                  background: 'rgba(255, 255, 255, 0.03)',
-                  borderRadius: '12px',
-                  border: '1px solid rgba(255, 255, 255, 0.08)',
+                  background: '#f8fafc',
+                  borderRadius: '10px',
+                  border: '1px solid #e2e8f0',
                 }}
               >
                 <GoogleLogin
@@ -259,50 +260,35 @@ export const GoogleSignInModal: React.FC<GoogleSignInModalProps> = ({
                   margin: '4px 0',
                 }}
               >
-                <div style={{ flex: 1, height: '1px', backgroundColor: 'rgba(255, 255, 255, 0.08)' }} />
-                <span style={{ fontSize: '0.72rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                <div style={{ flex: 1, height: '1px', backgroundColor: '#e2e8f0' }} />
+                <span style={{ fontSize: '0.72rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                   or
                 </span>
-                <div style={{ flex: 1, height: '1px', backgroundColor: 'rgba(255, 255, 255, 0.08)' }} />
+                <div style={{ flex: 1, height: '1px', backgroundColor: '#e2e8f0' }} />
               </div>
 
               {/* Enter custom Google account button */}
               <button
                 type="button"
                 onClick={() => setIsCustomMode(true)}
+                className="btn-secondary"
                 style={{
                   width: '100%',
-                  background: 'rgba(30, 41, 59, 0.5)',
-                  border: '1px solid rgba(255, 255, 255, 0.12)',
-                  borderRadius: '10px',
-                  padding: '10px 14px',
-                  color: '#cbd5e1',
-                  fontSize: '0.82rem',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
                   justifyContent: 'center',
+                  padding: '10px 14px',
+                  fontSize: '0.84rem',
+                  fontWeight: 600,
                   gap: '8px',
-                  transition: 'all 0.2s ease',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.borderColor = '#38bdf8';
-                  e.currentTarget.style.color = '#ffffff';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.12)';
-                  e.currentTarget.style.color = '#cbd5e1';
                 }}
               >
-                <Mail size={15} color="#38bdf8" />
+                <Mail size={15} color="#4a2c11" />
                 <span>Enter Google Account Manually</span>
               </button>
             </div>
           ) : (
             <form onSubmit={handleCustomSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <div>
-                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: '#cbd5e1', marginBottom: '6px' }}>
+                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
                   Full Name
                 </label>
                 <input
@@ -314,20 +300,20 @@ export const GoogleSignInModal: React.FC<GoogleSignInModalProps> = ({
                     width: '100%',
                     padding: '10px 14px',
                     borderRadius: '8px',
-                    background: 'rgba(15, 23, 42, 0.8)',
-                    border: '1px solid rgba(255, 255, 255, 0.15)',
-                    color: '#ffffff',
+                    background: '#ffffff',
+                    border: '1px solid #cbd5e1',
+                    color: '#0f172a',
                     fontSize: '0.85rem',
                     outline: 'none',
                   }}
-                  onFocus={(e) => (e.target.style.borderColor = '#38bdf8')}
-                  onBlur={(e) => (e.target.style.borderColor = 'rgba(255, 255, 255, 0.15)')}
+                  onFocus={(e) => (e.target.style.borderColor = '#4a2c11')}
+                  onBlur={(e) => (e.target.style.borderColor = '#cbd5e1')}
                 />
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: '#cbd5e1', marginBottom: '6px' }}>
-                  Google Email Address <span style={{ color: '#f43f5e' }}>*</span>
+                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
+                  Google Email Address <span style={{ color: '#dc2626' }}>*</span>
                 </label>
                 <input
                   type="email"
@@ -339,14 +325,14 @@ export const GoogleSignInModal: React.FC<GoogleSignInModalProps> = ({
                     width: '100%',
                     padding: '10px 14px',
                     borderRadius: '8px',
-                    background: 'rgba(15, 23, 42, 0.8)',
-                    border: '1px solid rgba(255, 255, 255, 0.15)',
-                    color: '#ffffff',
+                    background: '#ffffff',
+                    border: '1px solid #cbd5e1',
+                    color: '#0f172a',
                     fontSize: '0.85rem',
                     outline: 'none',
                   }}
-                  onFocus={(e) => (e.target.style.borderColor = '#38bdf8')}
-                  onBlur={(e) => (e.target.style.borderColor = 'rgba(255, 255, 255, 0.15)')}
+                  onFocus={(e) => (e.target.style.borderColor = '#4a2c11')}
+                  onBlur={(e) => (e.target.style.borderColor = '#cbd5e1')}
                 />
               </div>
 
@@ -376,15 +362,15 @@ export const GoogleSignInModal: React.FC<GoogleSignInModalProps> = ({
             style={{
               marginTop: '20px',
               paddingTop: '16px',
-              borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+              borderTop: '1px solid #e2e8f0',
               display: 'flex',
               alignItems: 'center',
               gap: '8px',
-              fontSize: '0.72rem',
+              fontSize: '0.74rem',
               color: '#64748b',
             }}
           >
-            <ShieldCheck size={16} color="#10b981" />
+            <ShieldCheck size={16} color="#059669" />
             <span>Google OAuth 2.0 Client ID configured. Traffis only requests basic profile.</span>
           </div>
         </div>
@@ -392,3 +378,5 @@ export const GoogleSignInModal: React.FC<GoogleSignInModalProps> = ({
     </div>
   );
 };
+
+export default GoogleSignInModal;

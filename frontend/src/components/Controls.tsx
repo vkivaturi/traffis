@@ -1,14 +1,8 @@
 import React from 'react';
-import { Play, Pause, Square, Gauge, Activity, Clock, AlertCircle } from 'lucide-react';
-import type { SimulationStats } from '../types/simulation';
+import { Play, Pause, RotateCcw, Gauge, Activity, Clock, AlertCircle } from 'lucide-react';
+import type { SimulationStats, ScenarioMetadata, TrafficLightData } from '../types/simulation';
+import { ScenarioConfigPanel } from './ScenarioConfigPanel';
 
-/**
- * Minimal transport dock: Start / Pause / Stop.
- *
- * All simulation parameters (inflow rate, default speed, vehicle mix,
- * signal timings, time limit) are defined per scenario in
- * `backend/sumo_config/scenarios/<id>/scenario.xml` — nothing is tunable from the UI.
- */
 interface ControlsProps {
   isRunning: boolean;
   onPlay: () => void;
@@ -18,16 +12,22 @@ interface ControlsProps {
   simTime?: number;
   maxSimTime?: number;
   timeLimitReached?: boolean;
+  scenario?: ScenarioMetadata | null;
+  trafficLight?: TrafficLightData;
+  onUpdateOption?: (optionId: string, value: boolean) => void;
 }
 
 const baseBtn: React.CSSProperties = {
-  display: 'flex',
+  display: 'inline-flex',
   alignItems: 'center',
-  gap: '7px',
-  padding: '9px 18px',
-  fontSize: '0.85rem',
-  fontWeight: 800,
+  gap: '8px',
+  padding: '9px 20px',
+  fontSize: '0.86rem',
+  fontWeight: 700,
   cursor: 'pointer',
+  borderRadius: '8px',
+  transition: 'all 0.15s ease',
+  boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
 };
 
 const fmtTime = (s: number) => {
@@ -45,6 +45,9 @@ export const Controls: React.FC<ControlsProps> = ({
   simTime = 0,
   maxSimTime = 300,
   timeLimitReached = false,
+  scenario,
+  trafficLight,
+  onUpdateOption,
 }) => {
   const isLimitReached = !!timeLimitReached || simTime >= maxSimTime;
   const hasStarted = simTime > 0;
@@ -53,33 +56,31 @@ export const Controls: React.FC<ControlsProps> = ({
   return (
     <div
       id="simulation-main-dock"
-      className="glass-panel"
       style={{
         display: 'flex',
         flexWrap: 'wrap',
         alignItems: 'center',
         justifyContent: 'space-between',
-        padding: '10px 18px',
+        padding: '12px 24px',
         gap: '16px',
-        backgroundColor: 'rgba(15, 23, 42, 0.85)',
-        border: '1px solid rgba(255, 255, 255, 0.1)',
+        backgroundColor: '#ffffff',
+        borderTop: '1px solid #e2e8f0',
+        boxShadow: '0 -2px 10px rgba(0, 0, 0, 0.03)',
         zIndex: 20,
       }}
     >
-      {/* Transport buttons */}
+      {/* Transport buttons for Traffic Operators */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
         {isRunning ? (
           <button
             id="btn-pause"
-            className="btn-secondary"
             onClick={onPause}
-            title="Pause simulation [Space]"
+            title="Pause simulation [Space key]"
             style={{
               ...baseBtn,
-              backgroundColor: 'rgba(245, 158, 11, 0.16)',
-              borderColor: 'rgba(245, 158, 11, 0.5)',
-              color: '#fbbf24',
-              boxShadow: '0 0 12px rgba(245, 158, 11, 0.2)',
+              backgroundColor: '#fffbeb',
+              border: '1px solid #fde68a',
+              color: '#b45309',
             }}
           >
             <Pause size={16} />
@@ -88,64 +89,94 @@ export const Controls: React.FC<ControlsProps> = ({
         ) : (
           <button
             id="btn-start"
-            className="btn-primary"
             onClick={onPlay}
             disabled={isLimitReached}
-            title={isLimitReached ? 'Time limit reached — press Stop to reset' : hasStarted ? 'Resume simulation [Space]' : 'Start simulation [Space]'}
+            title={
+              isLimitReached
+                ? 'Test duration reached — press Reset to restart'
+                : hasStarted
+                ? 'Resume simulation [Space key]'
+                : 'Start simulation [Space key]'
+            }
             style={{
               ...baseBtn,
-              background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-              borderColor: 'rgba(16, 185, 129, 0.5)',
-              boxShadow: '0 0 16px rgba(16, 185, 129, 0.3)',
+              backgroundColor: '#10b981',
+              border: '1px solid rgba(0, 0, 0, 0.1)',
+              color: '#ffffff',
               opacity: isLimitReached ? 0.45 : 1,
               cursor: isLimitReached ? 'not-allowed' : 'pointer',
             }}
           >
             <Play size={16} fill="currentColor" />
-            <span>{hasStarted && !isLimitReached ? 'RESUME' : 'START'}</span>
+            <span>{hasStarted && !isLimitReached ? 'RESUME' : 'START SIMULATION'}</span>
           </button>
         )}
 
         <button
           id="btn-stop"
-          className="btn-secondary"
           onClick={onStop}
           disabled={!hasStarted && !isRunning}
-          title="Stop and reset simulation to t=0 [R]"
+          title="Reset traffic simulation to beginning [R key]"
           style={{
             ...baseBtn,
-            backgroundColor: 'rgba(244, 63, 94, 0.14)',
-            borderColor: 'rgba(244, 63, 94, 0.45)',
-            color: '#fb7185',
-            opacity: !hasStarted && !isRunning ? 0.45 : 1,
+            backgroundColor: '#fef2f2',
+            border: '1px solid #fecaca',
+            color: '#dc2626',
+            opacity: !hasStarted && !isRunning ? 0.4 : 1,
             cursor: !hasStarted && !isRunning ? 'not-allowed' : 'pointer',
-            boxShadow: isLimitReached ? '0 0 14px rgba(244, 63, 94, 0.35)' : undefined,
           }}
         >
-          <Square size={14} fill="currentColor" className={isLimitReached ? 'pulse-indicator' : ''} />
-          <span>STOP</span>
+          <RotateCcw size={15} />
+          <span>RESET</span>
         </button>
+
+        {/* Collapsed Scenario Config Button to the right of RESET */}
+        {scenario && onUpdateOption && (
+          <ScenarioConfigPanel
+            scenario={scenario}
+            trafficLight={trafficLight}
+            onUpdateOption={onUpdateOption}
+          />
+        )}
       </div>
 
-      {/* Simulation clock */}
+      {/* Simulation elapsed clock */}
       <div
         id="metric-sim-time"
-        style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: '220px', flex: '0 1 320px' }}
+        style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: '240px', flex: '0 1 340px' }}
       >
-        {isLimitReached ? <AlertCircle size={18} color="#f43f5e" /> : <Clock size={18} color="#94a3b8" />}
+        {isLimitReached ? <AlertCircle size={18} color="#dc2626" /> : <Clock size={18} color="#64748b" />}
         <div style={{ flex: 1 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.68rem', color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase' }}>
-            <span>{isLimitReached ? 'Time limit reached' : 'Simulation time'}</span>
-            <span style={{ fontFamily: 'var(--font-mono)', color: '#f8fafc' }}>
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              fontSize: '0.72rem',
+              color: '#64748b',
+              fontWeight: 700,
+              textTransform: 'uppercase',
+              letterSpacing: '0.04em',
+            }}
+          >
+            <span>{isLimitReached ? 'Run Complete' : 'Elapsed Time'}</span>
+            <span style={{ fontFamily: 'var(--font-mono)', color: '#0f172a' }}>
               {fmtTime(simTime)} / {fmtTime(maxSimTime)}
             </span>
           </div>
-          <div style={{ height: '5px', borderRadius: '3px', backgroundColor: 'rgba(255,255,255,0.08)', marginTop: '4px', overflow: 'hidden' }}>
+          <div
+            style={{
+              height: '4px',
+              borderRadius: '2px',
+              backgroundColor: '#e2e8f0',
+              marginTop: '5px',
+              overflow: 'hidden',
+            }}
+          >
             <div
               style={{
                 width: `${progress}%`,
                 height: '100%',
-                background: isLimitReached ? '#f43f5e' : 'linear-gradient(90deg, #38bdf8, #10b981)',
+                backgroundColor: isLimitReached ? '#dc2626' : '#4a2c11',
                 transition: 'width 0.2s linear',
               }}
             />
@@ -153,31 +184,69 @@ export const Controls: React.FC<ControlsProps> = ({
         </div>
       </div>
 
-      {/* Read-only telemetry */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
+      {/* Non-technical operational telemetry */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
         <div
           id="metric-avg-speed"
-          style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '6px 14px', backgroundColor: 'rgba(16, 185, 129, 0.1)', borderRadius: '8px', border: '1px solid rgba(16, 185, 129, 0.25)' }}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            padding: '7px 16px',
+            backgroundColor: '#ecfdf5',
+            borderRadius: '8px',
+            border: '1px solid #a7f3d0',
+          }}
         >
-          <Gauge size={20} color="#10b981" />
+          <Gauge size={19} color="#059669" />
           <div>
-            <div style={{ fontSize: '0.65rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 700 }}>Average Speed</div>
-            <div style={{ fontSize: '1.15rem', fontWeight: 800, color: '#f8fafc', fontFamily: 'var(--font-mono)', lineHeight: 1.1 }}>
-              {stats.avg_speed_kmh} <span style={{ fontSize: '0.72rem', fontWeight: 600, color: '#94a3b8' }}>km/h</span>
+            <div style={{ fontSize: '0.66rem', color: '#047857', textTransform: 'uppercase', fontWeight: 700 }}>
+              Average Traffic Speed
+            </div>
+            <div
+              style={{
+                fontSize: '1.15rem',
+                fontWeight: 800,
+                color: '#064e3b',
+                fontFamily: 'var(--font-mono)',
+                lineHeight: 1.1,
+              }}
+            >
+              {stats.avg_speed_kmh}{' '}
+              <span style={{ fontSize: '0.72rem', fontWeight: 600, color: '#047857' }}>km/h</span>
             </div>
           </div>
         </div>
+
         <div
           id="metric-pce-flow"
-          title="Flow rate in Passenger Car Equivalent per hour (IRC: Car 1.0, Sports 1.0, Van 1.4, Truck 3.0)"
-          style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '6px 14px', backgroundColor: 'rgba(56, 189, 248, 0.1)', borderRadius: '8px', border: '1px solid rgba(56, 189, 248, 0.25)' }}
+          title="Corridor Flow Rate in Passenger Car Equivalent per hour (IRC guidelines)"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            padding: '7px 16px',
+            backgroundColor: '#eff6ff',
+            borderRadius: '8px',
+            border: '1px solid #bfdbfe',
+          }}
         >
-          <Activity size={20} color="#38bdf8" />
+          <Activity size={19} color="#2563eb" />
           <div>
-            <div style={{ fontSize: '0.65rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 700 }}>Vehicles / Hour (PCE)</div>
-            <div style={{ fontSize: '1.15rem', fontWeight: 800, color: '#38bdf8', fontFamily: 'var(--font-mono)', lineHeight: 1.1 }}>
+            <div style={{ fontSize: '0.66rem', color: '#1d4ed8', textTransform: 'uppercase', fontWeight: 700 }}>
+              Traffic Flow (Vehicles / hr)
+            </div>
+            <div
+              style={{
+                fontSize: '1.15rem',
+                fontWeight: 800,
+                color: '#1e40af',
+                fontFamily: 'var(--font-mono)',
+                lineHeight: 1.1,
+              }}
+            >
               {Math.round(stats.pce_per_hour ?? 0).toLocaleString()}{' '}
-              <span style={{ fontSize: '0.72rem', fontWeight: 600, color: '#94a3b8' }}>PCE/h</span>
+              <span style={{ fontSize: '0.72rem', fontWeight: 600, color: '#1d4ed8' }}>PCE/h</span>
             </div>
           </div>
         </div>

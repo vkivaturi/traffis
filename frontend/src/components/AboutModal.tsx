@@ -6,11 +6,11 @@ import {
   Check,
   ExternalLink,
   Cpu,
-  Activity,
   Layers,
   Compass,
-  Code2,
-  Sparkles,
+  Building2,
+  ShieldCheck,
+  RotateCw,
 } from 'lucide-react';
 
 interface AboutModalProps {
@@ -39,8 +39,8 @@ export const AboutModal: React.FC<AboutModalProps> = ({ isOpen, onClose }) => {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: 'rgba(3, 7, 18, 0.85)',
-        backdropFilter: 'blur(16px)',
+        backgroundColor: 'rgba(15, 23, 42, 0.4)',
+        backdropFilter: 'blur(8px)',
         padding: '20px',
         animation: 'fadeIn 0.2s ease-out',
       }}
@@ -54,10 +54,10 @@ export const AboutModal: React.FC<AboutModalProps> = ({ isOpen, onClose }) => {
           width: '100%',
           maxWidth: '680px',
           maxHeight: '88vh',
-          background: 'linear-gradient(180deg, rgba(15, 23, 42, 0.96) 0%, rgba(8, 12, 22, 0.98) 100%)',
-          border: '1px solid rgba(255, 255, 255, 0.12)',
-          borderRadius: '18px',
-          boxShadow: '0 25px 60px -15px rgba(0, 0, 0, 0.8), 0 0 40px rgba(56, 189, 248, 0.12)',
+          backgroundColor: '#ffffff',
+          border: '1px solid #e2e8f0',
+          borderRadius: '12px',
+          boxShadow: 'var(--shadow-lg)',
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden',
@@ -69,61 +69,61 @@ export const AboutModal: React.FC<AboutModalProps> = ({ isOpen, onClose }) => {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            padding: '20px 24px',
-            borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
-            background: 'rgba(30, 41, 59, 0.4)',
+            padding: '18px 24px',
+            borderBottom: '1px solid #e2e8f0',
+            backgroundColor: '#ffffff',
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <div
               style={{
-                width: '38px',
-                height: '38px',
-                borderRadius: '10px',
-                background: 'linear-gradient(135deg, #0284c7 0%, #38bdf8 100%)',
+                width: '36px',
+                height: '36px',
+                borderRadius: '8px',
+                backgroundColor: '#4a2c11',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                boxShadow: '0 0 15px rgba(56, 189, 248, 0.4)',
+                boxShadow: '0 2px 6px rgba(74, 44, 17, 0.25)',
               }}
             >
-              <Activity size={20} color="#ffffff" />
+              <Building2 size={18} color="#ffffff" />
             </div>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <h2 style={{ fontSize: '1.2rem', fontWeight: 800, letterSpacing: '0.04em', color: '#ffffff' }}>
+                <h2 style={{ fontSize: '1.18rem', fontWeight: 800, letterSpacing: '0.02em', color: '#0f172a' }}>
                   About TRAFFIS
                 </h2>
                 <span
                   style={{
-                    fontSize: '0.65rem',
+                    fontSize: '0.66rem',
                     fontWeight: 700,
                     padding: '2px 8px',
-                    borderRadius: '4px',
-                    backgroundColor: 'rgba(56, 189, 248, 0.15)',
-                    color: '#38bdf8',
-                    border: '1px solid rgba(56, 189, 248, 0.3)',
+                    borderRadius: '9999px',
+                    backgroundColor: '#f7f1ea',
+                    color: '#4a2c11',
+                    border: '1px solid #dfd2c4',
                   }}
                 >
-                  v2.4 Pro
+                  Municipal Operations
                 </span>
               </div>
-              <p style={{ fontSize: '0.78rem', color: '#94a3b8' }}>
-                Microscopic Traffic Simulation & Network Intelligence Platform
+              <p style={{ fontSize: '0.78rem', color: '#64748b' }}>
+                Evidence-Based Road Engineering & Traffic Control Simulation
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
             className="btn-icon"
-            style={{ width: '34px', height: '34px' }}
+            style={{ width: '32px', height: '32px' }}
             aria-label="Close modal"
           >
-            <X size={18} />
+            <X size={16} />
           </button>
         </div>
 
-        {/* Body Content with Custom Scrollbar */}
+        {/* Body Content */}
         <div
           style={{
             padding: '24px',
@@ -133,33 +133,33 @@ export const AboutModal: React.FC<AboutModalProps> = ({ isOpen, onClose }) => {
             gap: '20px',
           }}
         >
-          {/* Mission & Overview */}
+          {/* Mission & Purpose */}
           <div>
             <h4
               style={{
-                fontSize: '0.82rem',
+                fontSize: '0.78rem',
                 fontWeight: 700,
                 textTransform: 'uppercase',
-                letterSpacing: '0.08em',
-                color: '#38bdf8',
+                letterSpacing: '0.06em',
+                color: '#4a2c11',
                 marginBottom: '8px',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '6px',
               }}
             >
-              <Sparkles size={14} />
-              Platform Overview
+              <ShieldCheck size={14} />
+              Mission & Purpose
             </h4>
-            <p style={{ fontSize: '0.88rem', lineHeight: '1.6', color: '#cbd5e1' }}>
-              <strong>Traffis</strong> is a high-fidelity, real-time microscopic traffic simulation suite
-              designed for civil engineers, traffic planners, and smart-city researchers. It simulates individual
-              vehicle kinematics, lane changes, signal-controlled intersections, and highway corridors with
-              sub-millisecond precision.
+            <p style={{ fontSize: '0.88rem', lineHeight: '1.6', color: '#334155' }}>
+              <strong>Traffis</strong> is designed specifically for traffic police departments, municipal road
+              authorities, and civic transport engineers. It enables authorities to test road modifications—such
+              as converting an intersection into a roundabout, timing traffic signals, or constructing dedicated
+              free-left bypass lanes—in a safe virtual environment before executing changes on city streets.
             </p>
           </div>
 
-          {/* Architecture Grid */}
+          {/* Core Capabilities */}
           <div
             style={{
               display: 'grid',
@@ -170,159 +170,149 @@ export const AboutModal: React.FC<AboutModalProps> = ({ isOpen, onClose }) => {
             <div
               style={{
                 padding: '14px',
-                borderRadius: '10px',
-                background: 'rgba(30, 41, 59, 0.5)',
-                border: '1px solid rgba(255, 255, 255, 0.06)',
+                borderRadius: '8px',
+                backgroundColor: '#f8fafc',
+                border: '1px solid #e2e8f0',
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-                <Cpu size={16} color="#38bdf8" />
-                <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#f8fafc' }}>
-                  SUMO + TraCI Physics Engine
+                <Compass size={16} color="#2563eb" />
+                <span style={{ fontSize: '0.84rem', fontWeight: 600, color: '#0f172a' }}>
+                  Indian Road Rules (LHT)
                 </span>
               </div>
-              <p style={{ fontSize: '0.78rem', color: '#94a3b8', lineHeight: '1.45' }}>
-                Powered by Eclipse SUMO daemon running at 20 Hz, implementing the Krauss car-following model and realistic gap-acceptance algorithms.
+              <p style={{ fontSize: '0.78rem', color: '#64748b', lineHeight: '1.45' }}>
+                Modeled for Left-Hand Traffic (LHT) geometry, kerbside slow lanes, median overtaking lanes, and Indian mixed vehicle flow (cars and delivery vans).
               </p>
             </div>
 
             <div
               style={{
                 padding: '14px',
-                borderRadius: '10px',
-                background: 'rgba(30, 41, 59, 0.5)',
-                border: '1px solid rgba(255, 255, 255, 0.06)',
+                borderRadius: '8px',
+                backgroundColor: '#f8fafc',
+                border: '1px solid #e2e8f0',
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-                <Compass size={16} color="#f59e0b" />
-                <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#f8fafc' }}>
-                  Left-Hand Traffic (LHT)
+                <RotateCw size={16} color="#059669" />
+                <span style={{ fontSize: '0.84rem', fontWeight: 600, color: '#0f172a' }}>
+                  Roundabout & Bypass Analysis
                 </span>
               </div>
-              <p style={{ fontSize: '0.78rem', color: '#94a3b8', lineHeight: '1.45' }}>
-                Built natively for Indian & UK road network rules, featuring left-side driving, right-lane median overtakes, and dual carriageway geometry.
+              <p style={{ fontSize: '0.78rem', color: '#64748b', lineHeight: '1.45' }}>
+                Compare unsignalised roundabout throughput against signalized operations. Measure how many vehicles bypass bottlenecks using free-left slip lanes.
               </p>
             </div>
 
             <div
               style={{
                 padding: '14px',
-                borderRadius: '10px',
-                background: 'rgba(30, 41, 59, 0.5)',
-                border: '1px solid rgba(255, 255, 255, 0.06)',
+                borderRadius: '8px',
+                backgroundColor: '#f8fafc',
+                border: '1px solid #e2e8f0',
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-                <Layers size={16} color="#10b981" />
-                <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#f8fafc' }}>
-                  60 FPS Canvas & WebSockets
+                <Cpu size={16} color="#d97706" />
+                <span style={{ fontSize: '0.84rem', fontWeight: 600, color: '#0f172a' }}>
+                  Accurate Physics Simulation
                 </span>
               </div>
-              <p style={{ fontSize: '0.78rem', color: '#94a3b8', lineHeight: '1.45' }}>
-                Hardware-accelerated HTML5 Canvas with sub-frame position lerping, smooth camera follow modes, and low-latency binary state broadcasts.
+              <p style={{ fontSize: '0.78rem', color: '#64748b', lineHeight: '1.45' }}>
+                Underpinned by Eclipse SUMO daemon running at 20 Hz, calculating real-world car-following kinematics, braking gaps, and queue back-ups.
               </p>
             </div>
 
             <div
               style={{
                 padding: '14px',
-                borderRadius: '10px',
-                background: 'rgba(30, 41, 59, 0.5)',
-                border: '1px solid rgba(255, 255, 255, 0.06)',
+                borderRadius: '8px',
+                backgroundColor: '#f8fafc',
+                border: '1px solid #e2e8f0',
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-                <Code2 size={16} color="#8b5cf6" />
-                <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#f8fafc' }}>
-                  Full Interactive Control
+                <Layers size={16} color="#7c3aed" />
+                <span style={{ fontSize: '0.84rem', fontWeight: 600, color: '#0f172a' }}>
+                  Zero-Installation Web Access
                 </span>
               </div>
-              <p style={{ fontSize: '0.78rem', color: '#94a3b8', lineHeight: '1.45' }}>
-                Live vehicle injection, customizable vehicle inflow rates (PCE/hr), signal phase overrides, and microscopic telemetry HUD.
+              <p style={{ fontSize: '0.78rem', color: '#64748b', lineHeight: '1.45' }}>
+                Runs directly in modern web browsers on standard municipal laptops and control room screens without installing heavy CAD or GIS software.
               </p>
             </div>
           </div>
 
-          {/* Contact & Support Section */}
+          {/* Inquiries & Municipal Contact */}
           <div
             style={{
-              padding: '18px',
-              borderRadius: '12px',
-              background: 'linear-gradient(135deg, rgba(2, 132, 199, 0.1) 0%, rgba(15, 23, 42, 0.6) 100%)',
-              border: '1px solid rgba(56, 189, 248, 0.3)',
+              padding: '16px 18px',
+              borderRadius: '8px',
+              backgroundColor: '#f8fafc',
+              border: '1px solid #e2e8f0',
               display: 'flex',
               flexDirection: 'column',
-              gap: '12px',
+              gap: '10px',
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Mail size={18} color="#38bdf8" />
-              <h4 style={{ fontSize: '0.92rem', fontWeight: 700, color: '#ffffff' }}>
-                Contact & Inquiries
+              <Mail size={16} color="#4a2c11" />
+              <h4 style={{ fontSize: '0.9rem', fontWeight: 700, color: '#0f172a' }}>
+                Municipal Support & Inquiries
               </h4>
             </div>
 
-            <p style={{ fontSize: '0.82rem', color: '#cbd5e1', lineHeight: '1.5' }}>
-              For simulation collaborations, academic research, custom scenario designs, or platform support, feel free to get in touch with our team:
+            <p style={{ fontSize: '0.82rem', color: '#475569', lineHeight: '1.5' }}>
+              For custom junction modeling, corridor feasibility studies, or traffic police department onboarding, contact our engineering support:
             </p>
 
             <div
               style={{
                 display: 'flex',
-                flexWrap: 'wrap',
-                gap: '10px',
                 alignItems: 'center',
+                gap: '8px',
+                backgroundColor: '#ffffff',
+                padding: '8px 12px',
+                borderRadius: '6px',
+                border: '1px solid #e2e8f0',
+                width: 'fit-content',
+                boxShadow: 'var(--shadow-sm)',
               }}
             >
-              {/* Primary Contact Email Box */}
-              <div
+              <Mail size={14} color="#64748b" />
+              <a
+                href={`mailto:${contactEmail}`}
                 style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  background: 'rgba(15, 23, 42, 0.9)',
-                  padding: '8px 12px',
-                  borderRadius: '8px',
-                  border: '1px solid rgba(255, 255, 255, 0.12)',
-                  flex: 1,
-                  minWidth: '220px',
+                  color: '#4a2c11',
+                  textDecoration: 'none',
+                  fontWeight: 600,
+                  fontSize: '0.84rem',
                 }}
               >
-                <Mail size={15} color="#94a3b8" />
-                <a
-                  href={`mailto:${contactEmail}`}
-                  style={{
-                    color: '#38bdf8',
-                    textDecoration: 'none',
-                    fontWeight: 600,
-                    fontSize: '0.85rem',
-                    flex: 1,
-                  }}
-                >
-                  {contactEmail}
-                </a>
-                <button
-                  type="button"
-                  onClick={() => handleCopyEmail(contactEmail)}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    color: copiedEmail ? '#10b981' : '#94a3b8',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px',
-                    fontSize: '0.72rem',
-                    padding: '3px 6px',
-                    borderRadius: '4px',
-                  }}
-                  title="Copy email address"
-                >
-                  {copiedEmail ? <Check size={14} /> : <Copy size={14} />}
-                  {copiedEmail ? 'Copied' : 'Copy'}
-                </button>
-              </div>
+                {contactEmail}
+              </a>
+              <button
+                type="button"
+                onClick={() => handleCopyEmail(contactEmail)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: copiedEmail ? '#059669' : '#64748b',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  fontSize: '0.74rem',
+                  padding: '2px 6px',
+                  borderRadius: '4px',
+                  marginLeft: '4px',
+                }}
+                title="Copy email address"
+              >
+                {copiedEmail ? <Check size={13} /> : <Copy size={13} />}
+                {copiedEmail ? 'Copied' : 'Copy'}
+              </button>
             </div>
           </div>
         </div>
@@ -331,8 +321,8 @@ export const AboutModal: React.FC<AboutModalProps> = ({ isOpen, onClose }) => {
         <div
           style={{
             padding: '14px 24px',
-            borderTop: '1px solid rgba(255, 255, 255, 0.08)',
-            background: 'rgba(11, 15, 25, 0.9)',
+            borderTop: '1px solid #e2e8f0',
+            backgroundColor: '#f8fafc',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
@@ -347,13 +337,13 @@ export const AboutModal: React.FC<AboutModalProps> = ({ isOpen, onClose }) => {
               alignItems: 'center',
               gap: '6px',
               color: '#64748b',
-              fontSize: '0.75rem',
+              fontSize: '0.76rem',
               textDecoration: 'none',
             }}
-            onMouseEnter={(e) => (e.currentTarget.style.color = '#38bdf8')}
+            onMouseEnter={(e) => (e.currentTarget.style.color = '#4a2c11')}
             onMouseLeave={(e) => (e.currentTarget.style.color = '#64748b')}
           >
-            <span>Powered by Eclipse SUMO</span>
+            <span>Simulation Engine: Eclipse SUMO</span>
             <ExternalLink size={12} />
           </a>
 
@@ -365,3 +355,5 @@ export const AboutModal: React.FC<AboutModalProps> = ({ isOpen, onClose }) => {
     </div>
   );
 };
+
+export default AboutModal;

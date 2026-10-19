@@ -44,13 +44,15 @@ export const VehicleInspector: React.FC<VehicleInspectorProps> = ({
       className="glass-panel"
       style={{
         position: 'absolute',
-        top: '80px',
+        top: '74px',
         right: '20px',
         width: '300px',
         padding: '16px',
         zIndex: 25,
-        border: '1px solid rgba(56, 189, 248, 0.3)',
-        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.6), var(--glow-cyan)',
+        border: '1px solid #e2e8f0',
+        backgroundColor: 'rgba(255, 255, 255, 0.98)',
+        boxShadow: 'var(--shadow-lg)',
+        borderRadius: '10px',
         ...style,
       }}
     >
@@ -63,10 +65,10 @@ export const VehicleInspector: React.FC<VehicleInspectorProps> = ({
               height: '12px',
               borderRadius: '3px',
               backgroundColor: vehicle.color,
-              boxShadow: `0 0 8px ${vehicle.color}`,
+              border: '1px solid rgba(0, 0, 0, 0.1)',
             }}
           />
-          <span style={{ fontSize: '0.95rem', fontWeight: 800, fontFamily: 'var(--font-mono)', color: '#f8fafc' }}>
+          <span style={{ fontSize: '0.96rem', fontWeight: 800, fontFamily: 'var(--font-mono)', color: '#0f172a' }}>
             {vehicle.id}
           </span>
           <span
@@ -76,8 +78,8 @@ export const VehicleInspector: React.FC<VehicleInspectorProps> = ({
               textTransform: 'uppercase',
               padding: '2px 6px',
               borderRadius: '4px',
-              backgroundColor: 'rgba(255, 255, 255, 0.1)',
-              color: '#94a3b8',
+              backgroundColor: '#f1f5f9',
+              color: '#475569',
             }}
           >
             {vehicle.type.replace('_', ' ')}
@@ -88,8 +90,9 @@ export const VehicleInspector: React.FC<VehicleInspectorProps> = ({
               fontWeight: 700,
               padding: '2px 6px',
               borderRadius: '4px',
-              backgroundColor: isWest ? 'rgba(56, 189, 248, 0.15)' : 'rgba(16, 185, 129, 0.15)',
-              color: isWest ? '#38bdf8' : '#10b981',
+              backgroundColor: isWest ? '#eff6ff' : '#ecfdf5',
+              color: isWest ? '#2563eb' : '#059669',
+              border: `1px solid ${isWest ? '#bfdbfe' : '#a7f3d0'}`,
             }}
           >
             {odTag ?? (isWest ? '← WB' : 'EB →')}
@@ -107,39 +110,40 @@ export const VehicleInspector: React.FC<VehicleInspectorProps> = ({
           gridTemplateColumns: '1fr 1fr',
           gap: '8px',
           marginBottom: '12px',
-          backgroundColor: 'rgba(0, 0, 0, 0.3)',
+          backgroundColor: '#f8fafc',
+          border: '1px solid #e2e8f0',
           padding: '10px',
           borderRadius: '8px',
         }}
       >
         <div>
-          <div style={{ fontSize: '0.68rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <Gauge size={12} /> SPEED
+          <div style={{ fontSize: '0.68rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 600 }}>
+            <Gauge size={12} color="#4a2c11" /> SPEED
           </div>
-          <div style={{ fontSize: '1.2rem', fontWeight: 800, fontFamily: 'var(--font-mono)', color: '#38bdf8' }}>
-            {vehicle.speed_kmh} <span style={{ fontSize: '0.7rem' }}>km/h</span>
+          <div style={{ fontSize: '1.25rem', fontWeight: 800, fontFamily: 'var(--font-mono)', color: '#4a2c11' }}>
+            {vehicle.speed_kmh} <span style={{ fontSize: '0.72rem', color: '#64748b' }}>km/h</span>
           </div>
-          <div style={{ fontSize: '0.68rem', color: '#94a3b8' }}>
+          <div style={{ fontSize: '0.68rem', color: '#64748b' }}>
             ({vehicle.speed.toFixed(1)} m/s)
           </div>
         </div>
 
         <div>
-          <div style={{ fontSize: '0.68rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <ArrowUpRight size={12} /> ACCELERATION
+          <div style={{ fontSize: '0.68rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 600 }}>
+            <ArrowUpRight size={12} color="#059669" /> ACCELERATION
           </div>
           <div
             style={{
-              fontSize: '1.2rem',
+              fontSize: '1.25rem',
               fontWeight: 800,
               fontFamily: 'var(--font-mono)',
-              color: isBraking ? '#f43f5e' : isAccelerating ? '#10b981' : '#f8fafc',
+              color: isBraking ? '#dc2626' : isAccelerating ? '#059669' : '#0f172a',
             }}
           >
             {vehicle.acceleration > 0 ? `+${vehicle.acceleration}` : vehicle.acceleration}{' '}
-            <span style={{ fontSize: '0.7rem' }}>m/s²</span>
+            <span style={{ fontSize: '0.72rem', color: '#64748b' }}>m/s²</span>
           </div>
-          <div style={{ fontSize: '0.68rem', color: isBraking ? '#f43f5e' : isAccelerating ? '#10b981' : '#64748b' }}>
+          <div style={{ fontSize: '0.68rem', fontWeight: 600, color: isBraking ? '#dc2626' : isAccelerating ? '#059669' : '#64748b' }}>
             {isBraking ? 'Braking' : isAccelerating ? 'Accelerating' : 'Cruising'}
           </div>
         </div>
@@ -147,38 +151,38 @@ export const VehicleInspector: React.FC<VehicleInspectorProps> = ({
 
       {/* Position & Lane Details */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '0.78rem', marginBottom: '14px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '4px' }}>
-          <span style={{ color: '#94a3b8' }}>Direction:</span>
-          <span style={{ fontWeight: 600, color: isWest ? '#38bdf8' : '#10b981' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f1f5f9', paddingBottom: '4px' }}>
+          <span style={{ color: '#64748b' }}>Direction:</span>
+          <span style={{ fontWeight: 600, color: isWest ? '#2563eb' : '#059669' }}>
             {dirName}
           </span>
         </div>
 
-        <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '4px' }}>
-          <span style={{ color: '#94a3b8' }}>Position:</span>
-          <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 600 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f1f5f9', paddingBottom: '4px' }}>
+          <span style={{ color: '#64748b' }}>Position:</span>
+          <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 600, color: '#0f172a' }}>
             {odMatch ? `${vehicle.x.toFixed(1)}, ${vehicle.y.toFixed(1)} m` : `${vehicle.x.toFixed(1)}m / 1000m`}
           </span>
         </div>
 
-        <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '4px' }}>
-          <span style={{ color: '#94a3b8' }}>Lane:</span>
-          <span style={{ fontWeight: 600, color: '#38bdf8' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f1f5f9', paddingBottom: '4px' }}>
+          <span style={{ color: '#64748b' }}>Lane:</span>
+          <span style={{ fontWeight: 600, color: '#0f172a' }}>
             {laneLabel}
           </span>
         </div>
 
-        <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '4px' }}>
-          <span style={{ color: '#94a3b8' }}>Heading Angle:</span>
-          <span style={{ fontFamily: 'var(--font-mono)' }}>{vehicle.angle}° ({odMatch ? headingName : isWest ? 'West' : 'East'})</span>
+        <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f1f5f9', paddingBottom: '4px' }}>
+          <span style={{ color: '#64748b' }}>Heading Angle:</span>
+          <span style={{ fontFamily: 'var(--font-mono)', color: '#0f172a' }}>{vehicle.angle}° ({odMatch ? headingName : isWest ? 'West' : 'East'})</span>
         </div>
 
         {vehicle.leader_id && (
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'rgba(56, 189, 248, 0.08)', padding: '6px 8px', borderRadius: '6px' }}>
-            <span style={{ color: '#38bdf8', display: 'flex', alignItems: 'center', gap: '4px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#eff6ff', border: '1px solid #bfdbfe', padding: '6px 8px', borderRadius: '6px' }}>
+            <span style={{ color: '#1d4ed8', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 600 }}>
               <ShieldAlert size={13} /> Leader ({vehicle.leader_id}):
             </span>
-            <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, color: vehicle.leader_dist && vehicle.leader_dist < 15 ? '#f43f5e' : '#f8fafc' }}>
+            <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, color: vehicle.leader_dist && vehicle.leader_dist < 15 ? '#dc2626' : '#1e40af' }}>
               {vehicle.leader_dist}m ahead
             </span>
           </div>
@@ -191,8 +195,8 @@ export const VehicleInspector: React.FC<VehicleInspectorProps> = ({
         style={{
           width: '100%',
           justifyContent: 'center',
-          backgroundColor: isFollowing ? '#f43f5e' : undefined,
-          borderColor: isFollowing ? 'rgba(244, 63, 94, 0.4)' : undefined,
+          backgroundColor: isFollowing ? '#dc2626' : '#4a2c11',
+          borderColor: isFollowing ? '#b91c1c' : 'rgba(0, 0, 0, 0.1)',
         }}
         onClick={onFollow}
       >
@@ -202,3 +206,5 @@ export const VehicleInspector: React.FC<VehicleInspectorProps> = ({
     </div>
   );
 };
+
+export default VehicleInspector;

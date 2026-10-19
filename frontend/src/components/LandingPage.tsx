@@ -2,21 +2,26 @@ import React, { useState } from 'react';
 import {
   Activity,
   Play,
-  Layers,
-  Cpu,
-  Compass,
-  Zap,
+  RotateCw,
+  GitFork,
+  Milestone,
   Info,
   ChevronRight,
-  Gauge,
   Sliders,
-  Sparkles,
   ExternalLink,
   Mail,
   LogOut,
   Lock,
+  Building2,
+  ShieldCheck,
+  MapPin,
+  Clock,
+  ArrowRight,
+  TrendingDown,
+  Compass,
 } from 'lucide-react';
 import type { User } from '../types/auth';
+import type { ScenarioMetadata } from '../types/simulation';
 import { AboutModal } from './AboutModal';
 import { GoogleSignInModal } from './GoogleSignInModal';
 
@@ -26,6 +31,9 @@ interface LandingPageProps {
   onLaunchSimulator: () => void;
   onSignInWithGoogle: (user?: Partial<User>) => void;
   onSignOut: () => void;
+  scenarios?: ScenarioMetadata[];
+  activeScenarioId?: string;
+  onSelectScenarioAndLaunch?: (scenarioId: string) => void;
 }
 
 export const LandingPage: React.FC<LandingPageProps> = ({
@@ -34,14 +42,23 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   onLaunchSimulator,
   onSignInWithGoogle,
   onSignOut,
+  onSelectScenarioAndLaunch,
 }) => {
   const [isAboutOpen, setIsAboutOpen] = useState(false);
   const [isGoogleModalOpen, setIsGoogleModalOpen] = useState(false);
+  const [pendingScenarioId, setPendingScenarioId] = useState<string | null>(null);
 
-  const handleLaunchClick = () => {
+  const handleLaunchClick = (scenarioId?: string) => {
     if (isAuthenticated) {
-      onLaunchSimulator();
+      if (scenarioId && onSelectScenarioAndLaunch) {
+        onSelectScenarioAndLaunch(scenarioId);
+      } else {
+        onLaunchSimulator();
+      }
     } else {
+      if (scenarioId) {
+        setPendingScenarioId(scenarioId);
+      }
       setIsGoogleModalOpen(true);
     }
   };
@@ -49,9 +66,111 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   const handleGoogleSuccess = (userData?: Partial<User>) => {
     onSignInWithGoogle(userData);
     setIsGoogleModalOpen(false);
-    // After logging in, automatically transition to simulator
-    onLaunchSimulator();
+    if (pendingScenarioId && onSelectScenarioAndLaunch) {
+      onSelectScenarioAndLaunch(pendingScenarioId);
+      setPendingScenarioId(null);
+    } else {
+      onLaunchSimulator();
+    }
   };
+
+  const scenarioCards = [
+    {
+      id: 'gnt_circle',
+      title: 'GNT Circle Roundabout & Bypass',
+      location: 'Nallagandla ⇄ Tellapur ⇄ Lingampalli Flyover',
+      badge: 'Roundabout & Bypass',
+      badgeColor: '#059669',
+      badgeBg: '#ecfdf5',
+      badgeBorder: '#a7f3d0',
+      icon: <RotateCw size={18} color="#059669" />,
+      description:
+        'Major suburban traffic hub featuring a clockwise roundabout, a dedicated Tellapur free-left bypass slip, and a bottom-road median U-turn connector.',
+      operationalQuestions: [
+        'Compare unsignalised merging vs. traffic light control at the circle',
+        'Measure how many vehicles bypass the circle via the Tellapur free-left',
+        'Verify if the median U-turn prevents ring gridlock during peak hours',
+      ],
+      metricsTracked: 'Ring occupancy, arm queue length, U-turn throughput',
+      type: 'roundabout',
+    },
+    {
+      id: 'nallagandla_junction',
+      title: 'Simulate GNT Circle with no roundabout',
+      location: 'Nallagandla ⇄ Tellapur ⇄ Lingampalli Flyover',
+      badge: 'Signalised T-Junction',
+      badgeColor: '#4a2c11',
+      badgeBg: '#f7f1ea',
+      badgeBorder: '#dfd2c4',
+      icon: <GitFork size={18} color="#4a2c11" />,
+      description:
+        'High-density 3-way T-junction with dedicated free-left turns (TL→FL & FL→NG) that bypass the signal, providing direct connectivity to the flyover road.',
+      operationalQuestions: [
+        'Test 3-phase signal timing plans for morning vs evening peak flows',
+        'Ensure free-left slip lanes move continuously without blocking through-traffic',
+        'Analyze queue clearance times for Tellapur and Nallagandla approaches',
+      ],
+      metricsTracked: 'Inflow/outflow counts, delay per arm, phase split efficiency',
+      type: 'intersection',
+    },
+    {
+      id: 'four_way_intersection',
+      title: '4-Way Urban Crossroads',
+      location: 'City Arterial Crossroad (North-South / East-West)',
+      badge: '4-Phase Signalized',
+      badgeColor: '#b45309',
+      badgeBg: '#fffbeb',
+      badgeBorder: '#fde68a',
+      icon: <GitFork size={18} color="#b45309" />,
+      description:
+        'Standard 4-arm municipal crossroads with dual-lane approaches, right-turn pockets, and full multi-phase traffic signal scheduling.',
+      operationalQuestions: [
+        'Balance green phase durations across major arterial and cross-street',
+        'Evaluate yellow clearance times to eliminate intersection box blocking',
+        'Calculate overall intersection capacity in Passenger Car Units (PCE/hour)',
+      ],
+      metricsTracked: 'Average vehicle speed, queue buildup, PCE throughput',
+      type: 'intersection',
+    },
+    {
+      id: 'three_way_intersection',
+      title: '3-Way Priority T-Intersection',
+      location: 'Main Highway with Feeder Side Road',
+      badge: 'Arterial & Side Road',
+      badgeColor: '#5c3a21',
+      badgeBg: '#faf5ef',
+      badgeBorder: '#e8ddd0',
+      icon: <GitFork size={18} color="#5c3a21" />,
+      description:
+        'High-volume two-way arterial with a perpendicular side street, evaluating right-of-way gap acceptance and signal cycle trade-offs.',
+      operationalQuestions: [
+        'Determine whether to install a signal or rely on give-way priority',
+        'Prevent side-road queue spillbacks onto local neighborhood streets',
+        'Minimize main road speed reduction during peak feeder merging',
+      ],
+      metricsTracked: 'Minor-arm delay, main road flow rate, gap acceptance',
+      type: 'intersection',
+    },
+    {
+      id: 'straight_road',
+      title: '1000m Dual-Carriageway Highway',
+      location: 'Multi-lane Highway Corridor with Signal Gantry',
+      badge: 'Arterial Corridor',
+      badgeColor: '#0284c7',
+      badgeBg: '#f0f9ff',
+      badgeBorder: '#bae6fd',
+      icon: <Milestone size={18} color="#0284c7" />,
+      description:
+        '1-kilometer 4-lane divided highway with Indian Left-Hand Traffic (LHT) rules, kerbside slow lanes, median overtaking lanes, and a mid-block signal.',
+      operationalQuestions: [
+        'Evaluate lane discipline (heavy/slow vehicles in kerb vs. fast median overtaking)',
+        'Measure deceleration queues and braking zones before mid-block traffic signals',
+        'Determine free-flow highway capacity under mixed traffic conditions',
+      ],
+      metricsTracked: 'Lane utilization %, speed distribution, stopping distance',
+      type: 'corridor',
+    },
+  ];
 
   return (
     <div
@@ -60,14 +179,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         width: '100vw',
         overflowX: 'hidden',
         overflowY: 'auto',
-        backgroundColor: '#070a12',
-        color: '#f8fafc',
+        backgroundColor: '#ffffff',
+        color: '#0f172a',
         fontFamily: 'var(--font-sans)',
         display: 'flex',
         flexDirection: 'column',
       }}
     >
-      {/* 1. TOP NAVBAR */}
+      {/* 1. STRIPE-STYLE LIGHT TOP NAVBAR */}
       <nav
         style={{
           position: 'sticky',
@@ -76,107 +195,121 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          padding: '14px 28px',
-          backgroundColor: 'rgba(7, 10, 18, 0.85)',
-          backdropFilter: 'blur(16px)',
-          borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+          padding: '14px 36px',
+          backgroundColor: 'rgba(255, 255, 255, 0.94)',
+          backdropFilter: 'blur(10px)',
+          borderBottom: '1px solid #e2e8f0',
         }}
       >
         {/* Brand */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <div
             style={{
-              width: '38px',
-              height: '38px',
-              borderRadius: '10px',
-              background: 'linear-gradient(135deg, #0284c7 0%, #38bdf8 100%)',
+              width: '34px',
+              height: '34px',
+              borderRadius: '8px',
+              backgroundColor: '#4a2c11',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              boxShadow: '0 0 20px rgba(56, 189, 248, 0.4)',
+              boxShadow: '0 2px 6px rgba(74, 44, 17, 0.25)',
             }}
           >
-            <Activity size={20} color="#ffffff" />
+            <Activity size={18} color="#ffffff" />
           </div>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <span
                 style={{
-                  fontSize: '1.2rem',
+                  fontSize: '1.12rem',
                   fontWeight: 800,
-                  letterSpacing: '0.06em',
-                  background: 'linear-gradient(90deg, #ffffff 0%, #cbd5e1 100%)',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
+                  letterSpacing: '0.03em',
+                  color: '#0f172a',
                 }}
               >
                 TRAFFIS
               </span>
               <span
                 style={{
-                  fontSize: '0.65rem',
+                  fontSize: '0.66rem',
                   fontWeight: 700,
                   padding: '2px 8px',
-                  borderRadius: '4px',
-                  backgroundColor: 'rgba(245, 158, 11, 0.15)',
-                  color: '#f59e0b',
-                  border: '1px solid rgba(245, 158, 11, 0.35)',
+                  borderRadius: '9999px',
+                  backgroundColor: '#fffbeb',
+                  color: '#b45309',
+                  border: '1px solid #fde68a',
                 }}
               >
                 🇮🇳 Indian Roads (LHT)
               </span>
             </div>
-            <span style={{ fontSize: '0.72rem', color: '#64748b' }}>
-              Microscopic Traffic Simulation & Analytics Engine
+            <span style={{ fontSize: '0.74rem', color: '#64748b' }}>
+              Traffic Operations & Junction Simulation Platform
             </span>
           </div>
         </div>
 
-        {/* Center / Right Navigation Actions */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-          {/* About Button */}
+        {/* Center / Right Actions */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <a
+            href="#scenarios-section"
+            style={{
+              color: '#475569',
+              fontSize: '0.86rem',
+              fontWeight: 500,
+              textDecoration: 'none',
+              padding: '6px 12px',
+              borderRadius: '6px',
+              transition: 'color 0.15s ease',
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.color = '#0f172a')}
+            onMouseLeave={(e) => (e.currentTarget.style.color = '#475569')}
+          >
+            Scenarios
+          </a>
+
+          <a
+            href="#use-cases-section"
+            style={{
+              color: '#475569',
+              fontSize: '0.86rem',
+              fontWeight: 500,
+              textDecoration: 'none',
+              padding: '6px 12px',
+              borderRadius: '6px',
+              transition: 'color 0.15s ease',
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.color = '#0f172a')}
+            onMouseLeave={(e) => (e.currentTarget.style.color = '#475569')}
+          >
+            Municipal & Police Uses
+          </a>
+
           <button
             onClick={() => setIsAboutOpen(true)}
             className="btn-secondary"
             style={{
-              padding: '8px 16px',
-              fontSize: '0.85rem',
+              padding: '6px 14px',
+              fontSize: '0.82rem',
               display: 'flex',
               alignItems: 'center',
               gap: '6px',
             }}
           >
-            <Info size={16} color="#38bdf8" />
+            <Info size={14} color="#64748b" />
             <span>About</span>
           </button>
 
-          <a
-            href="#features-section"
-            style={{
-              color: '#94a3b8',
-              fontSize: '0.85rem',
-              fontWeight: 500,
-              textDecoration: 'none',
-              padding: '8px 12px',
-              borderRadius: '8px',
-              transition: 'all 0.2s ease',
-            }}
-            onMouseEnter={(e) => (e.currentTarget.style.color = '#ffffff')}
-            onMouseLeave={(e) => (e.currentTarget.style.color = '#94a3b8')}
-          >
-            Features
-          </a>
-
-          {/* Google Sign In / User Profile */}
+          {/* User state / Launch CTA */}
           {isAuthenticated && user ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <button
-                onClick={onLaunchSimulator}
+                onClick={() => handleLaunchClick()}
                 className="btn-primary"
-                style={{ padding: '8px 18px', fontSize: '0.85rem' }}
+                style={{ padding: '7px 16px', fontSize: '0.85rem' }}
               >
-                <Play size={15} fill="#ffffff" />
-                Launch Simulator
+                <Play size={14} fill="#ffffff" />
+                Open Simulator
               </button>
 
               <div
@@ -184,18 +317,18 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   display: 'flex',
                   alignItems: 'center',
                   gap: '8px',
-                  background: 'rgba(30, 41, 59, 0.7)',
+                  backgroundColor: '#f8fafc',
                   padding: '4px 10px 4px 6px',
-                  borderRadius: '30px',
-                  border: '1px solid rgba(255, 255, 255, 0.12)',
+                  borderRadius: '24px',
+                  border: '1px solid #e2e8f0',
                 }}
               >
                 <img
                   src={user.avatar}
                   alt={user.name}
-                  style={{ width: '28px', height: '28px', borderRadius: '50%', objectFit: 'cover' }}
+                  style={{ width: '26px', height: '26px', borderRadius: '50%', objectFit: 'cover' }}
                 />
-                <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#f8fafc' }}>
+                <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#0f172a' }}>
                   {user.name}
                 </span>
                 <button
@@ -203,16 +336,16 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   style={{
                     background: 'none',
                     border: 'none',
-                    color: '#94a3b8',
+                    color: '#64748b',
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
                     padding: '2px',
-                    marginLeft: '4px',
+                    marginLeft: '2px',
                   }}
                   title="Sign out"
                 >
-                  <LogOut size={14} />
+                  <LogOut size={13} />
                 </button>
               </div>
             </div>
@@ -222,28 +355,28 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: '10px',
-                background: '#ffffff',
-                color: '#1f2937',
-                padding: '8px 18px',
+                gap: '8px',
+                backgroundColor: '#ffffff',
+                color: '#1e293b',
+                padding: '7px 16px',
                 borderRadius: '8px',
-                fontSize: '0.85rem',
+                fontSize: '0.84rem',
                 fontWeight: 600,
-                border: 'none',
+                border: '1px solid #e2e8f0',
                 cursor: 'pointer',
-                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2), 0 0 15px rgba(255, 255, 255, 0.15)',
-                transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                transition: 'all 0.15s ease',
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'translateY(-1px)';
-                e.currentTarget.style.boxShadow = '0 4px 16px rgba(255, 255, 255, 0.3)';
+                e.currentTarget.style.backgroundColor = '#f8fafc';
+                e.currentTarget.style.borderColor = '#cbd5e1';
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.2), 0 0 15px rgba(255, 255, 255, 0.15)';
+                e.currentTarget.style.backgroundColor = '#ffffff';
+                e.currentTarget.style.borderColor = '#e2e8f0';
               }}
             >
-              <svg width="18" height="18" viewBox="0 0 24 24">
+              <svg width="16" height="16" viewBox="0 0 24 24">
                 <path
                   fill="#4285F4"
                   d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"
@@ -261,356 +394,699 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.35 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"
                 />
               </svg>
-              <span>Sign In with Google</span>
+              <span>Sign In</span>
             </button>
           )}
         </div>
       </nav>
 
-      {/* 2. HERO SECTION */}
+      {/* 2. STRIPE-STYLE HERO SECTION */}
       <section
         style={{
-          position: 'relative',
-          padding: '70px 24px 60px',
+          padding: '72px 28px 64px',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
           textAlign: 'center',
-          background: 'radial-gradient(ellipse 80% 50% at 50% -10%, rgba(2, 132, 199, 0.25) 0%, rgba(7, 10, 18, 0) 100%)',
-          borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
+          backgroundColor: '#ffffff',
+          backgroundImage: 'radial-gradient(ellipse 80% 50% at 50% -10%, rgba(99, 91, 255, 0.08) 0%, rgba(255, 255, 255, 0) 100%)',
+          borderBottom: '1px solid #e2e8f0',
         }}
       >
-        {/* Scenario Pill */}
+        {/* Civic Tag */}
         <div
-          className="glass-pill"
           style={{
             marginBottom: '20px',
-            borderColor: 'rgba(56, 189, 248, 0.3)',
-            backgroundColor: 'rgba(15, 23, 42, 0.8)',
-            padding: '6px 16px',
+            borderColor: '#dfd2c4',
+            backgroundColor: '#f7f1ea',
+            border: '1px solid #dfd2c4',
+            borderRadius: '9999px',
+            padding: '5px 14px',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '6px',
           }}
         >
-          <Sparkles size={14} color="#38bdf8" />
-          <span style={{ color: '#38bdf8', fontWeight: 600, fontSize: '0.8rem' }}>
-            Eclipse SUMO Physics Daemon • 20 Hz Real-Time TraCI Integration
+          <Building2 size={13} color="#4a2c11" />
+          <span style={{ color: '#4a2c11', fontWeight: 600, fontSize: '0.78rem' }}>
+            Decision-Support Tool for Traffic Police & Municipal Road Engineers
           </span>
         </div>
 
-        {/* Main Headline */}
+        {/* Headline */}
         <h1
           style={{
-            fontSize: 'clamp(2.4rem, 5vw, 4rem)',
-            fontWeight: 900,
-            lineHeight: '1.15',
-            letterSpacing: '-0.02em',
-            maxWidth: '960px',
-            marginBottom: '20px',
-            background: 'linear-gradient(135deg, #ffffff 0%, #cbd5e1 50%, #38bdf8 100%)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
+            fontSize: 'clamp(2.2rem, 4.4vw, 3.5rem)',
+            fontWeight: 800,
+            lineHeight: '1.18',
+            letterSpacing: '-0.03em',
+            maxWidth: '920px',
+            marginBottom: '18px',
+            color: '#0f172a',
           }}
         >
-          Microscopic Traffic Simulation & Highway Intelligence
+          Evaluate Road Changes & Signal Plans Before Paving City Streets
         </h1>
 
-        {/* Subtitle */}
+        {/* Subtitle in plain, non-technical English */}
         <p
           style={{
-            fontSize: 'clamp(1rem, 1.8vw, 1.2rem)',
+            fontSize: 'clamp(0.98rem, 1.5vw, 1.15rem)',
             lineHeight: '1.6',
-            color: '#94a3b8',
-            maxWidth: '780px',
-            marginBottom: '36px',
+            color: '#475569',
+            maxWidth: '740px',
+            marginBottom: '32px',
           }}
         >
-          Experience sub-millisecond vehicle kinematics, Left-Hand Traffic (LHT) Indian road networks,
-          adaptive traffic signal controls, and high-frequency WebSocket streaming visualized in 60 FPS Canvas.
+          Traffis lets traffic officers and municipal staff test roundabout designs, traffic light
+          green times, and free-left slip lanes virtually. Observe real vehicle queues, identify
+          bottlenecks, and make evidence-based road decisions with zero disruption to traffic.
         </p>
 
-        {/* Hero CTAs */}
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', justifyContent: 'center', marginBottom: '40px' }}>
+        {/* CTA Buttons */}
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '14px', justifyContent: 'center', marginBottom: '40px' }}>
           <button
-            onClick={handleLaunchClick}
+            onClick={() => handleLaunchClick()}
+            className="btn-primary"
             style={{
-              background: 'linear-gradient(135deg, #0284c7 0%, #38bdf8 100%)',
-              color: '#ffffff',
-              border: '1px solid rgba(56, 189, 248, 0.5)',
-              padding: '14px 32px',
-              borderRadius: '12px',
-              fontSize: '1.05rem',
+              padding: '12px 28px',
+              fontSize: '0.98rem',
               fontWeight: 700,
-              cursor: 'pointer',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '10px',
-              boxShadow: '0 10px 30px rgba(2, 132, 199, 0.4), 0 0 20px rgba(56, 189, 248, 0.3)',
-              transition: 'all 0.25s ease',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = 'translateY(-2px)';
-              e.currentTarget.style.boxShadow = '0 14px 36px rgba(2, 132, 199, 0.5), 0 0 30px rgba(56, 189, 248, 0.5)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = 'translateY(0)';
-              e.currentTarget.style.boxShadow = '0 10px 30px rgba(2, 132, 199, 0.4), 0 0 20px rgba(56, 189, 248, 0.3)';
+              borderRadius: '8px',
             }}
           >
             {isAuthenticated ? (
               <>
-                <Play size={18} fill="#ffffff" />
+                <Play size={16} fill="#ffffff" />
                 <span>Launch Simulation Studio</span>
               </>
             ) : (
               <>
-                <Lock size={18} />
-                <span>Sign In with Google to Enter Simulator</span>
+                <Lock size={16} />
+                <span>Sign In to Open Simulator</span>
               </>
             )}
-            <ChevronRight size={18} />
+            <ChevronRight size={16} />
           </button>
 
-          <button
-            onClick={() => setIsAboutOpen(true)}
+          <a
+            href="#scenarios-section"
             className="btn-secondary"
             style={{
-              padding: '14px 28px',
-              borderRadius: '12px',
-              fontSize: '1rem',
+              padding: '12px 24px',
+              fontSize: '0.94rem',
               fontWeight: 600,
+              textDecoration: 'none',
+              borderRadius: '8px',
             }}
           >
-            <Info size={18} color="#38bdf8" />
-            <span>Platform Overview & Details</span>
-          </button>
+            <span>Explore 5 Road Scenarios</span>
+            <ChevronRight size={15} color="#64748b" />
+          </a>
         </div>
 
-        {/* Feature Badges Grid */}
+        {/* Key Operational Pillars */}
         <div
           style={{
-            display: 'flex',
-            flexWrap: 'wrap',
-            justifyContent: 'center',
-            gap: '12px',
-            maxWidth: '900px',
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))',
+            gap: '14px',
+            width: '100%',
+            maxWidth: '980px',
+            marginTop: '10px',
           }}
         >
-          <div className="glass-pill" style={{ padding: '6px 14px' }}>
-            <Cpu size={14} color="#38bdf8" />
-            <span>20 Hz SUMO TraCI Loop</span>
+          <div
+            className="glass-panel"
+            style={{
+              padding: '14px 18px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              backgroundColor: '#ffffff',
+              borderColor: '#e2e8f0',
+              boxShadow: 'var(--shadow-sm)',
+            }}
+          >
+            <Compass size={20} color="#4a2c11" />
+            <div style={{ textAlign: 'left' }}>
+              <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#0f172a' }}>
+                Indian Road Physics (LHT)
+              </div>
+              <div style={{ fontSize: '0.72rem', color: '#64748b' }}>
+                Left-hand drive, kerb lane discipline
+              </div>
+            </div>
           </div>
-          <div className="glass-pill" style={{ padding: '6px 14px' }}>
-            <Compass size={14} color="#f59e0b" />
-            <span>Left-Hand Traffic (LHT) Geometry</span>
+
+          <div
+            className="glass-panel"
+            style={{
+              padding: '14px 18px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              backgroundColor: '#ffffff',
+              borderColor: '#e2e8f0',
+              boxShadow: 'var(--shadow-sm)',
+            }}
+          >
+            <RotateCw size={20} color="#059669" />
+            <div style={{ textAlign: 'left' }}>
+              <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#0f172a' }}>
+                Roundabouts vs. Signals
+              </div>
+              <div style={{ fontSize: '0.72rem', color: '#64748b' }}>
+                Compare circular flow against lights
+              </div>
+            </div>
           </div>
-          <div className="glass-pill" style={{ padding: '6px 14px' }}>
-            <Layers size={14} color="#10b981" />
-            <span>60 FPS Lerp Canvas Viewport</span>
+
+          <div
+            className="glass-panel"
+            style={{
+              padding: '14px 18px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              backgroundColor: '#ffffff',
+              borderColor: '#e2e8f0',
+              boxShadow: 'var(--shadow-sm)',
+            }}
+          >
+            <Sliders size={20} color="#d97706" />
+            <div style={{ textAlign: 'left' }}>
+              <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#0f172a' }}>
+                Free-Left & U-Turn Slips
+              </div>
+              <div style={{ fontSize: '0.72rem', color: '#64748b' }}>
+                Evaluate bottleneck bypass lanes
+              </div>
+            </div>
           </div>
-          <div className="glass-pill" style={{ padding: '6px 14px' }}>
-            <Gauge size={14} color="#8b5cf6" />
-            <span>PCE/Hour Flow Calibration</span>
+
+          <div
+            className="glass-panel"
+            style={{
+              padding: '14px 18px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              backgroundColor: '#ffffff',
+              borderColor: '#e2e8f0',
+              boxShadow: 'var(--shadow-sm)',
+            }}
+          >
+            <Clock size={20} color="#5c3a21" />
+            <div style={{ textAlign: 'left' }}>
+              <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#0f172a' }}>
+                Zero On-Street Risk
+              </div>
+              <div style={{ fontSize: '0.72rem', color: '#64748b' }}>
+                Test traffic plans in virtual space
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* 3. CORE FEATURES SECTION */}
+      {/* 3. SCENARIOS SECTION - Clean Stripe Light Grid */}
       <section
-        id="features-section"
+        id="scenarios-section"
         style={{
-          padding: '60px 28px 80px',
-          backgroundColor: 'rgba(11, 15, 25, 0.6)',
-          borderTop: '1px solid rgba(255, 255, 255, 0.06)',
-          borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
+          padding: '72px 28px 80px',
+          backgroundColor: '#f8fafc',
+          borderBottom: '1px solid #e2e8f0',
         }}
       >
-        <div style={{ maxWidth: '1280px', margin: '0 auto' }}>
-          <div style={{ textAlign: 'center', marginBottom: '40px' }}>
-            <h2 style={{ fontSize: '2rem', fontWeight: 800, color: '#ffffff', marginBottom: '8px' }}>
-              Engineered for Scientific Accuracy & Real-time Speed
+        <div style={{ maxWidth: '1240px', margin: '0 auto', width: '100%' }}>
+          <div style={{ marginBottom: '40px' }}>
+            <span
+              style={{
+                fontSize: '0.74rem',
+                fontWeight: 700,
+                textTransform: 'uppercase',
+                color: '#4a2c11',
+                letterSpacing: '0.06em',
+              }}
+            >
+              Current Road Networks
+            </span>
+            <h2 style={{ fontSize: '2rem', fontWeight: 800, color: '#0f172a', marginTop: '6px', marginBottom: '10px' }}>
+              Select a Scenario to Simulate & Analyze
             </h2>
-            <p style={{ color: '#94a3b8', fontSize: '0.95rem' }}>
-              Built with industry-standard microscopic modeling tools and modern web graphics.
+            <p style={{ color: '#475569', fontSize: '0.96rem', maxWidth: '780px' }}>
+              Each scenario is pre-calibrated with realistic traffic volume, vehicle types (cars,
+              vans, commercial transport), and road markings. Click any card to launch and inspect
+              traffic flow directly.
+            </p>
+          </div>
+
+          {/* Grid of Scenario Cards */}
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))',
+              gap: '24px',
+            }}
+          >
+            {scenarioCards.map((sc) => (
+              <div
+                key={sc.id}
+                className="glass-panel"
+                style={{
+                  padding: '26px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'space-between',
+                  transition: 'all 0.2s ease',
+                  backgroundColor: '#ffffff',
+                  borderColor: '#e2e8f0',
+                  boxShadow: 'var(--shadow-sm)',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = '#cbd5e1';
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                  e.currentTarget.style.boxShadow = 'var(--shadow-md)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = '#e2e8f0';
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = 'var(--shadow-sm)';
+                }}
+              >
+                <div>
+                  {/* Top Badge & Location */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
+                    <div
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        padding: '4px 10px',
+                        borderRadius: '6px',
+                        backgroundColor: sc.badgeBg,
+                        border: `1px solid ${sc.badgeBorder}`,
+                        color: sc.badgeColor,
+                        fontSize: '0.74rem',
+                        fontWeight: 700,
+                      }}
+                    >
+                      {sc.icon}
+                      <span>{sc.badge}</span>
+                    </div>
+                  </div>
+
+                  {/* Title & Location */}
+                  <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#0f172a', marginBottom: '6px' }}>
+                    {sc.title}
+                  </h3>
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      fontSize: '0.78rem',
+                      color: '#5c3a21',
+                      marginBottom: '14px',
+                      fontWeight: 600,
+                    }}
+                  >
+                    <MapPin size={13} />
+                    <span>{sc.location}</span>
+                  </div>
+
+                  {/* Summary */}
+                  <p style={{ fontSize: '0.86rem', color: '#475569', lineHeight: '1.55', marginBottom: '18px' }}>
+                    {sc.description}
+                  </p>
+
+                  {/* Practical Municipal Questions Answered */}
+                  <div
+                    style={{
+                      padding: '14px',
+                      borderRadius: '8px',
+                      backgroundColor: '#f8fafc',
+                      border: '1px solid #e2e8f0',
+                      marginBottom: '20px',
+                    }}
+                  >
+                    <div style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', color: '#64748b', marginBottom: '8px' }}>
+                      What You Can Test:
+                    </div>
+                    <ul style={{ paddingLeft: '16px', margin: 0, fontSize: '0.8rem', color: '#334155', lineHeight: '1.6' }}>
+                      {sc.operationalQuestions.map((q, idx) => (
+                        <li key={idx} style={{ marginBottom: '4px' }}>
+                          {q}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+
+                {/* Card Footer: Metrics & Launch Button */}
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px', fontSize: '0.74rem', color: '#64748b' }}>
+                    <span>Monitors:</span>
+                    <span style={{ color: '#0f172a', fontWeight: 600 }}>{sc.metricsTracked}</span>
+                  </div>
+
+                  <button
+                    onClick={() => handleLaunchClick(sc.id)}
+                    className="btn-primary"
+                    style={{
+                      width: '100%',
+                      justifyContent: 'center',
+                      padding: '10px 16px',
+                      fontSize: '0.88rem',
+                    }}
+                  >
+                    <Play size={14} fill="#ffffff" />
+                    <span>Launch {sc.title.split(' ')[0]} Scenario</span>
+                    <ArrowRight size={14} />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* 4. CIVIC & OPERATIONAL USE CASES SECTION */}
+      <section
+        id="use-cases-section"
+        style={{
+          padding: '72px 28px 80px',
+          backgroundColor: '#ffffff',
+          borderBottom: '1px solid #e2e8f0',
+        }}
+      >
+        <div style={{ maxWidth: '1240px', margin: '0 auto' }}>
+          <div style={{ textAlign: 'center', marginBottom: '48px' }}>
+            <span
+              style={{
+                fontSize: '0.74rem',
+                fontWeight: 700,
+                textTransform: 'uppercase',
+                color: '#4a2c11',
+                letterSpacing: '0.06em',
+              }}
+            >
+              Practical Applications
+            </span>
+            <h2 style={{ fontSize: '2rem', fontWeight: 800, color: '#0f172a', marginTop: '6px', marginBottom: '10px' }}>
+              How Municipal Teams & Traffic Police Use Traffis
+            </h2>
+            <p style={{ color: '#475569', fontSize: '0.96rem', maxWidth: '680px', margin: '0 auto' }}>
+              Designed to solve everyday challenges faced by traffic control rooms, municipal road
+              authorities, and field officers on duty.
             </p>
           </div>
 
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-              gap: '20px',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+              gap: '24px',
             }}
           >
-            <div className="glass-panel" style={{ padding: '24px' }}>
+            {/* Card 1: Traffic Police */}
+            <div className="glass-panel" style={{ padding: '28px', backgroundColor: '#ffffff', borderColor: '#e2e8f0', boxShadow: 'var(--shadow-sm)' }}>
               <div
                 style={{
                   width: '42px',
                   height: '42px',
                   borderRadius: '10px',
-                  background: 'rgba(56, 189, 248, 0.15)',
-                  border: '1px solid rgba(56, 189, 248, 0.3)',
+                  backgroundColor: '#f7f1ea',
+                  border: '1px solid #dfd2c4',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   marginBottom: '16px',
                 }}
               >
-                <Cpu size={22} color="#38bdf8" />
+                <ShieldCheck size={22} color="#4a2c11" />
               </div>
-              <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#f8fafc', marginBottom: '8px' }}>
-                SUMO & TraCI Daemon
+              <h3 style={{ fontSize: '1.15rem', fontWeight: 700, color: '#0f172a', marginBottom: '10px' }}>
+                Traffic Police & Field Control
               </h3>
-              <p style={{ fontSize: '0.84rem', color: '#94a3b8', lineHeight: '1.5' }}>
-                Runs Eclipse SUMO in headless daemon mode with TraCI controlling vehicle injection, speed limits,
-                and signal changes at 20 Hz (50ms ticks).
+              <p style={{ fontSize: '0.86rem', color: '#475569', lineHeight: '1.55', marginBottom: '16px' }}>
+                Prevent gridlock during peak commute hours by understanding where queues spill back
+                across key junctions.
               </p>
+              <ul style={{ paddingLeft: '18px', margin: 0, fontSize: '0.84rem', color: '#334155', lineHeight: '1.7' }}>
+                <li>Identify queue bottlenecks before stationing personnel on the street</li>
+                <li>Evaluate whether manual signal overrides improve or worsen junction delays</li>
+                <li>Simulate diversion routes and median U-turn flows during peak rush</li>
+              </ul>
             </div>
 
-            <div className="glass-panel" style={{ padding: '24px' }}>
+            {/* Card 2: Municipal Road Engineers */}
+            <div className="glass-panel" style={{ padding: '28px', backgroundColor: '#ffffff', borderColor: '#e2e8f0', boxShadow: 'var(--shadow-sm)' }}>
               <div
                 style={{
                   width: '42px',
                   height: '42px',
                   borderRadius: '10px',
-                  background: 'rgba(245, 158, 11, 0.15)',
-                  border: '1px solid rgba(245, 158, 11, 0.3)',
+                  backgroundColor: '#ecfdf5',
+                  border: '1px solid #a7f3d0',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   marginBottom: '16px',
                 }}
               >
-                <Compass size={22} color="#f59e0b" />
+                <Building2 size={22} color="#059669" />
               </div>
-              <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#f8fafc', marginBottom: '8px' }}>
-                Indian Road Physics (LHT)
+              <h3 style={{ fontSize: '1.15rem', fontWeight: 700, color: '#0f172a', marginBottom: '10px' }}>
+                Municipal Road Engineers
               </h3>
-              <p style={{ fontSize: '0.84rem', color: '#94a3b8', lineHeight: '1.5' }}>
-                Left-Hand Traffic rules with slow traffic in left kerb lanes and fast overtaking in right median lanes,
-                accurately reflecting Indian highway guidelines.
+              <p style={{ fontSize: '0.86rem', color: '#475569', lineHeight: '1.55', marginBottom: '16px' }}>
+                Justify infrastructure budgets with simulation data before constructing roundabouts
+                or widening roads.
               </p>
+              <ul style={{ paddingLeft: '18px', margin: 0, fontSize: '0.84rem', color: '#334155', lineHeight: '1.7' }}>
+                <li>Decide between building a roundabout vs. installing traffic signals</li>
+                <li>Measure how many vehicles utilize dedicated free-left slip lanes</li>
+                <li>Calculate corridor capacity in Passenger Car Equivalent (PCE/hour)</li>
+              </ul>
             </div>
 
-            <div className="glass-panel" style={{ padding: '24px' }}>
+            {/* Card 3: Urban Road Safety & Planning */}
+            <div className="glass-panel" style={{ padding: '28px', backgroundColor: '#ffffff', borderColor: '#e2e8f0', boxShadow: 'var(--shadow-sm)' }}>
               <div
                 style={{
                   width: '42px',
                   height: '42px',
                   borderRadius: '10px',
-                  background: 'rgba(16, 185, 129, 0.15)',
-                  border: '1px solid rgba(16, 185, 129, 0.3)',
+                  backgroundColor: '#fffbeb',
+                  border: '1px solid #fde68a',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   marginBottom: '16px',
                 }}
               >
-                <Sliders size={22} color="#10b981" />
+                <TrendingDown size={22} color="#d97706" />
               </div>
-              <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#f8fafc', marginBottom: '8px' }}>
-                Interactive Traffic Light HUD
+              <h3 style={{ fontSize: '1.15rem', fontWeight: 700, color: '#0f172a', marginBottom: '10px' }}>
+                Road Safety & Efficiency
               </h3>
-              <p style={{ fontSize: '0.84rem', color: '#94a3b8', lineHeight: '1.5' }}>
-                Adjust green, yellow, and red phase timing sliders on the fly. Trigger immediate phase transitions or switch
-                to manual green-wave overrides.
+              <p style={{ fontSize: '0.86rem', color: '#475569', lineHeight: '1.55', marginBottom: '16px' }}>
+                Minimize vehicle conflicts, reduce idling emissions, and enhance intersection safety.
               </p>
-            </div>
-
-            <div className="glass-panel" style={{ padding: '24px' }}>
-              <div
-                style={{
-                  width: '42px',
-                  height: '42px',
-                  borderRadius: '10px',
-                  background: 'rgba(139, 92, 246, 0.15)',
-                  border: '1px solid rgba(139, 92, 246, 0.3)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  marginBottom: '16px',
-                }}
-              >
-                <Zap size={22} color="#8b5cf6" />
-              </div>
-              <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#f8fafc', marginBottom: '8px' }}>
-                Compressed WebSocket Stream
-              </h3>
-              <p style={{ fontSize: '0.84rem', color: '#94a3b8', lineHeight: '1.5' }}>
-                Compact vehicle kinematic tuples broadcast at 10 Hz with client-side 60 FPS sub-frame lerp interpolation,
-                reducing bandwidth by over 88%.
-              </p>
+              <ul style={{ paddingLeft: '18px', margin: 0, fontSize: '0.84rem', color: '#334155', lineHeight: '1.7' }}>
+                <li>Tune yellow clearance intervals to eliminate red-light trapped vehicles</li>
+                <li>Assess mixed traffic behavior between passenger cars and delivery vans</li>
+                <li>Reduce stop-and-go delays to save commuter travel time and fuel</li>
+              </ul>
             </div>
           </div>
         </div>
       </section>
 
-      {/* 5. CALL TO ACTION BANNER */}
+      {/* 5. SIMPLE 3-STEP GUIDE FOR NON-TECHNICAL USERS */}
+      <section style={{ padding: '72px 28px', maxWidth: '1100px', margin: '0 auto', width: '100%' }}>
+        <div style={{ textAlign: 'center', marginBottom: '40px' }}>
+          <h2 style={{ fontSize: '1.8rem', fontWeight: 800, color: '#0f172a', marginBottom: '8px' }}>
+            How to Use Traffis in 3 Simple Steps
+          </h2>
+          <p style={{ color: '#64748b', fontSize: '0.94rem' }}>
+            No coding or technical expertise required — operate the simulator just like watching a live traffic feed.
+          </p>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '22px' }}>
+          <div
+            className="glass-panel"
+            style={{
+              padding: '24px',
+              backgroundColor: '#ffffff',
+              border: '1px solid #e2e8f0',
+              boxShadow: 'var(--shadow-sm)',
+            }}
+          >
+            <div
+              style={{
+                width: '32px',
+                height: '32px',
+                borderRadius: '50%',
+                backgroundColor: '#f7f1ea',
+                color: '#4a2c11',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontWeight: 800,
+                fontSize: '0.9rem',
+                marginBottom: '14px',
+              }}
+            >
+              1
+            </div>
+            <h4 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#0f172a', marginBottom: '8px' }}>
+              Select a Junction or Corridor
+            </h4>
+            <p style={{ fontSize: '0.84rem', color: '#475569', lineHeight: '1.5' }}>
+              Choose from GNT Circle, Nallagandla Junction, or urban crossroads using the top road
+              selector dropdown.
+            </p>
+          </div>
+
+          <div
+            className="glass-panel"
+            style={{
+              padding: '24px',
+              backgroundColor: '#ffffff',
+              border: '1px solid #e2e8f0',
+              boxShadow: 'var(--shadow-sm)',
+            }}
+          >
+            <div
+              style={{
+                width: '32px',
+                height: '32px',
+                borderRadius: '50%',
+                backgroundColor: '#ecfdf5',
+                color: '#059669',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontWeight: 800,
+                fontSize: '0.9rem',
+                marginBottom: '14px',
+              }}
+            >
+              2
+            </div>
+            <h4 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#0f172a', marginBottom: '8px' }}>
+              Press Start & Observe Flow
+            </h4>
+            <p style={{ fontSize: '0.84rem', color: '#475569', lineHeight: '1.5' }}>
+              Click START to begin. Pan, zoom, or click any vehicle to follow its trip and view live
+              speed and braking in real time.
+            </p>
+          </div>
+
+          <div
+            className="glass-panel"
+            style={{
+              padding: '24px',
+              backgroundColor: '#ffffff',
+              border: '1px solid #e2e8f0',
+              boxShadow: 'var(--shadow-sm)',
+            }}
+          >
+            <div
+              style={{
+                width: '32px',
+                height: '32px',
+                borderRadius: '50%',
+                backgroundColor: '#fffbeb',
+                color: '#d97706',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontWeight: 800,
+                fontSize: '0.9rem',
+                marginBottom: '14px',
+              }}
+            >
+              3
+            </div>
+            <h4 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#0f172a', marginBottom: '8px' }}>
+              Compare Plans & Metrics
+            </h4>
+            <p style={{ fontSize: '0.84rem', color: '#475569', lineHeight: '1.5' }}>
+              Toggle roundabout signals ON or OFF, inspect waiting vehicle counts, and view average
+              delay per arm directly on the dashboard.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* 6. CALL TO ACTION BANNER */}
       <section
         style={{
-          padding: '70px 24px',
+          padding: '48px 24px 64px',
           textAlign: 'center',
-          background: 'linear-gradient(180deg, rgba(7, 10, 18, 0) 0%, rgba(2, 132, 199, 0.15) 100%)',
+          backgroundColor: '#f8fafc',
+          borderTop: '1px solid #e2e8f0',
         }}
       >
         <div
           className="glass-panel"
           style={{
-            maxWidth: '800px',
+            maxWidth: '820px',
             margin: '0 auto',
-            padding: '40px 32px',
-            borderRadius: '20px',
-            border: '1px solid rgba(56, 189, 248, 0.3)',
-            boxShadow: '0 20px 50px rgba(0, 0, 0, 0.5), 0 0 30px rgba(56, 189, 248, 0.2)',
+            padding: '36px 32px',
+            borderRadius: '12px',
+            backgroundColor: '#ffffff',
+            border: '1px solid #e2e8f0',
+            boxShadow: 'var(--shadow-md)',
           }}
         >
-          <h2 style={{ fontSize: '1.8rem', fontWeight: 800, color: '#ffffff', marginBottom: '12px' }}>
-            Ready to Analyze Microscopic Traffic Flows?
+          <h2 style={{ fontSize: '1.75rem', fontWeight: 800, color: '#0f172a', marginBottom: '12px' }}>
+            Ready to Run a Traffic Simulation?
           </h2>
-          <p style={{ color: '#94a3b8', fontSize: '0.95rem', maxWidth: '560px', margin: '0 auto 28px' }}>
+          <p style={{ color: '#475569', fontSize: '0.94rem', maxWidth: '580px', margin: '0 auto 24px' }}>
             {isAuthenticated
-              ? `You are signed in as ${user?.name}. Jump straight into the simulation dashboard with full controls.`
-              : 'Sign in with your Google account to unlock full simulator access, vehicle spawner tools, and telemetry analytics.'}
+              ? `Signed in as ${user?.name}. Launch the studio now to test live traffic flows, queue dynamics, and signal plans.`
+              : 'Sign in to access the full simulation studio, vehicle follow camera, and live junction queue analytics.'}
           </p>
 
           <button
-            onClick={handleLaunchClick}
+            onClick={() => handleLaunchClick()}
+            className="btn-primary"
             style={{
-              background: 'linear-gradient(135deg, #0284c7 0%, #38bdf8 100%)',
-              color: '#ffffff',
-              border: 'none',
-              padding: '14px 36px',
-              borderRadius: '12px',
-              fontSize: '1.05rem',
+              padding: '12px 32px',
+              borderRadius: '8px',
+              fontSize: '0.98rem',
               fontWeight: 700,
-              cursor: 'pointer',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '10px',
-              boxShadow: '0 8px 24px rgba(2, 132, 199, 0.4)',
             }}
           >
             {isAuthenticated ? (
               <>
-                <Play size={18} fill="#ffffff" />
-                <span>Launch Simulator Workspace</span>
+                <Play size={16} fill="#ffffff" />
+                <span>Open Simulation Studio</span>
               </>
             ) : (
               <>
-                <Lock size={18} />
-                <span>Sign In with Google to Enter</span>
+                <Lock size={16} />
+                <span>Sign In to Launch Simulator</span>
               </>
             )}
-            <ChevronRight size={18} />
+            <ChevronRight size={16} />
           </button>
         </div>
       </section>
 
-      {/* 6. FOOTER */}
+      {/* 7. STRIPE-STYLE LIGHT FOOTER */}
       <footer
         style={{
           marginTop: 'auto',
-          padding: '24px 28px',
-          backgroundColor: '#04070e',
-          borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+          padding: '24px 36px',
+          backgroundColor: '#ffffff',
+          borderTop: '1px solid #e2e8f0',
           display: 'flex',
           flexWrap: 'wrap',
           alignItems: 'center',
@@ -620,19 +1096,21 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           color: '#64748b',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <span style={{ fontWeight: 700, color: '#f8fafc' }}>TRAFFIS</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <span style={{ fontWeight: 700, color: '#0f172a' }}>TRAFFIS</span>
           <span>•</span>
-          <span>Simulation platform built on Eclipse SUMO TraCI</span>
+          <span>Traffic Operations Platform for Indian Roads</span>
+          <span>•</span>
+          <span>Physics Engine: Eclipse SUMO</span>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '18px' }}>
           <button
             onClick={() => setIsAboutOpen(true)}
             style={{
               background: 'none',
               border: 'none',
-              color: '#38bdf8',
+              color: '#4a2c11',
               cursor: 'pointer',
               fontSize: '0.8rem',
               fontWeight: 600,
@@ -642,23 +1120,23 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             }}
           >
             <Info size={14} />
-            About & Contact Details
+            <span>About Traffis</span>
           </button>
 
           <a
             href="mailto:contact@traffis.in"
             style={{
-              color: '#94a3b8',
+              color: '#64748b',
               textDecoration: 'none',
               display: 'inline-flex',
               alignItems: 'center',
               gap: '4px',
             }}
-            onMouseEnter={(e) => (e.currentTarget.style.color = '#ffffff')}
-            onMouseLeave={(e) => (e.currentTarget.style.color = '#94a3b8')}
+            onMouseEnter={(e) => (e.currentTarget.style.color = '#0f172a')}
+            onMouseLeave={(e) => (e.currentTarget.style.color = '#64748b')}
           >
             <Mail size={14} />
-            contact@traffis.in
+            <span>contact@traffis.in</span>
           </a>
 
           <a
@@ -672,7 +1150,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               alignItems: 'center',
               gap: '4px',
             }}
-            onMouseEnter={(e) => (e.currentTarget.style.color = '#38bdf8')}
+            onMouseEnter={(e) => (e.currentTarget.style.color = '#4a2c11')}
             onMouseLeave={(e) => (e.currentTarget.style.color = '#64748b')}
           >
             <span>Eclipse SUMO</span>

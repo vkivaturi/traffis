@@ -15,7 +15,7 @@ export interface LabelHitRect {
 }
 
 const ASPHALT = '#1e2535';
-const SHOULDER = '#111827';
+const SHOULDER = '#cfc7ba';
 
 /** Offset a polyline sideways. d > 0 moves to the left of the travel direction. */
 export const offsetPolyline = (pts: Point[], d: number): Point[] => {

@@ -54,7 +54,7 @@ const renderStraightHighway = (
 
   // Embankment / Shoulders
   const shoulderH = 4 * zoom;
-  ctx.fillStyle = '#111827';
+  ctx.fillStyle = '#cfc7ba';
   ctx.fillRect(roadScreenX1 - 20 * zoom, roadScreenYTop - shoulderH, roadScreenWidth + 40 * zoom, shoulderH);
   ctx.fillRect(roadScreenX1 - 20 * zoom, roadScreenYBottom, roadScreenWidth + 40 * zoom, shoulderH);
 
@@ -141,7 +141,7 @@ const renderStraightHighway = (
     if (mx < -50 || mx > width + 50) continue;
 
     const isMajor = m % 100 === 0;
-    ctx.strokeStyle = isMajor ? 'rgba(56, 189, 248, 0.5)' : 'rgba(255, 255, 255, 0.2)';
+    ctx.strokeStyle = isMajor ? 'rgba(74, 44, 17, 0.45)' : 'rgba(120, 95, 65, 0.2)';
     ctx.lineWidth = isMajor ? 2 : 1;
 
     ctx.beginPath();
@@ -149,7 +149,7 @@ const renderStraightHighway = (
     ctx.lineTo(mx, roadScreenYBottom + 6);
     ctx.stroke();
 
-    ctx.fillStyle = isMajor ? '#38bdf8' : '#94a3b8';
+    ctx.fillStyle = isMajor ? '#4a2c11' : '#5c5243';
     ctx.font = `700 ${isMajor ? 11 : 9}px JetBrains Mono, monospace`;
     ctx.textAlign = 'center';
     ctx.fillText(`${m}m`, mx, roadScreenYBottom + 20);
@@ -332,7 +332,7 @@ const renderThreeWayIntersection = (
 
   // 1. Embankment Shoulders
   const shoulderPx = Math.max(3, 4 * zoom);
-  ctx.fillStyle = '#111827';
+  ctx.fillStyle = '#cfc7ba';
   ctx.fillRect(sxWestEnd, syRoadTop - shoulderPx, sxNorthLeft - sxWestEnd, shoulderPx);
   ctx.fillRect(sxNorthRight, syRoadTop - shoulderPx, sxEastEnd - sxNorthRight, shoulderPx);
   ctx.fillRect(sxWestEnd, syRoadBottom, sxEastEnd - sxWestEnd, shoulderPx);
@@ -715,7 +715,7 @@ const renderFourWayIntersection = (
 
   // 1. Embankment Shoulders
   const shoulderPx = Math.max(3, 4 * zoom);
-  ctx.fillStyle = '#111827';
+  ctx.fillStyle = '#cfc7ba';
   // Horizontal arms shoulders
   ctx.fillRect(sxWestEnd, syRoadTop - shoulderPx, sxNorthLeft - sxWestEnd, shoulderPx);
   ctx.fillRect(sxNorthRight, syRoadTop - shoulderPx, sxEastEnd - sxNorthRight, shoulderPx);
@@ -1176,12 +1176,10 @@ const drawMotorcycle = (ctx: CanvasRenderingContext2D, L: number, W: number, col
     ctx.beginPath();
     ctx.arc(L * 0.02, -W * 0.1, W * 0.12, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = '#fef08a';
-    ctx.fillRect(L * 0.46, -W * 0.08, Math.max(1, L * 0.04), W * 0.16);
   }
 };
 
-const drawAutoRickshaw = (ctx: CanvasRenderingContext2D, L: number, W: number, color: string, detailed: boolean) => {
+const drawAutoRickshaw = (ctx: CanvasRenderingContext2D, L: number, W: number, color: string, _detailed: boolean) => {
   // Body with rounded nose (single front wheel)
   ctx.fillStyle = color;
   ctx.beginPath();
@@ -1203,10 +1201,6 @@ const drawAutoRickshaw = (ctx: CanvasRenderingContext2D, L: number, W: number, c
   // Green trim stripe (classic Hyderabad auto)
   ctx.fillStyle = '#16a34a';
   ctx.fillRect(-L * 0.46, -W * 0.06, L * 0.66, W * 0.12);
-  if (detailed) {
-    ctx.fillStyle = '#fef08a';
-    ctx.fillRect(L / 2 - 2, -W * 0.08, 2, W * 0.16);
-  }
 };
 
 export const CanvasView: React.FC<CanvasViewProps> = ({
@@ -1378,12 +1372,12 @@ export const CanvasView: React.FC<CanvasViewProps> = ({
       const worldToScreenX = (wx: number) => cx + (wx - camX) * zoom;
       const worldToScreenY = (wy: number) => cy - (wy - camY) * zoom;
 
-      // 1. Draw Background (Dark Terrain / Grass with subtle grid)
-      ctx.fillStyle = '#080c14';
+      // 1. Draw Background (Warm brownish/sandy architectural terrain with subtle grid)
+      ctx.fillStyle = '#e8e0d2';
       ctx.fillRect(0, 0, width, height);
 
       // Terrain grid lines
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.02)';
+      ctx.strokeStyle = 'rgba(120, 95, 65, 0.07)';
       ctx.lineWidth = 1;
       const gridSpacingPx = 50 * zoom;
       if (gridSpacingPx > 10) {
@@ -1485,27 +1479,6 @@ export const CanvasView: React.FC<CanvasViewProps> = ({
           ctx.setLineDash([]);
         }
 
-        // Headlight glow
-        if (zoom > 2) {
-          const lightLen = Math.min(120, 20 * zoom);
-          const lightGrad = ctx.createRadialGradient(
-            vLenPx / 2, 0, 2,
-            vLenPx / 2 + lightLen * 0.7, 0, lightLen
-          );
-          lightGrad.addColorStop(0, 'rgba(254, 240, 138, 0.35)');
-          lightGrad.addColorStop(0.5, 'rgba(254, 240, 138, 0.1)');
-          lightGrad.addColorStop(1, 'rgba(254, 240, 138, 0)');
-
-          ctx.fillStyle = lightGrad;
-          ctx.beginPath();
-          ctx.moveTo(vLenPx / 2, -vWidPx * 0.4);
-          ctx.lineTo(vLenPx / 2 + lightLen, -vWidPx * 1.5);
-          ctx.lineTo(vLenPx / 2 + lightLen, vWidPx * 1.5);
-          ctx.lineTo(vLenPx / 2, vWidPx * 0.4);
-          ctx.closePath();
-          ctx.fill();
-        }
-
         // Drop shadow
         ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
         ctx.beginPath();
@@ -1552,11 +1525,6 @@ export const CanvasView: React.FC<CanvasViewProps> = ({
           ctx.beginPath();
           ctx.roundRect(-vLenPx * 0.38, -rwH / 2, rwW, rwH, 2);
           ctx.fill();
-
-          // Headlights
-          ctx.fillStyle = '#fef08a';
-          ctx.fillRect(vLenPx / 2 - 2, -vWidPx * 0.45, 2, vWidPx * 0.22);
-          ctx.fillRect(vLenPx / 2 - 2, vWidPx * 0.23, 2, vWidPx * 0.22);
 
           // Brake lights
           const isBraking = v.acceleration < -0.5;
@@ -1730,6 +1698,7 @@ export const CanvasView: React.FC<CanvasViewProps> = ({
         height: '100%',
         overflow: 'hidden',
         cursor: isDragging ? 'grabbing' : 'grab',
+        backgroundColor: '#e8e0d2',
       }}
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}

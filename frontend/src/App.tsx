@@ -9,7 +9,6 @@ import { VehicleInspector } from './components/VehicleInspector';
 import { LandingPage } from './components/LandingPage';
 import { AboutModal } from './components/AboutModal';
 import { JunctionMetricsPanel } from './components/JunctionMetricsPanel';
-import { ScenarioConfigPanel } from './components/ScenarioConfigPanel';
 import { SessionExpiredModal } from './components/SessionExpiredModal';
 import type { CameraState } from './types/simulation';
 import type { User } from './types/auth';
@@ -209,6 +208,14 @@ export const App: React.FC = () => {
           }}
           onSignInWithGoogle={signInWithGoogle}
           onSignOut={handleSignOut}
+          scenarios={scenarios}
+          activeScenarioId={currentScenarioId}
+          onSelectScenarioAndLaunch={(scenarioId: string) => {
+            handleSelectScenario(scenarioId);
+            if (isAuthenticated) {
+              setCurrentView('simulator');
+            }
+          }}
         />
         {sessionExpiredPrompt}
       </>
@@ -254,6 +261,7 @@ export const App: React.FC = () => {
           width: '100%',
           display: 'flex',
           overflow: 'hidden',
+          backgroundColor: '#e8e0d2',
         }}
       >
         <CanvasView
@@ -272,15 +280,6 @@ export const App: React.FC = () => {
           <JunctionMetricsPanel metrics={state.junction_metrics} />
         )}
 
-        {/* Scenario Configuration Panel (e.g. Roundabout Signals toggle) */}
-        {activeScenario?.options && activeScenario.options.length > 0 && (
-          <ScenarioConfigPanel
-            scenario={activeScenario}
-            trafficLight={state.traffic_light}
-            onUpdateOption={handleUpdateOption}
-          />
-        )}
-
         {/* Selected Vehicle Floating HUD */}
         {selectedVehicle && (
           <VehicleInspector
@@ -293,12 +292,11 @@ export const App: React.FC = () => {
               }));
             }}
             onClose={() => setSelectedVehicleId(null)}
-            style={activeScenario?.options?.length ? { right: '350px' } : undefined}
           />
         )}
       </div>
 
-      {/* 3. Transport Dock: Start / Pause / Stop (all parameters come from scenario.xml) */}
+      {/* 3. Transport Dock: Start / Pause / Stop + Scenario Config (all parameters come from scenario.xml) */}
       <Controls
         isRunning={state.is_running}
         onPlay={play}
@@ -308,6 +306,9 @@ export const App: React.FC = () => {
         simTime={state.sim_time}
         maxSimTime={state.max_sim_time ?? 300}
         timeLimitReached={state.time_limit_reached}
+        scenario={activeScenario}
+        trafficLight={state.traffic_light}
+        onUpdateOption={handleUpdateOption}
       />
 
       {/* 4. Open-Source Attribution Credits Footer */}
@@ -319,9 +320,9 @@ export const App: React.FC = () => {
           justifyContent: 'center',
           gap: '12px',
           padding: '4px 16px',
-          backgroundColor: 'rgba(8, 12, 20, 0.95)',
-          borderTop: '1px solid rgba(255, 255, 255, 0.06)',
-          fontSize: '0.7rem',
+          backgroundColor: '#ffffff',
+          borderTop: '1px solid #e2e8f0',
+          fontSize: '0.74rem',
           color: '#64748b',
           zIndex: 30,
           flexShrink: 0,
@@ -332,9 +333,10 @@ export const App: React.FC = () => {
           style={{
             background: 'none',
             border: 'none',
-            color: '#38bdf8',
+            color: '#4a2c11',
             cursor: 'pointer',
-            fontSize: '0.7rem',
+            fontSize: '0.74rem',
+            fontWeight: 500,
             display: 'inline-flex',
             alignItems: 'center',
             gap: '3px',
@@ -343,14 +345,14 @@ export const App: React.FC = () => {
           <Info size={11} />
           About Traffis
         </button>
-        <span style={{ color: '#334155' }}>•</span>
+        <span style={{ color: '#cbd5e1' }}>•</span>
         <span>Simulation engine powered by</span>
         <a
           href="https://eclipse.dev/sumo/"
           target="_blank"
           rel="noopener noreferrer"
           style={{
-            color: '#38bdf8',
+            color: '#4a2c11',
             textDecoration: 'none',
             fontWeight: 600,
             display: 'inline-flex',
