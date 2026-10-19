@@ -7,6 +7,72 @@
       "gnt_circle",
       "gnt_circle_with_traffic_lights",
       "nallagandla_junction"
+    ],
+    "metrics": [
+      {
+        "key": "avg_speed_kmh",
+        "label": "Avg Speed",
+        "unit": "km/h",
+        "description": "Mean vehicle traveling speed across the corridor junction network",
+        "higher_is_better": true,
+        "format": "decimal1"
+      },
+      {
+        "key": "pce_per_hour",
+        "label": "Throughput",
+        "unit": "PCE/h",
+        "description": "Corridor junction throughput capacity in Passenger Car Equivalents per hour",
+        "higher_is_better": true,
+        "format": "integer"
+      },
+      {
+        "key": "density_veh_km",
+        "label": "Traffic Density",
+        "unit": "veh/km",
+        "description": "Concentration of active vehicles per kilometer of carriageway",
+        "higher_is_better": false,
+        "format": "decimal1"
+      },
+      {
+        "key": "total_spawned",
+        "label": "Total Departed",
+        "unit": "veh",
+        "description": "Total vehicle departures injected into the network",
+        "higher_is_better": null,
+        "format": "integer"
+      },
+      {
+        "key": "total_arrived",
+        "label": "Total Arrived",
+        "unit": "veh",
+        "description": "Total vehicles successfully exiting to their destination",
+        "higher_is_better": true,
+        "format": "integer"
+      },
+      {
+        "key": "completion_rate",
+        "label": "Completion Rate",
+        "unit": "%",
+        "description": "Percentage of departed vehicles reaching their destination",
+        "higher_is_better": true,
+        "format": "percent"
+      },
+      {
+        "key": "avg_delay_s",
+        "label": "Avg Delay",
+        "unit": "s",
+        "description": "Average seconds lost per vehicle to queuing, signals, and yielding",
+        "higher_is_better": false,
+        "format": "decimal1"
+      },
+      {
+        "key": "avg_travel_time_s",
+        "label": "Avg Travel Time",
+        "unit": "s",
+        "description": "Average corridor traversal duration from origin to destination",
+        "higher_is_better": false,
+        "format": "decimal1"
+      }
     ]
   },
   {
@@ -17,6 +83,72 @@
       "straight_road",
       "three_way_intersection",
       "four_way_intersection"
+    ],
+    "metrics": [
+      {
+        "key": "avg_speed_kmh",
+        "label": "Avg Speed",
+        "unit": "km/h",
+        "description": "Mean vehicle traveling speed across the road network",
+        "higher_is_better": true,
+        "format": "decimal1"
+      },
+      {
+        "key": "pce_per_hour",
+        "label": "Throughput",
+        "unit": "PCE/h",
+        "description": "Hourly network capacity in Passenger Car Equivalents",
+        "higher_is_better": true,
+        "format": "integer"
+      },
+      {
+        "key": "density_veh_km",
+        "label": "Traffic Density",
+        "unit": "veh/km",
+        "description": "Concentration of active vehicles per kilometer of lane",
+        "higher_is_better": false,
+        "format": "decimal1"
+      },
+      {
+        "key": "total_spawned",
+        "label": "Total Departed",
+        "unit": "veh",
+        "description": "Total vehicle departures injected into the network",
+        "higher_is_better": null,
+        "format": "integer"
+      },
+      {
+        "key": "total_arrived",
+        "label": "Total Arrived",
+        "unit": "veh",
+        "description": "Total vehicles successfully exiting to their destination",
+        "higher_is_better": true,
+        "format": "integer"
+      },
+      {
+        "key": "completion_rate",
+        "label": "Completion Rate",
+        "unit": "%",
+        "description": "Percentage of departed vehicles reaching their destination",
+        "higher_is_better": true,
+        "format": "percent"
+      },
+      {
+        "key": "avg_delay_s",
+        "label": "Avg Delay",
+        "unit": "s",
+        "description": "Average seconds lost per vehicle to queuing, signals, and yielding",
+        "higher_is_better": false,
+        "format": "decimal1"
+      },
+      {
+        "key": "avg_travel_time_s",
+        "label": "Avg Travel Time",
+        "unit": "s",
+        "description": "Average corridor traversal duration from origin to destination",
+        "higher_is_better": false,
+        "format": "decimal1"
+      }
     ]
   }
 ]

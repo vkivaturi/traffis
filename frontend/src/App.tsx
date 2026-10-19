@@ -209,27 +209,8 @@ export const App: React.FC = () => {
 
   const sessionExpiredPrompt = authExpired ? <SessionExpiredModal onSignIn={handleReauthenticated} /> : null;
 
-  // 1. Compare Simulations View
-  if (currentView === 'compare') {
-    return (
-      <>
-        <CompareSimulationsPage
-          user={user}
-          isAuthenticated={isAuthenticated}
-          onNavigateHome={handleNavigateHome}
-          onLaunchSimulator={handleLaunchSimulatorFromCompare}
-          onSignInWithGoogle={signInWithGoogle}
-          onSignOut={handleSignOut}
-          scenarioGroups={scenarioGroups}
-          scenarios={scenarios}
-        />
-        {sessionExpiredPrompt}
-      </>
-    );
-  }
-
-  // 2. If user is on landing page or not authenticated, display Landing Page
-  if (currentView === 'landing' || !isAuthenticated) {
+  // 1. If user is on landing page or not authenticated, display Landing Page
+  if (!isAuthenticated || currentView === 'landing') {
     return (
       <>
         <LandingPage
@@ -251,6 +232,25 @@ export const App: React.FC = () => {
               setCurrentView('simulator');
             }
           }}
+        />
+        {sessionExpiredPrompt}
+      </>
+    );
+  }
+
+  // 2. Authenticated Compare Simulations View
+  if (currentView === 'compare') {
+    return (
+      <>
+        <CompareSimulationsPage
+          user={user}
+          isAuthenticated={isAuthenticated}
+          onNavigateHome={handleNavigateHome}
+          onLaunchSimulator={handleLaunchSimulatorFromCompare}
+          onSignInWithGoogle={signInWithGoogle}
+          onSignOut={handleSignOut}
+          scenarioGroups={scenarioGroups}
+          scenarios={scenarios}
         />
         {sessionExpiredPrompt}
       </>

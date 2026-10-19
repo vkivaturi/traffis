@@ -103,11 +103,20 @@ class ScenarioMetadata(BaseModel):
     group: Optional[str] = None
     group_id: Optional[str] = None
 
+class MetricDefinition(BaseModel):
+    key: str
+    label: str
+    unit: Optional[str] = ""
+    description: Optional[str] = ""
+    higher_is_better: Optional[bool] = None
+    format: Optional[str] = "decimal1"
+
 class ScenarioGroup(BaseModel):
     id: str
     name: str
     description: Optional[str] = None
     scenarios: List[ScenarioMetadata] = []
+    metrics: List[MetricDefinition] = []
 
 class RoadArmInfo(BaseModel):
     id: str

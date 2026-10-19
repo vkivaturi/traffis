@@ -48,6 +48,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   const [isAboutOpen, setIsAboutOpen] = useState(false);
   const [isGoogleModalOpen, setIsGoogleModalOpen] = useState(false);
   const [pendingScenarioId, setPendingScenarioId] = useState<string | null>(null);
+  const [pendingTarget, setPendingTarget] = useState<'simulator' | 'compare'>('simulator');
 
   const handleLaunchClick = (scenarioId?: string) => {
     if (isAuthenticated) {
@@ -57,6 +58,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         onLaunchSimulator();
       }
     } else {
+      setPendingTarget('simulator');
       if (scenarioId) {
         setPendingScenarioId(scenarioId);
       }
@@ -64,9 +66,27 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     }
   };
 
+  const handleCompareClick = () => {
+    if (isAuthenticated) {
+      if (onNavigateCompare) {
+        onNavigateCompare();
+      }
+    } else {
+      setPendingTarget('compare');
+      setIsGoogleModalOpen(true);
+    }
+  };
+
   const handleGoogleSuccess = (userData?: Partial<User>) => {
     onSignInWithGoogle(userData);
     setIsGoogleModalOpen(false);
+    if (pendingTarget === 'compare') {
+      setPendingTarget('simulator');
+      if (onNavigateCompare) {
+        onNavigateCompare();
+        return;
+      }
+    }
     if (pendingScenarioId && onSelectScenarioAndLaunch) {
       onSelectScenarioAndLaunch(pendingScenarioId);
       setPendingScenarioId(null);
@@ -307,7 +327,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
           {onNavigateCompare && (
             <button
-              onClick={onNavigateCompare}
+              onClick={handleCompareClick}
               className="btn-secondary"
               style={{
                 padding: '6px 14px',
@@ -320,8 +340,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 alignItems: 'center',
                 gap: '6px',
               }}
-              title="Compare multiple road scenarios side-by-side"
+              title={isAuthenticated ? 'Compare multiple road scenarios side-by-side' : 'Sign in with Google to compare scenarios'}
             >
+              {!isAuthenticated && <Lock size={12} color="#8a5323" />}
               <GitFork size={14} color="#4a2c11" />
               <span>Compare Simulations</span>
             </button>
@@ -548,7 +569,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
           {onNavigateCompare && (
             <button
-              onClick={onNavigateCompare}
+              onClick={handleCompareClick}
               style={{
                 padding: '12px 24px',
                 fontSize: '0.94rem',
@@ -572,7 +593,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 e.currentTarget.style.backgroundColor = '#f7f1ea';
                 e.currentTarget.style.borderColor = '#dfd2c4';
               }}
+              title={isAuthenticated ? 'Compare multiple road scenarios side-by-side' : 'Sign in with Google to compare scenarios'}
             >
+              {!isAuthenticated && <Lock size={15} color="#8a5323" />}
               <GitFork size={16} color="#4a2c11" />
               <span>Compare Simulations</span>
             </button>
@@ -728,7 +751,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
             {onNavigateCompare && (
               <button
-                onClick={onNavigateCompare}
+                onClick={handleCompareClick}
                 style={{
                   padding: '10px 20px',
                   backgroundColor: '#ffffff',
@@ -753,7 +776,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   e.currentTarget.style.borderColor = '#dfd2c4';
                   e.currentTarget.style.backgroundColor = '#ffffff';
                 }}
+                title={isAuthenticated ? 'Compare multiple road scenarios side-by-side' : 'Sign in with Google to compare scenarios'}
               >
+                {!isAuthenticated && <Lock size={14} color="#8a5323" />}
                 <GitFork size={16} color="#4a2c11" />
                 <span>Compare Scenarios Side-by-Side</span>
                 <ChevronRight size={15} color="#4a2c11" />

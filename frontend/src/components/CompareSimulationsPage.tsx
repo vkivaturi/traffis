@@ -14,9 +14,21 @@ import {
   ChevronRight,
   Check,
   Zap,
+  LogOut,
 } from 'lucide-react';
-import type { ScenarioGroup, ScenarioMetadata } from '../types/simulation';
+import type { ScenarioGroup, ScenarioMetadata, MetricDefinition } from '../types/simulation';
 import type { User } from '../types/auth';
+
+const DEFAULT_METRICS: MetricDefinition[] = [
+  { key: 'avg_speed_kmh', label: 'Avg Speed', unit: 'km/h', description: 'Mean traveling speed across the network', higher_is_better: true, format: 'decimal1' },
+  { key: 'pce_per_hour', label: 'Throughput', unit: 'PCE/h', description: 'Corridor junction throughput capacity in Passenger Car Equivalents per hour', higher_is_better: true, format: 'integer' },
+  { key: 'density_veh_km', label: 'Traffic Density', unit: 'veh/km', description: 'Concentration of active vehicles per kilometer of carriageway', higher_is_better: false, format: 'decimal1' },
+  { key: 'total_spawned', label: 'Total Departed', unit: 'veh', description: 'Total vehicle departures injected into the network', higher_is_better: null, format: 'integer' },
+  { key: 'total_arrived', label: 'Total Arrived', unit: 'veh', description: 'Total vehicles successfully exiting to their destination', higher_is_better: true, format: 'integer' },
+  { key: 'completion_rate', label: 'Completion Rate', unit: '%', description: 'Percentage of departed vehicles reaching their destination', higher_is_better: true, format: 'percent' },
+  { key: 'avg_delay_s', label: 'Avg Delay', unit: 's', description: 'Average seconds lost per vehicle to queuing, signals, and yielding', higher_is_better: false, format: 'decimal1' },
+  { key: 'avg_travel_time_s', label: 'Avg Travel Time', unit: 's', description: 'Average corridor traversal duration from origin to destination', higher_is_better: false, format: 'decimal1' },
+];
 
 export interface ComparisonResult {
   scenario_id: string;
@@ -54,6 +66,7 @@ export const CompareSimulationsPage: React.FC<CompareSimulationsPageProps> = ({
   user,
   onNavigateHome,
   onLaunchSimulator,
+  onSignOut,
   scenarioGroups = [],
   scenarios = [],
 }) => {
@@ -68,12 +81,14 @@ export const CompareSimulationsPage: React.FC<CompareSimulationsPageProps> = ({
         name: 'Nallagandla Tellapur Junction',
         description: 'Suburban arterial junctions connecting Nallagandla, Tellapur, and Lingampalli Flyover.',
         scenarios: scenarios.filter(s => ['gnt_circle', 'gnt_circle_with_traffic_lights', 'nallagandla_junction'].includes(s.id)),
+        metrics: DEFAULT_METRICS,
       },
       {
         id: 'other_scenarios',
         name: 'Other scenarios',
         description: 'General road networks and urban intersections.',
         scenarios: scenarios.filter(s => ['straight_road', 'three_way_intersection', 'four_way_intersection'].includes(s.id)),
+        metrics: DEFAULT_METRICS,
       },
     ];
   }, [scenarioGroups, scenarios]);
@@ -81,6 +96,11 @@ export const CompareSimulationsPage: React.FC<CompareSimulationsPageProps> = ({
   const groupScenarios = React.useMemo(() => {
     const currentGroup = groups.find(g => g.id === selectedGroupId) || groups[0];
     return currentGroup?.scenarios || [];
+  }, [groups, selectedGroupId]);
+
+  const groupMetrics = React.useMemo(() => {
+    const currentGroup = groups.find(g => g.id === selectedGroupId) || groups[0];
+    return (currentGroup?.metrics && currentGroup.metrics.length > 0) ? currentGroup.metrics : DEFAULT_METRICS;
   }, [groups, selectedGroupId]);
 
   // 2. Selected scenario IDs within current group
@@ -173,6 +193,9 @@ export const CompareSimulationsPage: React.FC<CompareSimulationsPageProps> = ({
         });
 
         if (!response.ok) {
+          if (response.status === 401) {
+            throw new Error('Google sign-in session expired or invalid. Please sign in again.');
+          }
           const errData = await response.json().catch(() => ({}));
           throw new Error(errData.detail || `Server returned error ${response.status}`);
         }
@@ -202,7 +225,47 @@ export const CompareSimulationsPage: React.FC<CompareSimulationsPageProps> = ({
     setCurrentRunningScenarioName('');
   };
 
-  // Export results as CSV
+  // Helper functions for standardized group metrics
+  const getMetricValue = (result: ComparisonResult, key: string): number | null => {
+    if (key in result.stats) {
+      const val = (result.stats as unknown as Record<string, number>)[key];
+      return val !== undefined && val !== null ? val : null;
+    }
+    if (key in result) {
+      const val = (result as unknown as Record<string, number | null>)[key];
+      return val !== undefined && val !== null ? val : null;
+    }
+    return null;
+  };
+
+  const formatMetricDisplay = (val: number | null, metric: MetricDefinition): string => {
+    if (val === null || val === undefined || isNaN(val)) return '—';
+    if (metric.format === 'integer') {
+      return `${Math.round(val).toLocaleString()}${metric.unit ? ` ${metric.unit}` : ''}`;
+    }
+    if (metric.format === 'percent') {
+      return `${val.toFixed(1)}%`;
+    }
+    return `${val.toFixed(1)}${metric.unit ? ` ${metric.unit}` : ''}`;
+  };
+
+  const getBestValueForMetric = (metric: MetricDefinition, resList: ComparisonResult[]): number | null => {
+    if (metric.higher_is_better === null || metric.higher_is_better === undefined || resList.length === 0) {
+      return null;
+    }
+    const validValues = resList
+      .map(r => getMetricValue(r, metric.key))
+      .filter((v): v is number => v !== null && !isNaN(v));
+    if (validValues.length === 0) return null;
+    return metric.higher_is_better ? Math.max(...validValues) : Math.min(...validValues);
+  };
+
+  const isBest = (val: number | null, bestVal: number | null): boolean => {
+    if (val === null || bestVal === null) return false;
+    return Math.abs(val - bestVal) < 0.001;
+  };
+
+  // Export results to CSV using standardized group metrics
   const handleExportCSV = () => {
     if (results.length === 0) return;
 
@@ -211,17 +274,7 @@ export const CompareSimulationsPage: React.FC<CompareSimulationsPageProps> = ({
       'Scenario Name',
       'Type',
       'Duration (s)',
-      'Avg Speed (km/h)',
-      'Throughput (PCE/h)',
-      'Traffic Density (veh/km)',
-      'Total Departed',
-      'Total Arrived',
-      'Completion Rate (%)',
-      'Avg Travel Time (s)',
-      'Avg Delay (s)',
-      'Ring Occupancy',
-      'U-Turn Throughput',
-      'Teleports / Conflicts',
+      ...groupMetrics.map(m => `"${m.label}${m.unit ? ` (${m.unit})` : ''}"`),
     ];
 
     const rows = results.map(r => [
@@ -229,17 +282,10 @@ export const CompareSimulationsPage: React.FC<CompareSimulationsPageProps> = ({
       `"${r.scenario_name}"`,
       `"${r.scenario_type}"`,
       r.duration,
-      r.stats.avg_speed_kmh,
-      r.stats.pce_per_hour,
-      r.stats.density_veh_km,
-      r.stats.total_spawned,
-      r.stats.total_arrived,
-      r.stats.completion_rate,
-      r.avg_travel_time_s ?? 'N/A',
-      r.avg_delay_s ?? 'N/A',
-      r.roundabout_occupancy ?? 'N/A',
-      r.uturn_count ?? 'N/A',
-      r.teleports,
+      ...groupMetrics.map(m => {
+        const val = getMetricValue(r, m.key);
+        return val !== null && val !== undefined ? val : '';
+      }),
     ]);
 
     const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
@@ -251,14 +297,6 @@ export const CompareSimulationsPage: React.FC<CompareSimulationsPageProps> = ({
     link.click();
     document.body.removeChild(link);
   };
-
-  // Find best values for highlights
-  const bestSpeed = results.length > 0 ? Math.max(...results.map(r => r.stats.avg_speed_kmh)) : null;
-  const bestPce = results.length > 0 ? Math.max(...results.map(r => r.stats.pce_per_hour)) : null;
-  const bestArrivals = results.length > 0 ? Math.max(...results.map(r => r.stats.total_arrived)) : null;
-  const bestDelay = results.length > 0
-    ? Math.min(...results.filter(r => r.avg_delay_s !== null && r.avg_delay_s !== undefined).map(r => r.avg_delay_s!))
-    : null;
 
   return (
     <div
@@ -383,6 +421,50 @@ export const CompareSimulationsPage: React.FC<CompareSimulationsPageProps> = ({
               <Play size={14} fill="#0f172a" />
               <span>Open Live Simulator</span>
             </button>
+
+            {/* Signed-in Google User badge */}
+            {user && (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  backgroundColor: '#f8fafc',
+                  padding: '4px 10px 4px 6px',
+                  borderRadius: '20px',
+                  border: '1px solid #e2e8f0',
+                }}
+              >
+                <img
+                  src={user.avatar}
+                  alt={user.name}
+                  style={{ width: '24px', height: '24px', borderRadius: '50%', objectFit: 'cover' }}
+                />
+                <span style={{ fontSize: '0.78rem', fontWeight: 600, color: '#0f172a', maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {user.name.split(' ')[0]}
+                </span>
+                {onSignOut && (
+                  <button
+                    onClick={onSignOut}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      padding: '2px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      color: '#94a3b8',
+                      transition: 'color 0.15s ease',
+                    }}
+                    title="Sign Out"
+                    onMouseEnter={(e) => (e.currentTarget.style.color = '#ef4444')}
+                    onMouseLeave={(e) => (e.currentTarget.style.color = '#94a3b8')}
+                  >
+                    <LogOut size={13} />
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </nav>
@@ -923,57 +1005,35 @@ export const CompareSimulationsPage: React.FC<CompareSimulationsPageProps> = ({
               </div>
             </div>
 
-            {/* KPI Summary Cards */}
+            {/* KPI Summary Cards for Standardized Group Metrics */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px', marginBottom: '22px' }}>
-              <div style={{ padding: '16px', borderRadius: '10px', backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0' }}>
-                <div style={{ fontSize: '0.68rem', fontWeight: 700, color: '#166534', textTransform: 'uppercase' }}>
-                  Highest Throughput (PCE/h)
-                </div>
-                <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#15803d', marginTop: '4px' }}>
-                  {bestPce?.toLocaleString() ?? '-'}
-                </div>
-                <div style={{ fontSize: '0.72rem', color: '#166534', marginTop: '2px' }}>
-                  {results.find(r => r.stats.pce_per_hour === bestPce)?.scenario_name}
-                </div>
-              </div>
+              {groupMetrics
+                .filter(m => m.higher_is_better !== null && m.higher_is_better !== undefined)
+                .slice(0, 4)
+                .map((m, idx) => {
+                  const bestVal = getBestValueForMetric(m, results);
+                  const topScenario = results.find(r => isBest(getMetricValue(r, m.key), bestVal));
+                  const colors = [
+                    { bg: '#f0fdf4', border: '#bbf7d0', title: '#166534', value: '#15803d' },
+                    { bg: '#eff6ff', border: '#bfdbfe', title: '#1e40af', value: '#1d4ed8' },
+                    { bg: '#faf5ef', border: '#e8ddd0', title: '#5c3a21', value: '#4a2c11' },
+                    { bg: '#fffbeb', border: '#fde68a', title: '#92400e', value: '#b45309' },
+                  ][idx % 4];
 
-              <div style={{ padding: '16px', borderRadius: '10px', backgroundColor: '#eff6ff', border: '1px solid #bfdbfe' }}>
-                <div style={{ fontSize: '0.68rem', fontWeight: 700, color: '#1e40af', textTransform: 'uppercase' }}>
-                  Highest Average Speed
-                </div>
-                <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#1d4ed8', marginTop: '4px' }}>
-                  {bestSpeed} <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>km/h</span>
-                </div>
-                <div style={{ fontSize: '0.72rem', color: '#1e40af', marginTop: '2px' }}>
-                  {results.find(r => r.stats.avg_speed_kmh === bestSpeed)?.scenario_name}
-                </div>
-              </div>
-
-              <div style={{ padding: '16px', borderRadius: '10px', backgroundColor: '#faf5ef', border: '1px solid #e8ddd0' }}>
-                <div style={{ fontSize: '0.68rem', fontWeight: 700, color: '#5c3a21', textTransform: 'uppercase' }}>
-                  Most Vehicles Completed
-                </div>
-                <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#4a2c11', marginTop: '4px' }}>
-                  {bestArrivals} <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>vehs</span>
-                </div>
-                <div style={{ fontSize: '0.72rem', color: '#5c3a21', marginTop: '2px' }}>
-                  {results.find(r => r.stats.total_arrived === bestArrivals)?.scenario_name}
-                </div>
-              </div>
-
-              {bestDelay !== null && (
-                <div style={{ padding: '16px', borderRadius: '10px', backgroundColor: '#fffbeb', border: '1px solid #fde68a' }}>
-                  <div style={{ fontSize: '0.68rem', fontWeight: 700, color: '#92400e', textTransform: 'uppercase' }}>
-                    Lowest Delay per Vehicle
-                  </div>
-                  <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#b45309', marginTop: '4px' }}>
-                    {bestDelay} <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>sec</span>
-                  </div>
-                  <div style={{ fontSize: '0.72rem', color: '#92400e', marginTop: '2px' }}>
-                    {results.find(r => r.avg_delay_s === bestDelay)?.scenario_name}
-                  </div>
-                </div>
-              )}
+                  return (
+                    <div key={m.key} style={{ padding: '16px', borderRadius: '10px', backgroundColor: colors.bg, border: `1px solid ${colors.border}` }}>
+                      <div style={{ fontSize: '0.68rem', fontWeight: 700, color: colors.title, textTransform: 'uppercase' }}>
+                        {m.higher_is_better ? `Highest ${m.label}` : `Lowest ${m.label}`} {m.unit ? `(${m.unit})` : ''}
+                      </div>
+                      <div style={{ fontSize: '1.4rem', fontWeight: 800, color: colors.value, marginTop: '4px' }}>
+                        {bestVal !== null ? formatMetricDisplay(bestVal, m) : '—'}
+                      </div>
+                      <div style={{ fontSize: '0.72rem', color: colors.title, marginTop: '2px', fontWeight: 600 }}>
+                        {topScenario?.scenario_name || '—'}
+                      </div>
+                    </div>
+                  );
+                })}
             </div>
 
             {/* Results Table */}
@@ -999,43 +1059,22 @@ export const CompareSimulationsPage: React.FC<CompareSimulationsPageProps> = ({
                     <th style={{ padding: '14px 18px', fontWeight: 800, color: '#0f172a', minWidth: '220px' }}>
                       Scenario (1st Column)
                     </th>
-                    <th style={{ padding: '14px 14px', fontWeight: 700, color: '#334155', minWidth: '130px' }}>
-                      Avg Speed
-                    </th>
-                    <th style={{ padding: '14px 14px', fontWeight: 700, color: '#334155', minWidth: '130px' }}>
-                      Throughput
-                    </th>
-                    <th style={{ padding: '14px 14px', fontWeight: 700, color: '#334155', minWidth: '120px' }}>
-                      Density
-                    </th>
-                    <th style={{ padding: '14px 14px', fontWeight: 700, color: '#334155', minWidth: '110px' }}>
-                      Departed
-                    </th>
-                    <th style={{ padding: '14px 14px', fontWeight: 700, color: '#334155', minWidth: '110px' }}>
-                      Arrived
-                    </th>
-                    <th style={{ padding: '14px 14px', fontWeight: 700, color: '#334155', minWidth: '110px' }}>
-                      Completion
-                    </th>
-                    <th style={{ padding: '14px 14px', fontWeight: 700, color: '#334155', minWidth: '110px' }}>
-                      Avg Delay
-                    </th>
-                    {results.some(r => r.roundabout_occupancy !== null) && (
-                      <th style={{ padding: '14px 14px', fontWeight: 700, color: '#334155', minWidth: '120px' }}>
-                        Ring Occupancy
+                    {groupMetrics.map((m) => (
+                      <th
+                        key={m.key}
+                        style={{ padding: '14px 14px', fontWeight: 700, color: '#334155', minWidth: '120px' }}
+                        title={m.description || m.label}
+                      >
+                        {m.label} {m.unit ? `(${m.unit})` : ''}
                       </th>
-                    )}
-                    <th style={{ padding: '14px 18px', fontWeight: 700, color: '#334155', minWidth: '140px', textAlign: 'right' }}>
+                    ))}
+                    <th style={{ padding: '14px 18px', fontWeight: 700, color: '#334155', minWidth: '130px', textAlign: 'right' }}>
                       Action
                     </th>
                   </tr>
                 </thead>
                 <tbody>
                   {results.map((r, idx) => {
-                    const isTopSpeed = r.stats.avg_speed_kmh === bestSpeed;
-                    const isTopPce = r.stats.pce_per_hour === bestPce;
-                    const isLowestDelay = bestDelay !== null && r.avg_delay_s === bestDelay;
-
                     return (
                       <tr
                         key={r.scenario_id}
@@ -1053,7 +1092,7 @@ export const CompareSimulationsPage: React.FC<CompareSimulationsPageProps> = ({
                                 width: '8px',
                                 height: '8px',
                                 borderRadius: '50%',
-                                backgroundColor: isTopPce ? '#10b981' : '#3b82f6',
+                                backgroundColor: idx === 0 ? '#10b981' : '#3b82f6',
                               }}
                             />
                             <div>
@@ -1067,87 +1106,35 @@ export const CompareSimulationsPage: React.FC<CompareSimulationsPageProps> = ({
                           </div>
                         </td>
 
-                        {/* Avg Speed */}
-                        <td style={{ padding: '16px 14px', fontFamily: 'var(--font-mono)' }}>
-                          <span style={{ fontWeight: 700, color: isTopSpeed ? '#15803d' : '#0f172a' }}>
-                            {r.stats.avg_speed_kmh} km/h
-                          </span>
-                          {isTopSpeed && (
-                            <span
-                              style={{
-                                marginLeft: '6px',
-                                padding: '1px 5px',
-                                borderRadius: '4px',
-                                fontSize: '0.6rem',
-                                fontWeight: 700,
-                                backgroundColor: '#dcfce7',
-                                color: '#15803d',
-                              }}
-                            >
-                              FASTEST
-                            </span>
-                          )}
-                        </td>
+                        {/* Standardized Common Group Metrics */}
+                        {groupMetrics.map((m) => {
+                          const val = getMetricValue(r, m.key);
+                          const bestVal = getBestValueForMetric(m, results);
+                          const isTop = isBest(val, bestVal);
 
-                        {/* Throughput */}
-                        <td style={{ padding: '16px 14px', fontFamily: 'var(--font-mono)' }}>
-                          <span style={{ fontWeight: 700, color: isTopPce ? '#15803d' : '#0f172a' }}>
-                            {r.stats.pce_per_hour.toLocaleString()} PCE/h
-                          </span>
-                          {isTopPce && (
-                            <span
-                              style={{
-                                marginLeft: '6px',
-                                padding: '1px 5px',
-                                borderRadius: '4px',
-                                fontSize: '0.6rem',
-                                fontWeight: 700,
-                                backgroundColor: '#dcfce7',
-                                color: '#15803d',
-                              }}
-                            >
-                              BEST FLOW
-                            </span>
-                          )}
-                        </td>
-
-                        {/* Density */}
-                        <td style={{ padding: '16px 14px', fontFamily: 'var(--font-mono)', color: '#475569' }}>
-                          {r.stats.density_veh_km} veh/km
-                        </td>
-
-                        {/* Total Departed */}
-                        <td style={{ padding: '16px 14px', fontFamily: 'var(--font-mono)', color: '#334155' }}>
-                          {r.stats.total_spawned}
-                        </td>
-
-                        {/* Total Arrived */}
-                        <td style={{ padding: '16px 14px', fontFamily: 'var(--font-mono)', fontWeight: 600, color: '#0f172a' }}>
-                          {r.stats.total_arrived}
-                        </td>
-
-                        {/* Completion Rate */}
-                        <td style={{ padding: '16px 14px', fontFamily: 'var(--font-mono)', color: '#334155' }}>
-                          {r.stats.completion_rate}%
-                        </td>
-
-                        {/* Avg Delay */}
-                        <td style={{ padding: '16px 14px', fontFamily: 'var(--font-mono)' }}>
-                          {r.avg_delay_s !== null ? (
-                            <span style={{ fontWeight: isLowestDelay ? 700 : 500, color: isLowestDelay ? '#15803d' : '#475569' }}>
-                              {r.avg_delay_s} s
-                            </span>
-                          ) : (
-                            <span style={{ color: '#94a3b8' }}>-</span>
-                          )}
-                        </td>
-
-                        {/* Roundabout Occupancy (if applicable) */}
-                        {results.some(res => res.roundabout_occupancy !== null) && (
-                          <td style={{ padding: '16px 14px', fontFamily: 'var(--font-mono)', color: '#475569' }}>
-                            {r.roundabout_occupancy !== null ? `${r.roundabout_occupancy} vehs` : '-'}
-                          </td>
-                        )}
+                          return (
+                            <td key={m.key} style={{ padding: '16px 14px', fontFamily: 'var(--font-mono)' }}>
+                              <span style={{ fontWeight: isTop ? 700 : 500, color: isTop ? '#15803d' : '#0f172a' }}>
+                                {formatMetricDisplay(val, m)}
+                              </span>
+                              {isTop && (
+                                <span
+                                  style={{
+                                    marginLeft: '6px',
+                                    padding: '1px 5px',
+                                    borderRadius: '4px',
+                                    fontSize: '0.6rem',
+                                    fontWeight: 700,
+                                    backgroundColor: '#dcfce7',
+                                    color: '#15803d',
+                                  }}
+                                >
+                                  BEST
+                                </span>
+                              )}
+                            </td>
+                          );
+                        })}
 
                         {/* Action: Open in Simulator */}
                         <td style={{ padding: '16px 18px', textAlign: 'right' }}>

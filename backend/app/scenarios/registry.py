@@ -65,6 +65,7 @@ class ScenarioRegistry:
             group_id = grp.get("id", "group")
             group_name = grp.get("name", "Group")
             group_desc = grp.get("description")
+            metrics = grp.get("metrics") or []
             scenario_ids = grp.get("scenarios") or grp.get("scenario_ids") or []
 
             scenarios_in_grp: List[ScenarioMetadata] = []
@@ -82,6 +83,7 @@ class ScenarioRegistry:
                     name=group_name,
                     description=group_desc,
                     scenarios=scenarios_in_grp,
+                    metrics=metrics,
                 )
             )
 

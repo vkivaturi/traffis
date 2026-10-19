@@ -120,11 +120,21 @@ export interface ScenarioMetadata {
   group_id?: string;
 }
 
+export interface MetricDefinition {
+  key: string;
+  label: string;
+  unit?: string;
+  description?: string;
+  higher_is_better?: boolean | null;
+  format?: 'decimal1' | 'integer' | 'percent' | string;
+}
+
 export interface ScenarioGroup {
   id: string;
   name: string;
   description?: string;
   scenarios: ScenarioMetadata[];
+  metrics?: MetricDefinition[];
 }
 
 export interface RoadArmInfo {

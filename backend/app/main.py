@@ -178,15 +178,13 @@ class CompareRunRequest(BaseModel):
     duration: float = 60.0
 
 @app.post("/api/simulation/compare-run")
-async def compare_run_endpoint(req: CompareRunRequest, request: Request):
-    """Execute scenario in fast batch mode and return final performance metrics for comparison."""
-    auth_header = request.headers.get("Authorization")
-    if auth_header:
-        try:
-            token = auth_header.replace("Bearer ", "").strip()
-            verify_token(token)
-        except Exception as e:
-            logger.debug("Token check note: %s", e)
+async def compare_run_endpoint(
+    req: CompareRunRequest,
+    current_user: dict = Depends(get_current_user)
+):
+    """Execute scenario in fast batch mode and return final performance metrics for comparison.
+    Enforces Google authentication.
+    """
     try:
         result = await sim_manager.run_benchmark(req.scenario_id, req.duration)
         return {"status": "ok", "result": result}
