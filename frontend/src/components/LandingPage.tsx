@@ -19,6 +19,7 @@ import {
   ArrowRight,
   TrendingDown,
   Compass,
+  TrafficCone,
 } from 'lucide-react';
 import type { User } from '../types/auth';
 import type { ScenarioMetadata } from '../types/simulation';
@@ -79,7 +80,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       id: 'gnt_circle',
       title: 'GNT Circle Roundabout & Bypass',
       location: 'Nallagandla ⇄ Tellapur ⇄ Lingampalli Flyover',
-      badge: 'Roundabout & Bypass',
+      badge: 'Unsignalised Roundabout',
       badgeColor: '#059669',
       badgeBg: '#ecfdf5',
       badgeBorder: '#a7f3d0',
@@ -87,11 +88,30 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       description:
         'Major suburban traffic hub featuring a clockwise roundabout, a dedicated Tellapur free-left bypass slip, and a bottom-road median U-turn connector.',
       operationalQuestions: [
-        'Compare unsignalised merging vs. traffic light control at the circle',
+        'Analyze unsignalised merging conflicts and gap acceptance at the circle',
         'Measure how many vehicles bypass the circle via the Tellapur free-left',
         'Verify if the median U-turn prevents ring gridlock during peak hours',
       ],
       metricsTracked: 'Ring occupancy, arm queue length, U-turn throughput',
+      type: 'roundabout',
+    },
+    {
+      id: 'gnt_circle_with_traffic_lights',
+      title: 'GNT Circle With Traffic Lights',
+      location: 'Nallagandla ⇄ Tellapur ⇄ Lingampalli Flyover',
+      badge: 'Signalised Roundabout',
+      badgeColor: '#2563eb',
+      badgeBg: '#eff6ff',
+      badgeBorder: '#bfdbfe',
+      icon: <TrafficCone size={18} color="#2563eb" />,
+      description:
+        'Clockwise roundabout regulated by traffic signals on the Nallagandla entry and Flyover ring continuation, paired with continuous free-left slips and median U-turn.',
+      operationalQuestions: [
+        'Test signal coordination between Nallagandla entry and Flyover ring traffic',
+        'Evaluate how signals prevent circular ring lockups during extreme demand',
+        'Measure throughput and delay comparison vs. the unsignalised roundabout baseline',
+      ],
+      metricsTracked: 'Signal phase splits, ring queue clearance, PCE throughput',
       type: 'roundabout',
     },
     {
@@ -500,7 +520,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               borderRadius: '8px',
             }}
           >
-            <span>Explore 5 Road Scenarios</span>
+            <span>Explore 6 Road Scenarios</span>
             <ChevronRight size={15} color="#64748b" />
           </a>
         </div>
@@ -720,37 +740,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   <p style={{ fontSize: '0.86rem', color: '#475569', lineHeight: '1.55', marginBottom: '18px' }}>
                     {sc.description}
                   </p>
-
-                  {/* Practical Municipal Questions Answered */}
-                  <div
-                    style={{
-                      padding: '14px',
-                      borderRadius: '8px',
-                      backgroundColor: '#f8fafc',
-                      border: '1px solid #e2e8f0',
-                      marginBottom: '20px',
-                    }}
-                  >
-                    <div style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', color: '#64748b', marginBottom: '8px' }}>
-                      What You Can Test:
-                    </div>
-                    <ul style={{ paddingLeft: '16px', margin: 0, fontSize: '0.8rem', color: '#334155', lineHeight: '1.6' }}>
-                      {sc.operationalQuestions.map((q, idx) => (
-                        <li key={idx} style={{ marginBottom: '4px' }}>
-                          {q}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
                 </div>
 
-                {/* Card Footer: Metrics & Launch Button */}
+                {/* Card Footer: Launch Button */}
                 <div>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px', fontSize: '0.74rem', color: '#64748b' }}>
-                    <span>Monitors:</span>
-                    <span style={{ color: '#0f172a', fontWeight: 600 }}>{sc.metricsTracked}</span>
-                  </div>
-
                   <button
                     onClick={() => handleLaunchClick(sc.id)}
                     className="btn-primary"
@@ -768,139 +761,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 </div>
               </div>
             ))}
-          </div>
-        </div>
-      </section>
-
-      {/* 4. CIVIC & OPERATIONAL USE CASES SECTION */}
-      <section
-        id="use-cases-section"
-        style={{
-          padding: '72px 28px 80px',
-          backgroundColor: '#ffffff',
-          borderBottom: '1px solid #e2e8f0',
-        }}
-      >
-        <div style={{ maxWidth: '1240px', margin: '0 auto' }}>
-          <div style={{ textAlign: 'center', marginBottom: '48px' }}>
-            <span
-              style={{
-                fontSize: '0.74rem',
-                fontWeight: 700,
-                textTransform: 'uppercase',
-                color: '#4a2c11',
-                letterSpacing: '0.06em',
-              }}
-            >
-              Practical Applications
-            </span>
-            <h2 style={{ fontSize: '2rem', fontWeight: 800, color: '#0f172a', marginTop: '6px', marginBottom: '10px' }}>
-              How Municipal Teams & Traffic Police Use Traffis
-            </h2>
-            <p style={{ color: '#475569', fontSize: '0.96rem', maxWidth: '680px', margin: '0 auto' }}>
-              Designed to solve everyday challenges faced by traffic control rooms, municipal road
-              authorities, and field officers on duty.
-            </p>
-          </div>
-
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
-              gap: '24px',
-            }}
-          >
-            {/* Card 1: Traffic Police */}
-            <div className="glass-panel" style={{ padding: '28px', backgroundColor: '#ffffff', borderColor: '#e2e8f0', boxShadow: 'var(--shadow-sm)' }}>
-              <div
-                style={{
-                  width: '42px',
-                  height: '42px',
-                  borderRadius: '10px',
-                  backgroundColor: '#f7f1ea',
-                  border: '1px solid #dfd2c4',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  marginBottom: '16px',
-                }}
-              >
-                <ShieldCheck size={22} color="#4a2c11" />
-              </div>
-              <h3 style={{ fontSize: '1.15rem', fontWeight: 700, color: '#0f172a', marginBottom: '10px' }}>
-                Traffic Police & Field Control
-              </h3>
-              <p style={{ fontSize: '0.86rem', color: '#475569', lineHeight: '1.55', marginBottom: '16px' }}>
-                Prevent gridlock during peak commute hours by understanding where queues spill back
-                across key junctions.
-              </p>
-              <ul style={{ paddingLeft: '18px', margin: 0, fontSize: '0.84rem', color: '#334155', lineHeight: '1.7' }}>
-                <li>Identify queue bottlenecks before stationing personnel on the street</li>
-                <li>Evaluate whether manual signal overrides improve or worsen junction delays</li>
-                <li>Simulate diversion routes and median U-turn flows during peak rush</li>
-              </ul>
-            </div>
-
-            {/* Card 2: Municipal Road Engineers */}
-            <div className="glass-panel" style={{ padding: '28px', backgroundColor: '#ffffff', borderColor: '#e2e8f0', boxShadow: 'var(--shadow-sm)' }}>
-              <div
-                style={{
-                  width: '42px',
-                  height: '42px',
-                  borderRadius: '10px',
-                  backgroundColor: '#ecfdf5',
-                  border: '1px solid #a7f3d0',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  marginBottom: '16px',
-                }}
-              >
-                <Building2 size={22} color="#059669" />
-              </div>
-              <h3 style={{ fontSize: '1.15rem', fontWeight: 700, color: '#0f172a', marginBottom: '10px' }}>
-                Municipal Road Engineers
-              </h3>
-              <p style={{ fontSize: '0.86rem', color: '#475569', lineHeight: '1.55', marginBottom: '16px' }}>
-                Justify infrastructure budgets with simulation data before constructing roundabouts
-                or widening roads.
-              </p>
-              <ul style={{ paddingLeft: '18px', margin: 0, fontSize: '0.84rem', color: '#334155', lineHeight: '1.7' }}>
-                <li>Decide between building a roundabout vs. installing traffic signals</li>
-                <li>Measure how many vehicles utilize dedicated free-left slip lanes</li>
-                <li>Calculate corridor capacity in Passenger Car Equivalent (PCE/hour)</li>
-              </ul>
-            </div>
-
-            {/* Card 3: Urban Road Safety & Planning */}
-            <div className="glass-panel" style={{ padding: '28px', backgroundColor: '#ffffff', borderColor: '#e2e8f0', boxShadow: 'var(--shadow-sm)' }}>
-              <div
-                style={{
-                  width: '42px',
-                  height: '42px',
-                  borderRadius: '10px',
-                  backgroundColor: '#fffbeb',
-                  border: '1px solid #fde68a',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  marginBottom: '16px',
-                }}
-              >
-                <TrendingDown size={22} color="#d97706" />
-              </div>
-              <h3 style={{ fontSize: '1.15rem', fontWeight: 700, color: '#0f172a', marginBottom: '10px' }}>
-                Road Safety & Efficiency
-              </h3>
-              <p style={{ fontSize: '0.86rem', color: '#475569', lineHeight: '1.55', marginBottom: '16px' }}>
-                Minimize vehicle conflicts, reduce idling emissions, and enhance intersection safety.
-              </p>
-              <ul style={{ paddingLeft: '18px', margin: 0, fontSize: '0.84rem', color: '#334155', lineHeight: '1.7' }}>
-                <li>Tune yellow clearance intervals to eliminate red-light trapped vehicles</li>
-                <li>Assess mixed traffic behavior between passenger cars and delivery vans</li>
-                <li>Reduce stop-and-go delays to save commuter travel time and fuel</li>
-              </ul>
-            </div>
           </div>
         </div>
       </section>
@@ -1033,51 +893,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           borderTop: '1px solid #e2e8f0',
         }}
       >
-        <div
-          className="glass-panel"
-          style={{
-            maxWidth: '820px',
-            margin: '0 auto',
-            padding: '36px 32px',
-            borderRadius: '12px',
-            backgroundColor: '#ffffff',
-            border: '1px solid #e2e8f0',
-            boxShadow: 'var(--shadow-md)',
-          }}
-        >
-          <h2 style={{ fontSize: '1.75rem', fontWeight: 800, color: '#0f172a', marginBottom: '12px' }}>
-            Ready to Run a Traffic Simulation?
-          </h2>
-          <p style={{ color: '#475569', fontSize: '0.94rem', maxWidth: '580px', margin: '0 auto 24px' }}>
-            {isAuthenticated
-              ? `Signed in as ${user?.name}. Launch the studio now to test live traffic flows, queue dynamics, and signal plans.`
-              : 'Sign in to access the full simulation studio, vehicle follow camera, and live junction queue analytics.'}
-          </p>
-
-          <button
-            onClick={() => handleLaunchClick()}
-            className="btn-primary"
-            style={{
-              padding: '12px 32px',
-              borderRadius: '8px',
-              fontSize: '0.98rem',
-              fontWeight: 700,
-            }}
-          >
-            {isAuthenticated ? (
-              <>
-                <Play size={16} fill="#ffffff" />
-                <span>Open Simulation Studio</span>
-              </>
-            ) : (
-              <>
-                <Lock size={16} />
-                <span>Sign In to Launch Simulator</span>
-              </>
-            )}
-            <ChevronRight size={16} />
-          </button>
-        </div>
       </section>
 
       {/* 7. STRIPE-STYLE LIGHT FOOTER */}
