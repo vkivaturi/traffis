@@ -7,6 +7,7 @@ import { CanvasView } from './components/CanvasView';
 import { Controls } from './components/Controls';
 import { VehicleInspector } from './components/VehicleInspector';
 import { LandingPage } from './components/LandingPage';
+import { CompareSimulationsPage } from './components/CompareSimulationsPage';
 import { AboutModal } from './components/AboutModal';
 import { JunctionMetricsPanel } from './components/JunctionMetricsPanel';
 import { SessionExpiredModal } from './components/SessionExpiredModal';
@@ -22,12 +23,9 @@ export const App: React.FC = () => {
     signOut,
   } = useAuth();
 
-  // View state: 'landing' | 'simulator'
-  // Only authenticated users can access 'simulator'
-  const [currentView, setCurrentView] = useState<'landing' | 'simulator'>('landing');
+  // View state: 'landing' | 'simulator' | 'compare'
+  const [currentView, setCurrentView] = useState<'landing' | 'simulator' | 'compare'>('landing');
   const [isAboutOpen, setIsAboutOpen] = useState(false);
-
-  const activeView = isAuthenticated ? currentView : 'landing';
 
   const {
     state,
@@ -79,13 +77,13 @@ export const App: React.FC = () => {
   // Sound effect when traffic signal changes
   const prevSignalStateRef = useRef<string | undefined>(undefined);
   useEffect(() => {
-    if (state.traffic_light && soundEnabled && activeView === 'simulator') {
+    if (state.traffic_light && soundEnabled && isAuthenticated && currentView === 'simulator') {
       if (prevSignalStateRef.current && prevSignalStateRef.current !== state.traffic_light.state) {
         soundSystem.playSignalChangeSound(state.traffic_light.state);
       }
       prevSignalStateRef.current = state.traffic_light.state;
     }
-  }, [state.traffic_light, soundEnabled, activeView]);
+  }, [state.traffic_light, soundEnabled, isAuthenticated, currentView]);
 
   const handleToggleSound = () => {
     const nextVal = !soundEnabled;
@@ -141,12 +139,12 @@ export const App: React.FC = () => {
 
   const selectedVehicle = state.vehicles.find((v) => v.id === selectedVehicleId) || null;
 
-  // Pause/stop ongoing simulation whenever user navigates back to landing page
+  // Pause/stop ongoing simulation whenever user navigates back to landing or compare page
   useEffect(() => {
-    if (activeView === 'landing' && state.is_running) {
+    if (currentView !== 'simulator' && state.is_running) {
       pause();
     }
-  }, [activeView, state.is_running, pause]);
+  }, [currentView, state.is_running, pause]);
 
   const handleNavigateHome = useCallback(() => {
     if (state.is_running) {
@@ -164,7 +162,7 @@ export const App: React.FC = () => {
 
   // Keyboard Shortcuts (only active in simulator view)
   useEffect(() => {
-    if (activeView !== 'simulator') return;
+    if (!isAuthenticated || currentView !== 'simulator') return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (['INPUT', 'SELECT', 'TEXTAREA'].includes((e.target as HTMLElement).tagName)) {
@@ -185,7 +183,7 @@ export const App: React.FC = () => {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [activeView, state.is_running, state.sim_time, state.max_sim_time, state.time_limit_reached, pause, play, handleReset]);
+  }, [isAuthenticated, currentView, state.is_running, state.sim_time, state.max_sim_time, state.time_limit_reached, pause, play, handleReset]);
 
   // After the user signs in again, return to the landing page (per requirement)
   const handleReauthenticated = (userData?: Partial<User>) => {
@@ -193,10 +191,45 @@ export const App: React.FC = () => {
     setCurrentView('landing');
   };
 
+  const handleNavigateCompare = () => {
+    setCurrentView('compare');
+  };
+
+  const handleLaunchSimulatorFromCompare = (scenarioId?: string) => {
+    if (scenarioId) {
+      handleSelectScenario(scenarioId);
+    }
+    if (isAuthenticated) {
+      setCurrentView('simulator');
+    } else {
+      signInWithGoogle();
+      setCurrentView('simulator');
+    }
+  };
+
   const sessionExpiredPrompt = authExpired ? <SessionExpiredModal onSignIn={handleReauthenticated} /> : null;
 
-  // If user is on landing page or not authenticated, display Landing Page
-  if (activeView === 'landing') {
+  // 1. Compare Simulations View
+  if (currentView === 'compare') {
+    return (
+      <>
+        <CompareSimulationsPage
+          user={user}
+          isAuthenticated={isAuthenticated}
+          onNavigateHome={handleNavigateHome}
+          onLaunchSimulator={handleLaunchSimulatorFromCompare}
+          onSignInWithGoogle={signInWithGoogle}
+          onSignOut={handleSignOut}
+          scenarioGroups={scenarioGroups}
+          scenarios={scenarios}
+        />
+        {sessionExpiredPrompt}
+      </>
+    );
+  }
+
+  // 2. If user is on landing page or not authenticated, display Landing Page
+  if (currentView === 'landing' || !isAuthenticated) {
     return (
       <>
         <LandingPage
@@ -211,6 +244,7 @@ export const App: React.FC = () => {
           onSignOut={handleSignOut}
           scenarios={scenarios}
           activeScenarioId={currentScenarioId}
+          onNavigateCompare={handleNavigateCompare}
           onSelectScenarioAndLaunch={(scenarioId: string) => {
             handleSelectScenario(scenarioId);
             if (isAuthenticated) {
@@ -223,7 +257,7 @@ export const App: React.FC = () => {
     );
   }
 
-  // Authenticated Simulator View
+  // 3. Authenticated Simulator View
   return (
     <div
       id="app-root"
@@ -250,6 +284,7 @@ export const App: React.FC = () => {
         onSelectScenario={handleSelectScenario}
         user={user}
         onNavigateHome={handleNavigateHome}
+        onNavigateCompare={handleNavigateCompare}
         onOpenAbout={() => setIsAboutOpen(true)}
         onSignOut={handleSignOut}
       />

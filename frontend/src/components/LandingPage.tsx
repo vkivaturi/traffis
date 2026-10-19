@@ -13,11 +13,9 @@ import {
   LogOut,
   Lock,
   Building2,
-  ShieldCheck,
   MapPin,
   Clock,
   ArrowRight,
-  TrendingDown,
   Compass,
   TrafficCone,
 } from 'lucide-react';
@@ -35,6 +33,7 @@ interface LandingPageProps {
   scenarios?: ScenarioMetadata[];
   activeScenarioId?: string;
   onSelectScenarioAndLaunch?: (scenarioId: string) => void;
+  onNavigateCompare?: () => void;
 }
 
 export const LandingPage: React.FC<LandingPageProps> = ({
@@ -44,6 +43,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   onSignInWithGoogle,
   onSignOut,
   onSelectScenarioAndLaunch,
+  onNavigateCompare,
 }) => {
   const [isAboutOpen, setIsAboutOpen] = useState(false);
   const [isGoogleModalOpen, setIsGoogleModalOpen] = useState(false);
@@ -305,6 +305,28 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             Municipal & Police Uses
           </a>
 
+          {onNavigateCompare && (
+            <button
+              onClick={onNavigateCompare}
+              className="btn-secondary"
+              style={{
+                padding: '6px 14px',
+                fontSize: '0.82rem',
+                fontWeight: 600,
+                color: '#4a2c11',
+                backgroundColor: '#f7f1ea',
+                borderColor: '#dfd2c4',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+              }}
+              title="Compare multiple road scenarios side-by-side"
+            >
+              <GitFork size={14} color="#4a2c11" />
+              <span>Compare Simulations</span>
+            </button>
+          )}
+
           <button
             onClick={() => setIsAboutOpen(true)}
             className="btn-secondary"
@@ -523,6 +545,38 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             <span>Explore 6 Road Scenarios</span>
             <ChevronRight size={15} color="#64748b" />
           </a>
+
+          {onNavigateCompare && (
+            <button
+              onClick={onNavigateCompare}
+              style={{
+                padding: '12px 24px',
+                fontSize: '0.94rem',
+                fontWeight: 700,
+                backgroundColor: '#f7f1ea',
+                color: '#4a2c11',
+                border: '1.5px solid #dfd2c4',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                boxShadow: '0 2px 6px rgba(74, 44, 17, 0.08)',
+                transition: 'all 0.15s ease',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = '#ede2d5';
+                e.currentTarget.style.borderColor = '#4a2c11';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = '#f7f1ea';
+                e.currentTarget.style.borderColor = '#dfd2c4';
+              }}
+            >
+              <GitFork size={16} color="#4a2c11" />
+              <span>Compare Simulations</span>
+            </button>
+          )}
         </div>
 
         {/* Key Operational Pillars */}
@@ -640,26 +694,71 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         }}
       >
         <div style={{ maxWidth: '1240px', margin: '0 auto', width: '100%' }}>
-          <div style={{ marginBottom: '40px' }}>
-            <span
-              style={{
-                fontSize: '0.74rem',
-                fontWeight: 700,
-                textTransform: 'uppercase',
-                color: '#4a2c11',
-                letterSpacing: '0.06em',
-              }}
-            >
-              Current Road Networks
-            </span>
-            <h2 style={{ fontSize: '2rem', fontWeight: 800, color: '#0f172a', marginTop: '6px', marginBottom: '10px' }}>
-              Select a Scenario to Simulate & Analyze
-            </h2>
-            <p style={{ color: '#475569', fontSize: '0.96rem', maxWidth: '780px' }}>
-              Each scenario is pre-calibrated with realistic traffic volume, vehicle types (cars,
-              vans, commercial transport), and road markings. Click any card to launch and inspect
-              traffic flow directly.
-            </p>
+          <div
+            style={{
+              marginBottom: '40px',
+              display: 'flex',
+              flexWrap: 'wrap',
+              alignItems: 'flex-end',
+              justifyContent: 'space-between',
+              gap: '20px',
+            }}
+          >
+            <div>
+              <span
+                style={{
+                  fontSize: '0.74rem',
+                  fontWeight: 700,
+                  textTransform: 'uppercase',
+                  color: '#4a2c11',
+                  letterSpacing: '0.06em',
+                }}
+              >
+                Current Road Networks
+              </span>
+              <h2 style={{ fontSize: '2rem', fontWeight: 800, color: '#0f172a', marginTop: '6px', marginBottom: '10px' }}>
+                Select a Scenario to Simulate & Analyze
+              </h2>
+              <p style={{ color: '#475569', fontSize: '0.96rem', maxWidth: '780px' }}>
+                Each scenario is pre-calibrated with realistic traffic volume, vehicle types (cars,
+                vans, commercial transport), and road markings. Click any card to launch and inspect
+                traffic flow directly.
+              </p>
+            </div>
+
+            {onNavigateCompare && (
+              <button
+                onClick={onNavigateCompare}
+                style={{
+                  padding: '10px 20px',
+                  backgroundColor: '#ffffff',
+                  color: '#4a2c11',
+                  border: '1.5px solid #dfd2c4',
+                  borderRadius: '8px',
+                  fontWeight: 700,
+                  fontSize: '0.88rem',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  boxShadow: 'var(--shadow-sm)',
+                  transition: 'all 0.15s ease',
+                  flexShrink: 0,
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = '#4a2c11';
+                  e.currentTarget.style.backgroundColor = '#f7f1ea';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = '#dfd2c4';
+                  e.currentTarget.style.backgroundColor = '#ffffff';
+                }}
+              >
+                <GitFork size={16} color="#4a2c11" />
+                <span>Compare Scenarios Side-by-Side</span>
+                <ChevronRight size={15} color="#4a2c11" />
+              </button>
+            )}
           </div>
 
           {/* Grid of Scenario Cards */}

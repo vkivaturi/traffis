@@ -8,10 +8,11 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
 
+from pydantic import BaseModel
 from .config import settings, bandwidth_limiter
 from .schemas import NetworkInfo
 from .simulation import sim_manager
-from .auth import get_current_user, verify_ws_token
+from .auth import get_current_user, verify_ws_token, verify_token
 
 logger = logging.getLogger("traffis_backend")
 
@@ -171,6 +172,27 @@ async def update_scenario_options_endpoint(req: dict, user: dict = Depends(get_c
         }
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+class CompareRunRequest(BaseModel):
+    scenario_id: str
+    duration: float = 60.0
+
+@app.post("/api/simulation/compare-run")
+async def compare_run_endpoint(req: CompareRunRequest, request: Request):
+    """Execute scenario in fast batch mode and return final performance metrics for comparison."""
+    auth_header = request.headers.get("Authorization")
+    if auth_header:
+        try:
+            token = auth_header.replace("Bearer ", "").strip()
+            verify_token(token)
+        except Exception as e:
+            logger.debug("Token check note: %s", e)
+    try:
+        result = await sim_manager.run_benchmark(req.scenario_id, req.duration)
+        return {"status": "ok", "result": result}
+    except Exception as e:
+        logger.error("Compare run failed for %s: %s", req.scenario_id, e, exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):

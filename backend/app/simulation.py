@@ -224,6 +224,77 @@ class SimulationManager:
     def _get_traffic_light_data(self) -> Optional[TrafficLightState]:
         return self.scenario.get_traffic_light_data()
 
+    async def run_benchmark(self, scenario_id: str, duration_s: float = 60.0) -> Dict[str, Any]:
+        """Execute a scenario in fast batch mode up to duration_s and return final summary metrics."""
+        await self.pause()
+        await self.select_scenario(scenario_id)
+
+        async with self.lock:
+            self.is_running = True
+            self.time_limit_reached = False
+            target_time = min(duration_s, self.scenario.settings.max_sim_time)
+            step_length = settings.STEP_LENGTH
+
+            step_count = 0
+            while self.sim_time < target_time and not self.time_limit_reached:
+                vph = self.scenario.settings.vehicles_per_hour
+                if vph > 0:
+                    rate_per_sec = vph / 3600.0
+                    self.auto_spawn_accumulator += rate_per_sec * step_length
+                    spawn_count = int(self.auto_spawn_accumulator)
+                    if spawn_count > 0:
+                        self.auto_spawn_accumulator -= spawn_count
+                        for _ in range(min(spawn_count, 15)):
+                            auto_req = self.scenario.get_auto_spawn_request()
+                            self._insert_vehicle(auto_req)
+
+                self._do_step()
+                step_count += 1
+                if step_count % 200 == 0:
+                    await asyncio.sleep(0)
+
+            self.is_running = False
+            state_msg = self._collect_current_state()
+
+        jm = state_msg.junction_metrics
+        avg_delay_s = None
+        avg_travel_time_s = None
+        if jm and jm.od:
+            completed_od = [od for od in jm.od if od.arrived > 0 and od.avg_travel_time_s is not None]
+            if completed_od:
+                total_arrived = sum(od.arrived for od in completed_od)
+                avg_travel_time_s = round(sum(od.avg_travel_time_s * od.arrived for od in completed_od) / total_arrived, 1)
+        if jm and jm.arms:
+            arms_with_delay = [a for a in jm.arms if a.avg_delay_s is not None and a.inflow > 0]
+            if arms_with_delay:
+                total_inflow = sum(a.inflow for a in arms_with_delay)
+                avg_delay_s = round(sum(a.avg_delay_s * a.inflow for a in arms_with_delay) / total_inflow, 1)
+
+        total_spawned = state_msg.stats.total_spawned
+        total_arrived = state_msg.stats.total_arrived
+        completion_rate = round((total_arrived / total_spawned * 100.0), 1) if total_spawned > 0 else 0.0
+
+        return {
+            "scenario_id": self.scenario.id,
+            "scenario_name": self.scenario.name,
+            "scenario_type": self.scenario.type,
+            "duration": round(self.sim_time, 1),
+            "stats": {
+                "active_vehicles": state_msg.stats.active_vehicles,
+                "total_spawned": total_spawned,
+                "total_arrived": total_arrived,
+                "avg_speed_kmh": round(state_msg.stats.avg_speed_kmh, 1),
+                "density_veh_km": round(state_msg.stats.density_veh_km, 1),
+                "pce_per_hour": round(state_msg.stats.pce_per_hour, 1),
+                "completion_rate": completion_rate,
+            },
+            "avg_travel_time_s": avg_travel_time_s,
+            "avg_delay_s": avg_delay_s,
+            "roundabout_occupancy": jm.roundabout_occupancy if jm else None,
+            "uturn_count": jm.uturn_count if jm else None,
+            "teleports": jm.teleports if jm else 0,
+        }
+
     async def stop(self):
         """Stop simulation loop and close TraCI."""
         if self.loop_task:

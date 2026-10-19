@@ -27,6 +27,7 @@ interface HeaderProps {
   onSelectScenario: (scenarioId: string) => void;
   user?: User | null;
   onNavigateHome?: () => void;
+  onNavigateCompare?: () => void;
   onOpenAbout?: () => void;
   onSignOut?: () => void;
 }
@@ -41,6 +42,7 @@ export const Header: React.FC<HeaderProps> = ({
   onSelectScenario,
   user,
   onNavigateHome,
+  onNavigateCompare,
   onOpenAbout,
   onSignOut,
 }) => {
@@ -170,6 +172,24 @@ export const Header: React.FC<HeaderProps> = ({
           >
             <Home size={14} color="#4a2c11" />
             <span>Home</span>
+          </button>
+        )}
+
+        {onNavigateCompare && (
+          <button
+            onClick={onNavigateCompare}
+            className="btn-secondary"
+            style={{
+              padding: '6px 12px',
+              fontSize: '0.8rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+            }}
+            title="Compare Multiple Road Scenarios Side-by-Side"
+          >
+            <GitFork size={14} color="#4a2c11" />
+            <span>Compare</span>
           </button>
         )}
 
