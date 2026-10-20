@@ -240,3 +240,37 @@ async def websocket_endpoint(websocket: WebSocket):
         logger.warning("WebSocket error: %s", e)
         sim_manager.unregister_websocket(websocket)
 
+
+# -------------------------------------------------------------------------
+# Static Frontend Serving (Production / Docker build)
+# -------------------------------------------------------------------------
+from pathlib import Path
+from fastapi.staticfiles import StaticFiles
+from starlette.responses import FileResponse
+
+CANDIDATE_DIST_PATHS = [
+    Path(__file__).resolve().parent.parent.parent / "frontend" / "dist",
+    Path("/app/frontend/dist"),
+    Path(__file__).resolve().parent.parent / "dist",
+]
+
+FRONTEND_DIST = next((p for p in CANDIDATE_DIST_PATHS if p.is_dir()), None)
+
+if FRONTEND_DIST:
+    logger.info("Serving built frontend from %s", FRONTEND_DIST)
+    assets_dir = FRONTEND_DIST / "assets"
+    if assets_dir.is_dir():
+        app.mount("/assets", StaticFiles(directory=str(assets_dir)), name="assets")
+
+    screenshots_dir = FRONTEND_DIST / "screenshots"
+    if screenshots_dir.is_dir():
+        app.mount("/screenshots", StaticFiles(directory=str(screenshots_dir)), name="screenshots")
+
+    @app.get("/{full_path:path}")
+    async def serve_frontend(full_path: str):
+        target = FRONTEND_DIST / full_path
+        if full_path and target.is_file():
+            return FileResponse(target)
+        return FileResponse(FRONTEND_DIST / "index.html")
+
+

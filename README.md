@@ -120,9 +120,18 @@ python sumo_config/build_network.py
 
 ---
 
-## 🚀 Start Instructions
+## 🚀 Running Traffis
 
-### Option A: One-Click Startup Script (Recommended)
+Traffis can be deployed and run in **three ways**:
+1. **Local Development with `start.sh`** (macOS / Linux native with live hot reload)
+2. **Local Container with Docker** (`docker compose up -d` or `docker run`)
+3. **AWS EC2 as a Docker Container** (Production cloud hosting with automatic restart)
+
+> 📖 **For complete step-by-step instructions across all 3 methods, refer to the [Deployment Guide (DEPLOYMENT.md)](DEPLOYMENT.md).**
+
+---
+
+### Option A: One-Click Startup Script (Local Development)
 
 Run the included [`start.sh`](file:///Users/vijay/Projects/traffis/start.sh) script from the project root:
 
@@ -132,14 +141,25 @@ Run the included [`start.sh`](file:///Users/vijay/Projects/traffis/start.sh) scr
 
 This script:
 1. Configures `SUMO_HOME` and adds SUMO binaries to `PATH`.
-2. Validates and compiles the 1000m 3-lane road network with `netconvert`.
+2. Validates and compiles the scenario road networks with `netconvert`.
 3. Activates the Python virtual environment and starts the **FastAPI backend** on `http://127.0.0.1:8000`.
 4. Starts the **Vite React frontend** on `http://localhost:5173`.
 5. Gracefully handles `Ctrl+C` to terminate both servers and release TraCI ports.
 
 ---
 
-### Option B: Manual Step-by-Step Setup
+### Option B: Local Docker Container
+
+Run Traffis in a self-contained container without needing SUMO or Python installed locally:
+
+```bash
+docker compose up -d --build
+```
+Access the application at **[http://localhost:8000](http://localhost:8000)**.
+
+---
+
+### Option C: Manual Step-by-Step Setup
 
 #### Step 1: Set Up Backend
 
