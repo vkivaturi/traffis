@@ -380,12 +380,6 @@ class NallagandlaJunctionScenario(BaseScenario):
         lat = self.settings.behaviour_models.get("lateralResolution")
         if lat:
             args.extend(["--lateral-resolution", lat])
-        args.extend([
-            "--time-to-teleport", "5",
-            "--time-to-teleport.highways", "5",
-            "--time-to-teleport.highways.min-speed", "0",
-            "--ignore-junction-blocker", "2",
-        ])
         return args
 
     @property
@@ -568,7 +562,6 @@ class NallagandlaJunctionScenario(BaseScenario):
         self.teleports = 0
         self.free_flow_s: Dict[str, float] = {}
         self.route_length_m: Dict[str, float] = {}
-        self.stopped_ticks: Dict[str, int] = {}
 
     def reset_state(self) -> None:
         super().reset_state()
@@ -616,50 +609,6 @@ class NallagandlaJunctionScenario(BaseScenario):
                 self.delay_n[key[:2]] += 1
 
         self.teleports += traci.simulation.getStartingTeleportNumber()
-        # Multi-tier proactive deadlock resolution (Unstuck within 1.0 - 2.0s, teleport hard cap at 3.5s)
-        active_vids = set(traci.vehicle.getIDList())
-        for vid in list(self.stopped_ticks.keys()):
-            if vid not in active_vids:
-                del self.stopped_ticks[vid]
-
-        for vid in active_vids:
-            try:
-                spd = traci.vehicle.getSpeed(vid)
-                if spd < 0.25:
-                    self.stopped_ticks[vid] = self.stopped_ticks.get(vid, 0) + 1
-                    ticks = self.stopped_ticks[vid]
-
-                    # Tier 1: Stuck for >= 1.0s (20 ticks) -> override junction hesitation immediately
-                    if 20 <= ticks < 40:
-                        leader = traci.vehicle.getLeader(vid, 12.0)
-                        if leader is None:
-                            # No car ahead: pure link/junction hesitation -> full override
-                            traci.vehicle.setSpeedMode(vid, 0)
-                            traci.vehicle.setSpeed(vid, 8.0)
-                        else:
-                            # Car ahead: ignore right-of-way to nudge closer and prevent gap locks
-                            traci.vehicle.setSpeedMode(vid, 23)
-                            traci.vehicle.setSpeed(vid, 6.0)
-
-                    # Tier 2: Stuck for >= 2.0s (40 ticks) -> strong impulse nudge & enable assertive lane change
-                    elif 40 <= ticks < 70:
-                        traci.vehicle.setSpeedMode(vid, 0)
-                        traci.vehicle.setSpeed(vid, 10.0)
-                        traci.vehicle.setLaneChangeMode(vid, 1365)
-
-                    # Tier 3: Stuck for >= 3.5s (70 ticks) -> vaporize gridlock to ensure strictly < 5s limit
-                    elif ticks >= 70:
-                        del self.stopped_ticks[vid]
-                        traci.vehicle.remove(vid, reason=traci.constants.REMOVE_TELEPORT)
-                        self.teleports += 1
-                else:
-                    if vid in self.stopped_ticks:
-                        if self.stopped_ticks[vid] >= 20:
-                            traci.vehicle.setSpeed(vid, -1)
-                            traci.vehicle.setSpeedMode(vid, 31)
-                        del self.stopped_ticks[vid]
-            except Exception:
-                pass
 
     def _queue_length(self, edge: str) -> int:
         halting = 0
@@ -702,7 +651,7 @@ class NallagandlaJunctionScenario(BaseScenario):
         return JunctionMetrics(
             arms=arms,
             od=od,
-            entry_queues=[],
+            entry_queues=[EntryQueue(id=e, label=lbl, halting=self._queue_length(e)) for e, lbl in ENTRY_QUEUES],
             roundabout_occupancy=0,
             uturn_count=0,
             teleports=self.teleports,

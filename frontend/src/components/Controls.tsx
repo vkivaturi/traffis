@@ -75,8 +75,12 @@ export const Controls: React.FC<ControlsProps> = ({
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
         {isRunning ? (
           <button
+            key="btn-pause"
             id="btn-pause"
-            onClick={onPause}
+            onClick={(e) => {
+              (e.currentTarget as HTMLButtonElement).blur();
+              onPause();
+            }}
             title="Pause simulation [Space key]"
             style={{
               ...baseBtn,
@@ -90,8 +94,12 @@ export const Controls: React.FC<ControlsProps> = ({
           </button>
         ) : (
           <button
+            key="btn-start"
             id="btn-start"
-            onClick={onPlay}
+            onClick={(e) => {
+              (e.currentTarget as HTMLButtonElement).blur();
+              onPlay();
+            }}
             disabled={isLimitReached}
             title={
               isLimitReached

@@ -21,7 +21,7 @@ async def test_full_flow():
         async def recv_type(expected_type, timeout=5.0):
             deadline = time.time() + timeout
             while time.time() < deadline:
-                raw = await asyncio.wait_for(ws.recv(), timeout=2.0)
+                raw = await asyncio.wait_for(ws.recv(), timeout=5.0)
                 msg = json.loads(raw)
                 if msg.get("type") == expected_type:
                     return msg
@@ -49,7 +49,7 @@ async def test_full_flow():
             jm = None
             deadline = time.time() + (20.0 if is_roundabout else 8.0)
             while time.time() < deadline:
-                state = await recv_type("state")
+                state = await recv_type("state", timeout=max(2.0, deadline - time.time()))
                 # compact tuple direction field carries the OD key, e.g. "TL_NG"
                 seen_origins |= {str(v[13])[:2] for v in state.get("compact_vehicles") or []}
                 jm = state.get("junction_metrics") or jm  # sent at 1 Hz

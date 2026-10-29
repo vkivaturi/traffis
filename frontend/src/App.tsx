@@ -139,11 +139,13 @@ export const App: React.FC = () => {
 
   const selectedVehicle = state.vehicles.find((v) => v.id === selectedVehicleId) || null;
 
-  // Pause/stop ongoing simulation whenever user navigates back to landing or compare page
+  // Pause/stop ongoing simulation whenever user navigates away from simulator view
+  const prevViewRef = useRef(currentView);
   useEffect(() => {
-    if (currentView !== 'simulator' && state.is_running) {
+    if (prevViewRef.current === 'simulator' && currentView !== 'simulator' && state.is_running) {
       pause();
     }
+    prevViewRef.current = currentView;
   }, [currentView, state.is_running, pause]);
 
   const handleNavigateHome = useCallback(() => {

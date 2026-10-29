@@ -214,10 +214,13 @@ async def websocket_endpoint(websocket: WebSocket):
                 payload = msg.get("payload", {})
 
                 if action == "play":
+                    logger.info("Received 'play' action from client %s", websocket.client)
                     await sim_manager.play()
                 elif action == "pause":
+                    logger.info("Received 'pause' action from client %s", websocket.client)
                     await sim_manager.pause()
                 elif action == "reset":
+                    logger.info("Received 'reset' action from client %s", websocket.client)
                     await sim_manager.reset()
                 elif action == "select_scenario":
                     scenario_id = payload.get("scenario_id")
