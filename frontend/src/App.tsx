@@ -309,6 +309,7 @@ export const App: React.FC = () => {
           onSelectVehicle={setSelectedVehicleId}
           trafficLight={state.traffic_light}
           scenario={activeScenario}
+          scenarioId={currentScenarioId}
           networkInfo={networkInfo}
         />
 

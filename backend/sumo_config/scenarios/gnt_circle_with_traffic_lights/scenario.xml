@@ -25,9 +25,9 @@
         <param key="lcKeepRight" value="0.3"/>
         <param key="latAlignment" value="arbitrary"/>
         <param key="minGapLat" value="0.3"/>
-        <param key="jmIgnoreFoeProb" value="0.1"/>
-        <param key="jmIgnoreFoeSpeed" value="5.0"/>
-        <param key="jmTimegapMinor" value="0.5"/>
+        <param key="jmIgnoreFoeProb" value="1.0"/>
+        <param key="jmIgnoreFoeSpeed" value="10.0"/>
+        <param key="jmTimegapMinor" value="0.2"/>
     </behaviour>
 
     <vehicleMix>

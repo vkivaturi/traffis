@@ -190,8 +190,8 @@ Driver/vehicle behaviour is configured **once for the whole simulation**, not pe
 | Car-following model | `carFollowModel` | `Krauss` | Consistent with existing scenarios |
 | Lane-change model | `laneChangeModel` | `SL2015` | Required for sub-lane / filtering |
 | Lateral resolution | `--lateral-resolution` (sumocfg) | `0.8` m | Enables sub-lane filtering / tight lateral spacing |
-| Junction blocking tolerance | `--ignore-junction-blocker` | `10` s | Prevents gridlock in ring |
-| Teleport time | `--time-to-teleport` | `120` s | Clears deadlocks; teleports counted in metrics |
+| Junction blocking tolerance | `--ignore-junction-blocker` | `5` s | Prevents gridlock in ring |
+| Teleport time | `--time-to-teleport` | `5` s | Clears deadlocks immediately; no car stuck > 5s |
 
 #### 5.2.2 Behaviour parameters (applied to every vType unless overridden in §5.2.3)
 | Parameter | SUMO attribute | Default (Indian) | SUMO default | Effect |
@@ -202,7 +202,7 @@ Driver/vehicle behaviour is configured **once for the whole simulation**, not pe
 | Impatience | `impatience` | **0.8** | 0.0 | Forces entry into ring / merges after waiting |
 | Speed factor | `speedFactor` | **normc(1.1,0.15,0.7,1.5)** | 1.0 | Speed-limit compliance (≈ 10% over) |
 | Lane-change assertiveness | `lcAssertive` | **2.0** | 1.0 | Accepts smaller gaps |
-| Cooperative LC | `lcCooperative` | **0.3** | 1.0 | Less yielding to others |
+| Cooperative LC | `lcCooperative` | **0.3** | 1.0 | Preserves priority for circulating roundabout traffic |
 | Speed-gain LC | `lcSpeedGain` | **2.0** | 1.0 | Frequent overtaking |
 | Keep-left urge | `lcKeepRight`* | **0.3** | 1.0 | Weak lane discipline (*"keepRight" = keep to driving side; left in lefthand nets) |
 | Lateral alignment | `latAlignment` | `arbitrary` | `center` | Vehicles don't centre in lane |

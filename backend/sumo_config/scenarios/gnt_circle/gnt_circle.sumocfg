@@ -12,8 +12,10 @@
     </time>
     <processing>
         <lateral-resolution value="0.8"/>
-        <ignore-junction-blocker value="10"/>
-        <time-to-teleport value="120"/>
+        <ignore-junction-blocker value="2"/>
+        <time-to-teleport value="5"/>
+        <time-to-teleport.highways value="5"/>
+        <time-to-teleport.highways.min-speed value="0"/>
         <collision.action value="none"/>
     </processing>
     <report>

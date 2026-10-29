@@ -13,12 +13,12 @@
 -->
 <scenario id="gnt_circle" maxSimTime="300">
     <demand>
-        <od key="NG_TL" vehsPerHour="500"/>
+        <od key="NG_TL" vehsPerHour="1000"/>
         <od key="NG_FL" vehsPerHour="3000"/>
-        <od key="TL_FL" vehsPerHour="1000"/>
-        <od key="TL_NG" vehsPerHour="500"/>
+        <od key="TL_FL" vehsPerHour="2000"/>
+        <od key="TL_NG" vehsPerHour="1000"/>
         <od key="FL_NG" vehsPerHour="3000"/>
-        <od key="FL_TL" vehsPerHour="1000"/>
+        <od key="FL_TL" vehsPerHour="2000"/>
     </demand>
 
     <behaviour carFollowModel="Krauss" laneChangeModel="SL2015" lateralResolution="0.8">
@@ -33,9 +33,9 @@
         <param key="lcKeepRight" value="0.3"/>
         <param key="latAlignment" value="arbitrary"/>
         <param key="minGapLat" value="0.3"/>
-        <param key="jmIgnoreFoeProb" value="0.1"/>
-        <param key="jmIgnoreFoeSpeed" value="5.0"/>
-        <param key="jmTimegapMinor" value="0.5"/>
+        <param key="jmIgnoreFoeProb" value="1.0"/>
+        <param key="jmIgnoreFoeSpeed" value="10.0"/>
+        <param key="jmTimegapMinor" value="0.2"/>
     </behaviour>
 
     <vehicleMix>

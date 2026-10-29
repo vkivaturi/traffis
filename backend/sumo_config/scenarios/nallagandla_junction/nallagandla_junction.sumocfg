@@ -11,8 +11,12 @@
         <step-length value="0.05"/>
     </time>
     <processing>
+        <lateral-resolution value="0.8"/>
+        <ignore-junction-blocker value="2"/>
+        <time-to-teleport value="5"/>
+        <time-to-teleport.highways value="5"/>
+        <time-to-teleport.highways.min-speed value="0"/>
         <collision.action value="none"/>
-        <time-to-teleport value="-1"/>
     </processing>
     <report>
         <no-step-log value="true"/>

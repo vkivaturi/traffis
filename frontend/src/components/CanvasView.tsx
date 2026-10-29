@@ -11,6 +11,7 @@ interface CanvasViewProps {
   onSelectVehicle: (id: string | null) => void;
   trafficLight?: TrafficLightData;
   scenario?: ScenarioMetadata | null;
+  scenarioId?: string | null;
   networkInfo?: NetworkInfo | null;
 }
 
@@ -1211,13 +1212,14 @@ export const CanvasView: React.FC<CanvasViewProps> = ({
   onSelectVehicle,
   trafficLight,
   scenario,
+  scenarioId,
   networkInfo,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
 
   const effectiveScenario = scenario || networkInfo?.scenario;
-  const effectiveScenarioId = effectiveScenario?.id;
+  const effectiveScenarioId = scenarioId || effectiveScenario?.id || networkInfo?.scenario?.id;
   const isIntersection =
     effectiveScenario?.type === 'intersection' || effectiveScenarioId === 'three_way_intersection';
   // Curved-geometry scenarios (e.g. GNT Circle, Nallagandla Junction) render lane polylines from network info
@@ -1423,8 +1425,15 @@ export const CanvasView: React.FC<CanvasViewProps> = ({
           ctx.setLineDash([]);
         }
 
-        // Speed tag above vehicle image (disabled in Nallagandla Junction scenario)
-        if (effectiveScenarioId !== 'nallagandla_junction' && (zoom > 4 || vid === selectedVehicleId)) {
+        // Speed tag above vehicle image (disabled in all GNT Circle variants, roundabouts, and signalised corridor geometry)
+        const isSpeedTagDisabled =
+          effectiveScenarioId === 'gnt_circle' ||
+          effectiveScenarioId === 'gnt_circle_with_traffic_lights' ||
+          effectiveScenarioId === 'nallagandla_junction' ||
+          Boolean(effectiveScenarioId?.startsWith('gnt')) ||
+          isRoundabout ||
+          isGeometry;
+        if (!isSpeedTagDisabled && (zoom > 4 || vid === selectedVehicleId)) {
           const badgeY = -vWidPx - 10;
           ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
           ctx.beginPath();
@@ -1554,7 +1563,7 @@ export const CanvasView: React.FC<CanvasViewProps> = ({
 
     animId = requestAnimationFrame(render);
     return () => cancelAnimationFrame(animId);
-  }, [camera, selectedVehicleId, trafficLight, isIntersection, effectiveScenarioId, scenario, geometry, isGeometry, hoveredLabel]);
+  }, [camera, selectedVehicleId, trafficLight, isIntersection, effectiveScenarioId, scenario, geometry, isGeometry, isRoundabout, hoveredLabel]);
 
   // Mouse pan/zoom handlers
   const handleMouseDown = (e: React.MouseEvent) => {

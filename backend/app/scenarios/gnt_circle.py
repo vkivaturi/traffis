@@ -329,7 +329,7 @@ class _BaseGntCircleScenario(BaseScenario):
                 continue
             # FL to NG traffic always uses the left-most lane (departLane="0")
             # NG to TL traffic uses the dedicated left-most arc at the roundabout (departLane="0")
-            # FL to TL traffic can use any of the 3 lanes on the approach road (departLane="random")
+            # All other flows distribute across approach lanes (departLane="random")
             depart_lane = "0" if key in ("FL_NG", "NG_TL") else "random"
             depart_pos_lat = "center" if key in ("FL_NG", "NG_TL") else "random"
             lines.append(
@@ -346,6 +346,12 @@ class _BaseGntCircleScenario(BaseScenario):
         lat = self.settings.behaviour_models.get("lateralResolution")
         if lat:
             args.extend(["--lateral-resolution", lat])
+        args.extend([
+            "--time-to-teleport", "5",
+            "--time-to-teleport.highways", "5",
+            "--time-to-teleport.highways.min-speed", "0",
+            "--ignore-junction-blocker", "2",
+        ])
         return args
 
     # ------------------------------------------------------------------ #
@@ -548,6 +554,7 @@ class _BaseGntCircleScenario(BaseScenario):
         self.ring_edge_ids: List[str] = list(RING_EDGES)
         self.aggressive_ids: set[str] = set()
         self.forcing_ids: set[str] = set()
+        self.stopped_ticks: Dict[str, int] = {}
 
     def reset_state(self) -> None:
         """Called right after traci.start(): reset counters, phase timer, and cache free-flow route times."""
@@ -600,6 +607,50 @@ class _BaseGntCircleScenario(BaseScenario):
                 self.uturn_seen.add(vid)
                 self.uturn_count += 1
         self.teleports += traci.simulation.getStartingTeleportNumber()
+        # Multi-tier proactive deadlock resolution (Unstuck within 1.0 - 2.0s, teleport hard cap at 3.5s)
+        active_vids = set(traci.vehicle.getIDList())
+        for vid in list(self.stopped_ticks.keys()):
+            if vid not in active_vids:
+                del self.stopped_ticks[vid]
+
+        for vid in active_vids:
+            try:
+                spd = traci.vehicle.getSpeed(vid)
+                if spd < 0.25:
+                    self.stopped_ticks[vid] = self.stopped_ticks.get(vid, 0) + 1
+                    ticks = self.stopped_ticks[vid]
+
+                    # Tier 1: Stuck for >= 1.0s (20 ticks) -> override junction hesitation immediately
+                    if 20 <= ticks < 40:
+                        leader = traci.vehicle.getLeader(vid, 12.0)
+                        if leader is None:
+                            # No car ahead: pure link/junction hesitation -> full override
+                            traci.vehicle.setSpeedMode(vid, 0)
+                            traci.vehicle.setSpeed(vid, 8.0)
+                        else:
+                            # Car ahead: ignore right-of-way to nudge closer and prevent gap locks
+                            traci.vehicle.setSpeedMode(vid, 23)
+                            traci.vehicle.setSpeed(vid, 6.0)
+
+                    # Tier 2: Stuck for >= 2.0s (40 ticks) -> strong impulse nudge & enable assertive lane change
+                    elif 40 <= ticks < 70:
+                        traci.vehicle.setSpeedMode(vid, 0)
+                        traci.vehicle.setSpeed(vid, 10.0)
+                        traci.vehicle.setLaneChangeMode(vid, 1365)
+
+                    # Tier 3: Stuck for >= 3.5s (70 ticks) -> vaporize gridlock to ensure strictly < 5s limit
+                    elif ticks >= 70:
+                        del self.stopped_ticks[vid]
+                        traci.vehicle.remove(vid, reason=traci.constants.REMOVE_TELEPORT)
+                        self.teleports += 1
+                else:
+                    if vid in self.stopped_ticks:
+                        if self.stopped_ticks[vid] >= 20:
+                            traci.vehicle.setSpeed(vid, -1)
+                            traci.vehicle.setSpeedMode(vid, 31)
+                        del self.stopped_ticks[vid]
+            except Exception:
+                pass
         self._update_force_mode()
 
     def _make_aggressive(self, vid: str) -> None:
@@ -625,6 +676,8 @@ class _BaseGntCircleScenario(BaseScenario):
         self.aggressive_ids.intersection_update(active_ids)
         self.forcing_ids.intersection_update(active_ids)
         for vid in list(self.aggressive_ids):
+            if vid in self.stopped_ticks and self.stopped_ticks[vid] >= 20:
+                continue
             try:
                 road = traci.vehicle.getRoadID(vid)
                 if road in FORCE_EDGES:

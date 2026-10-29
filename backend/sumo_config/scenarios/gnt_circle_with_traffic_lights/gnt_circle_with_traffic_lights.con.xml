@@ -9,7 +9,7 @@
     <connection from="TL_in" to="TL_free_left" fromLane="1" toLane="0"/>
 
     <!-- stem_merge: free left joins the stem SB kerb (left-most) lane, yielding to ring exit traffic (D-6) -->
-    <connection from="stem_sb_a"    to="stem_sb_b" fromLane="0" toLane="0"/>
+    <connection from="stem_sb_a"    to="stem_sb_b" fromLane="0" toLane="0" pass="true"/>
     <connection from="stem_sb_a"    to="stem_sb_b" fromLane="1" toLane="1"/>
     <connection from="stem_sb_a"    to="stem_sb_b" fromLane="2" toLane="2"/>
     <connection from="TL_free_left" to="stem_sb_b" fromLane="0" toLane="0" pass="true"/>
@@ -61,6 +61,7 @@
 
     <connection from="rb_N_E" to="TL_out" fromLane="0" toLane="0"/>
     <connection from="rb_N_E" to="TL_out" fromLane="1" toLane="1"/>
+    <connection from="rb_N_E" to="TL_out" fromLane="2" toLane="1"/>
     <connection from="rb_N_E" to="rb_E_S" fromLane="0" toLane="0"/>
     <connection from="rb_N_E" to="rb_E_S" fromLane="1" toLane="1"/>
     <connection from="rb_N_E" to="rb_E_S" fromLane="2" toLane="1"/>
@@ -74,6 +75,7 @@
     <connection from="rb_S_W" to="NG_out_a" fromLane="0" toLane="0"/>
     <connection from="rb_S_W" to="NG_out_a" fromLane="1" toLane="1"/>
     <connection from="rb_S_W" to="rb_W_N"   fromLane="0" toLane="1" pass="true"/>
+    <connection from="rb_S_W" to="rb_W_N"   fromLane="1" toLane="1" pass="true"/>
     <connection from="rb_S_W" to="rb_W_N"   fromLane="1" toLane="2" pass="true"/>
 
     <!-- ng_merge: free left merges into NG_out_b kerb lane alongside ring exit traffic -->

@@ -3,8 +3,8 @@
      Do not edit by hand: change scenario.xml instead (SPEC.md §5.2.4). -->
 <routes xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/routes_file.xsd">
     <vTypeDistribution id="indian_mix">
-        <vType id="car" probability="0.8500" vClass="passenger" guiShape="passenger" color="#38bdf8" length="4.3" width="1.7" maxSpeed="30.0" accel="2.6" decel="4.5" carFollowModel="Krauss" laneChangeModel="SL2015" minGap="1.0" tau="0.6" sigma="0.6" impatience="0.8" speedFactor="normc(1.1,0.15,0.7,1.5)" lcAssertive="2.0" lcCooperative="0.3" lcSpeedGain="2.0" lcKeepRight="0.3" latAlignment="arbitrary" minGapLat="0.3" jmIgnoreFoeProb="0.1" jmIgnoreFoeSpeed="5.0" jmTimegapMinor="0.5"/>
-        <vType id="van" probability="0.1500" vClass="delivery" guiShape="delivery" color="#a78bfa" length="5.0" width="1.9" maxSpeed="25.0" accel="2.0" decel="4.2" carFollowModel="Krauss" laneChangeModel="SL2015" minGap="1.0" tau="0.6" sigma="0.6" impatience="0.8" speedFactor="normc(1.1,0.15,0.7,1.5)" lcAssertive="2.0" lcCooperative="0.3" lcSpeedGain="2.0" lcKeepRight="0.3" latAlignment="arbitrary" minGapLat="0.3" jmIgnoreFoeProb="0.1" jmIgnoreFoeSpeed="5.0" jmTimegapMinor="0.5"/>
+        <vType id="car" probability="0.8500" vClass="passenger" guiShape="passenger" color="#38bdf8" length="4.3" width="1.7" maxSpeed="30.0" accel="2.6" decel="4.5" carFollowModel="Krauss" laneChangeModel="SL2015" minGap="1.0" tau="0.6" sigma="0.6" impatience="0.8" speedFactor="normc(1.1,0.15,0.7,1.5)" lcAssertive="2.0" lcCooperative="0.3" lcSpeedGain="2.0" lcKeepRight="0.3" latAlignment="arbitrary" minGapLat="0.3" jmIgnoreFoeProb="1.0" jmIgnoreFoeSpeed="10.0" jmTimegapMinor="0.2"/>
+        <vType id="van" probability="0.1500" vClass="delivery" guiShape="delivery" color="#a78bfa" length="5.0" width="1.9" maxSpeed="25.0" accel="2.0" decel="4.2" carFollowModel="Krauss" laneChangeModel="SL2015" minGap="1.0" tau="0.6" sigma="0.6" impatience="0.8" speedFactor="normc(1.1,0.15,0.7,1.5)" lcAssertive="2.0" lcCooperative="0.3" lcSpeedGain="2.0" lcKeepRight="0.3" latAlignment="arbitrary" minGapLat="0.3" jmIgnoreFoeProb="1.0" jmIgnoreFoeSpeed="10.0" jmTimegapMinor="0.2"/>
     </vTypeDistribution>
 
     <route id="r_NG_TL" edges="NG_in rb_W_N rb_N_E TL_out"/>
@@ -17,10 +17,10 @@
     <route id="r_TL_TL" edges="TL_in TL_free_left stem_sb_b bot_wb_b bot_eb stem_nb_a stem_nb_b rb_S_W rb_W_N rb_N_E TL_out"/>
     <route id="r_FL_FL" edges="FL_in bot_eb stem_nb_a stem_nb_b rb_S_W rb_W_N rb_N_E rb_E_S stem_sb_a stem_sb_b bot_wb_b FL_out"/>
 
-    <flow id="NG_TL" route="r_NG_TL" type="indian_mix" begin="0" end="100000" vehsPerHour="500" departLane="0" departPosLat="center" departSpeed="desired"/>
+    <flow id="NG_TL" route="r_NG_TL" type="indian_mix" begin="0" end="100000" vehsPerHour="1000" departLane="0" departPosLat="center" departSpeed="desired"/>
     <flow id="NG_FL" route="r_NG_FL" type="indian_mix" begin="0" end="100000" vehsPerHour="3000" departLane="random" departPosLat="random" departSpeed="desired"/>
-    <flow id="TL_FL" route="r_TL_FL" type="indian_mix" begin="0" end="100000" vehsPerHour="1000" departLane="random" departPosLat="random" departSpeed="desired"/>
-    <flow id="TL_NG" route="r_TL_NG" type="indian_mix" begin="0" end="100000" vehsPerHour="500" departLane="random" departPosLat="random" departSpeed="desired"/>
+    <flow id="TL_FL" route="r_TL_FL" type="indian_mix" begin="0" end="100000" vehsPerHour="2000" departLane="random" departPosLat="random" departSpeed="desired"/>
+    <flow id="TL_NG" route="r_TL_NG" type="indian_mix" begin="0" end="100000" vehsPerHour="1000" departLane="random" departPosLat="random" departSpeed="desired"/>
     <flow id="FL_NG" route="r_FL_NG" type="indian_mix" begin="0" end="100000" vehsPerHour="3000" departLane="0" departPosLat="center" departSpeed="desired"/>
-    <flow id="FL_TL" route="r_FL_TL" type="indian_mix" begin="0" end="100000" vehsPerHour="1000" departLane="random" departPosLat="random" departSpeed="desired"/>
+    <flow id="FL_TL" route="r_FL_TL" type="indian_mix" begin="0" end="100000" vehsPerHour="2000" departLane="random" departPosLat="random" departSpeed="desired"/>
 </routes>
