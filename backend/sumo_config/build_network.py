@@ -213,17 +213,32 @@ def find_sumo_binary(binary_name="netconvert"):
     p = shutil.which(binary_name)
     if p:
         return p
-    sumo_home = os.environ.get("SUMO_HOME", "/Library/Frameworks/EclipseSUMO.framework/Versions/Current/EclipseSUMO/share/sumo")
+    sumo_home = os.environ.get("SUMO_HOME", "")
+    if not sumo_home:
+        for standard in [
+            "/Library/Frameworks/EclipseSUMO.framework/Versions/Current/EclipseSUMO/share/sumo",
+            "/opt/homebrew/share/sumo",
+            r"C:\Program Files (x86)\Eclipse\Sumo",
+            r"C:\Program Files\Eclipse\Sumo",
+            os.path.expandvars(r"%LOCALAPPDATA%\Programs\Eclipse\Sumo"),
+        ]:
+            if os.path.exists(standard):
+                sumo_home = standard
+                break
+
     candidates = [
         os.path.join(sumo_home, "bin", binary_name),
+        os.path.join(sumo_home, "bin", f"{binary_name}.exe"),
         os.path.join(sumo_home, "..", "..", "bin", binary_name),
         f"/Library/Frameworks/EclipseSUMO.framework/Versions/Current/EclipseSUMO/bin/{binary_name}",
         f"/opt/homebrew/bin/{binary_name}",
         f"/usr/local/bin/{binary_name}"
     ]
     for c in candidates:
+        if not c:
+            continue
         abs_c = os.path.abspath(c)
-        if os.path.exists(abs_c) and os.access(abs_c, os.X_OK):
+        if os.path.exists(abs_c) and (os.access(abs_c, os.X_OK) or abs_c.lower().endswith(".exe")):
             return abs_c
     return None
 

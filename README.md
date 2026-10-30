@@ -133,11 +133,17 @@ Traffis can be deployed and run in **three ways**:
 
 ### Option A: One-Click Startup Script (Local Development)
 
-Run the included [`start.sh`](file:///Users/vijay/Projects/traffis/start.sh) script from the project root:
+Run the included startup script from the project root:
 
-```bash
-./start.sh
-```
+- **macOS / Linux**:
+  ```bash
+  ./start.sh
+  ```
+
+- **Windows**:
+  ```cmd
+  start.bat
+  ```
 
 This script:
 1. Configures `SUMO_HOME` and adds SUMO binaries to `PATH`.

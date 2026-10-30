@@ -17,6 +17,14 @@ def resolve_sumo_home() -> str:
     homebrew_path = "/opt/homebrew/share/sumo"
     if os.path.exists(homebrew_path):
         return homebrew_path
+    windows_candidates = [
+        r"C:\Program Files (x86)\Eclipse\Sumo",
+        r"C:\Program Files\Eclipse\Sumo",
+        os.path.expandvars(r"%LOCALAPPDATA%\Programs\Eclipse\Sumo"),
+    ]
+    for win_path in windows_candidates:
+        if os.path.exists(win_path):
+            return win_path
     return ""
 
 def resolve_sumo_binary(binary_name: str = "sumo") -> str:
@@ -28,6 +36,7 @@ def resolve_sumo_binary(binary_name: str = "sumo") -> str:
     if sumo_home:
         candidates = [
             os.path.join(sumo_home, "bin", binary_name),
+            os.path.join(sumo_home, "bin", f"{binary_name}.exe"),
             os.path.join(sumo_home, "..", "..", "bin", binary_name),
             f"/Library/Frameworks/EclipseSUMO.framework/Versions/Current/EclipseSUMO/bin/{binary_name}",
             f"/opt/homebrew/bin/{binary_name}",
@@ -35,7 +44,7 @@ def resolve_sumo_binary(binary_name: str = "sumo") -> str:
         ]
         for c in candidates:
             abs_c = os.path.abspath(c)
-            if os.path.exists(abs_c) and os.access(abs_c, os.X_OK):
+            if os.path.exists(abs_c) and (os.access(abs_c, os.X_OK) or abs_c.lower().endswith(".exe")):
                 return abs_c
     return binary_name
 

@@ -79,10 +79,16 @@ Best for active feature development, frontend hot module reloading (HMR), and mo
 
 Run the master bootstrap script from the repository root:
 
-```bash
-chmod +x start.sh
-./start.sh
-```
+- **macOS / Linux**:
+  ```bash
+  chmod +x start.sh
+  ./start.sh
+  ```
+
+- **Windows (Command Prompt / PowerShell)**:
+  ```cmd
+  start.bat
+  ```
 
 The script automatically:
 1. Validates `SUMO_HOME` and SUMO CLI binaries (`netconvert`, `sumo`).

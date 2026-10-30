@@ -51,7 +51,8 @@ flowchart TD
 /Users/vijay/Projects/traffis/
 ├── AGENTS.md                     # [This file] Primary guide for AI agents & engineers
 ├── README.md                     # Human-facing introduction & setup documentation
-├── start.sh                      # Shell script: compiles network & starts backend + frontend
+├── start.sh                      # Shell script: compiles network & starts backend + frontend (macOS/Linux)
+├── start.bat                     # Windows batch script: compiles network & starts backend + frontend
 ├── backend/                      # Python FastAPI + SUMO TraCI service
 │   ├── .venv/                    # Python virtual environment
 │   ├── requirements.txt          # Python dependencies (fastapi, uvicorn, traci, etc.)
