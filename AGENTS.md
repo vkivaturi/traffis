@@ -95,7 +95,7 @@ flowchart TD
         │   └── useAuth.ts        # Persistent Google authentication state & session manager
         ├── components/
         │   ├── LandingPage.tsx   # Main landing page with 4 screenshot cards, hero banner & CTA
-        │   ├── GoogleSignInModal.tsx # Google OAuth modal dialog with one-click profile picker
+        │   ├── GoogleSignInModal.tsx # Google OAuth modal dialog with official Google Sign-In
         │   ├── AboutModal.tsx    # About popup with system specs, architecture & contact email
         │   ├── ImageLightboxModal.tsx # Fullscreen screenshot inspector with technical specs
         │   ├── Header.tsx        # Top status bar, connection health, audio toggle, reset & profile

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { GoogleLogin, type CredentialResponse } from '@react-oauth/google';
-import { X, ShieldCheck, Check, AlertCircle, Mail } from 'lucide-react';
+import { X, ShieldCheck, AlertCircle } from 'lucide-react';
 import type { User } from '../types/auth';
 
 interface GoogleSignInModalProps {
@@ -32,9 +32,6 @@ export const GoogleSignInModal: React.FC<GoogleSignInModalProps> = ({
   onClose,
   onSignIn,
 }) => {
-  const [customName, setCustomName] = useState('');
-  const [customEmail, setCustomEmail] = useState('');
-  const [isCustomMode, setIsCustomMode] = useState(false);
   const [loading, setLoading] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
 
@@ -57,29 +54,12 @@ export const GoogleSignInModal: React.FC<GoogleSignInModalProps> = ({
         return;
       }
     }
-    setAuthError('Unable to extract Google account email. Please enter your email manually.');
+    setAuthError('Unable to verify Google account credentials. Please try signing in again.');
     setLoading(false);
   };
 
   const handleGoogleError = () => {
     setAuthError('Google sign-in was cancelled or origin is not authorized yet.');
-  };
-
-  const handleCustomSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const emailTrimmed = customEmail.trim();
-    if (!emailTrimmed) return;
-    setLoading(true);
-    setAuthError(null);
-    setTimeout(() => {
-      onSignIn({
-        name: customName.trim() || emailTrimmed.split('@')[0],
-        email: emailTrimmed,
-        avatar: `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(emailTrimmed)}`,
-        token: `dev_custom_${btoa(emailTrimmed).replace(/=/g, '')}`,
-      });
-      setLoading(false);
-    }, 300);
   };
 
   return (
@@ -222,7 +202,7 @@ export const GoogleSignInModal: React.FC<GoogleSignInModalProps> = ({
                 Authenticating with Google OAuth...
               </span>
             </div>
-          ) : !isCustomMode ? (
+          ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '18px', alignItems: 'center' }}>
               <p style={{ fontSize: '0.84rem', color: '#475569', textAlign: 'center', lineHeight: 1.5 }}>
                 Sign in with your verified Google Account to launch the interactive microscopic traffic simulator.
@@ -250,111 +230,7 @@ export const GoogleSignInModal: React.FC<GoogleSignInModalProps> = ({
                   width="320"
                 />
               </div>
-
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '10px',
-                  width: '100%',
-                  margin: '4px 0',
-                }}
-              >
-                <div style={{ flex: 1, height: '1px', backgroundColor: '#e2e8f0' }} />
-                <span style={{ fontSize: '0.72rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                  or
-                </span>
-                <div style={{ flex: 1, height: '1px', backgroundColor: '#e2e8f0' }} />
-              </div>
-
-              {/* Enter custom Google account button */}
-              <button
-                type="button"
-                onClick={() => setIsCustomMode(true)}
-                className="btn-secondary"
-                style={{
-                  width: '100%',
-                  justifyContent: 'center',
-                  padding: '10px 14px',
-                  fontSize: '0.84rem',
-                  fontWeight: 600,
-                  gap: '8px',
-                }}
-              >
-                <Mail size={15} color="#4a2c11" />
-                <span>Enter Google Account Manually</span>
-              </button>
             </div>
-          ) : (
-            <form onSubmit={handleCustomSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              <div>
-                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
-                  Full Name
-                </label>
-                <input
-                  type="text"
-                  placeholder="Your Name"
-                  value={customName}
-                  onChange={(e) => setCustomName(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '10px 14px',
-                    borderRadius: '8px',
-                    background: '#ffffff',
-                    border: '1px solid #cbd5e1',
-                    color: '#0f172a',
-                    fontSize: '0.85rem',
-                    outline: 'none',
-                  }}
-                  onFocus={(e) => (e.target.style.borderColor = '#4a2c11')}
-                  onBlur={(e) => (e.target.style.borderColor = '#cbd5e1')}
-                />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
-                  Google Email Address <span style={{ color: '#dc2626' }}>*</span>
-                </label>
-                <input
-                  type="email"
-                  required
-                  placeholder="your-email@gmail.com"
-                  value={customEmail}
-                  onChange={(e) => setCustomEmail(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '10px 14px',
-                    borderRadius: '8px',
-                    background: '#ffffff',
-                    border: '1px solid #cbd5e1',
-                    color: '#0f172a',
-                    fontSize: '0.85rem',
-                    outline: 'none',
-                  }}
-                  onFocus={(e) => (e.target.style.borderColor = '#4a2c11')}
-                  onBlur={(e) => (e.target.style.borderColor = '#cbd5e1')}
-                />
-              </div>
-
-              <div style={{ display: 'flex', gap: '10px', marginTop: '6px' }}>
-                <button
-                  type="button"
-                  onClick={() => setIsCustomMode(false)}
-                  className="btn-secondary"
-                  style={{ flex: 1, justifyContent: 'center' }}
-                >
-                  Back
-                </button>
-                <button
-                  type="submit"
-                  className="btn-primary"
-                  style={{ flex: 2, justifyContent: 'center' }}
-                >
-                  <Check size={16} />
-                  Authorize & Sign In
-                </button>
-              </div>
-            </form>
           )}
 
           {/* Privacy and OAuth Reassurance */}
