@@ -111,7 +111,35 @@ Best for running the entire application in a clean, self-contained environment w
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/) (macOS / Windows) or Docker Engine (Linux).
 - Docker daemon must be running.
 
-### 2. Method A: Using Docker Compose (Recommended)
+### 2. Google OAuth Client ID Configuration
+
+> [!IMPORTANT]
+> **Build-Time vs. Runtime Behavior**:
+> Because the frontend SPA is compiled with Vite (`npm run build`), `VITE_GOOGLE_CLIENT_ID` is inlined directly into the static JavaScript bundle **at image build time**, not container runtime. Setting `-e VITE_GOOGLE_CLIENT_ID=...` or runtime `environment:` in Docker will have no effect on the compiled UI bundle.
+
+- **Will it work normally itself?**
+  - **Yes, when building on your local developer machine**: If `frontend/.env` is already present on your workstation, Docker automatically includes it in the build context (`COPY frontend/ ./`), and Vite bakes your client ID into the production bundle.
+  - **No, on fresh git clones or servers (e.g. AWS EC2, CI/CD)**: Because `.gitignore` excludes `.env` files, a fresh `git clone` will not have `frontend/.env`. You must provide it via either **Option A** (recommended) or **Option B** before running `docker build` or `docker compose up --build`.
+
+#### Option A: Create `frontend/.env` before building (Recommended)
+```bash
+cp frontend/.env.example frontend/.env
+# Edit frontend/.env with your authorized Google OAuth Client ID:
+# VITE_GOOGLE_CLIENT_ID=your_id.apps.googleusercontent.com
+```
+
+#### Option B: Pass as a Docker Build Argument
+You can inject the client ID during build without committing or creating `.env`:
+- **With Docker Compose**:
+  ```bash
+  VITE_GOOGLE_CLIENT_ID="your_id.apps.googleusercontent.com" docker compose up -d --build
+  ```
+- **With Docker CLI**:
+  ```bash
+  docker build --build-arg VITE_GOOGLE_CLIENT_ID="your_id.apps.googleusercontent.com" -t traffis:latest .
+  ```
+
+### 3. Method A: Using Docker Compose (Recommended)
 
 1. **Build and start the container in the background**:
    ```bash
@@ -131,7 +159,7 @@ Best for running the entire application in a clean, self-contained environment w
    docker compose down
    ```
 
-### 3. Method B: Using Standard Docker CLI
+### 4. Method B: Using Standard Docker CLI
 
 1. **Build the Docker image**:
    ```bash
@@ -227,6 +255,11 @@ newgrp docker
 git clone https://github.com/vkivaturi/traffis.git
 cd traffis
 
+# Configure Google OAuth Client ID (git clone does not include .env files)
+cp frontend/.env.example frontend/.env
+# Edit frontend/.env with your authorized Google Web Client ID:
+nano frontend/.env
+
 # Launch with Docker Compose
 docker compose up -d --build
 ```
@@ -295,7 +328,19 @@ For domain names (e.g., `traffis.yourdomain.com`), a Caddy reverse proxy automat
 
 ## Environment Variables & Configuration
 
-The application supports configuration overrides via environment variables passed directly or in `docker-compose.yml`:
+The application distinguishes between **build-time variables** (baked into the frontend bundle) and **runtime variables** (passed to the Python/SUMO container process):
+
+### 1. Frontend Build-Time Variables (Docker Build Stage)
+
+Must be supplied before or during `docker build` / `docker compose up --build`:
+
+| Variable | Default | Purpose & Usage |
+| :--- | :--- | :--- |
+| `VITE_GOOGLE_CLIENT_ID` | `""` (empty) | Google OAuth 2.0 Web Client ID. Baked into frontend static bundle via `frontend/.env` or `--build-arg VITE_GOOGLE_CLIENT_ID=...`. |
+
+### 2. Backend Runtime Variables (Container Process)
+
+Can be passed directly via `docker run -e VAR=val` or configured under `environment:` in `docker-compose.yml`:
 
 | Variable | Default | Purpose |
 | :--- | :--- | :--- |

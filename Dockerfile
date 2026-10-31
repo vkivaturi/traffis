@@ -10,7 +10,10 @@ RUN npm ci
 
 # Copy frontend source and build static distribution
 COPY frontend/ ./
-RUN npm run build
+
+# Optional build argument: inject Google Client ID if provided at build time
+ARG VITE_GOOGLE_CLIENT_ID
+RUN if [ -n "$VITE_GOOGLE_CLIENT_ID" ]; then echo "VITE_GOOGLE_CLIENT_ID=$VITE_GOOGLE_CLIENT_ID" >> .env.production.local; fi && npm run build
 
 # =============================================================================
 # Stage 2: Runtime Container (Ubuntu 24.04 LTS + Eclipse SUMO + Python 3.12)
