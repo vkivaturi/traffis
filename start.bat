@@ -7,6 +7,11 @@ title Traffis Launcher
 set "PROJECT_ROOT=%~dp0"
 if "%PROJECT_ROOT:~-1%"=="\" set "PROJECT_ROOT=%PROJECT_ROOT:~0,-1%"
 
+:: Allow passing VITE_GOOGLE_CLIENT_ID as first CLI argument: start.bat <client-id>
+if not "%~1"=="" (
+    set "VITE_GOOGLE_CLIENT_ID=%~1"
+)
+
 :: Resolve SUMO_HOME on Windows if not already set
 if not defined SUMO_HOME (
     if exist "C:\Program Files (x86)\Eclipse\Sumo" (
@@ -18,17 +23,26 @@ if not defined SUMO_HOME (
     )
 )
 
+:: Note: use delayed expansion (!VAR!) inside blocks - paths like "C:\Program Files (x86)" contain ")" which breaks %VAR% expansion
 if defined SUMO_HOME (
-    set "PATH=%SUMO_HOME%\bin;%PATH%"
+    set "PATH=!SUMO_HOME!\bin;!PATH!"
 )
 
 echo ==================================================
 echo     TRAFFIS: Real-Time SUMO Traffic Simulation    
 echo ==================================================
 if defined SUMO_HOME (
-    echo SUMO_HOME: %SUMO_HOME%
+    echo SUMO_HOME: !SUMO_HOME!
 ) else (
     echo [WARNING] SUMO_HOME is not set. Ensure SUMO is in your system PATH.
+)
+
+:: Ensure Node.js is in PATH if installed in standard location
+where npm >nul 2>&1
+if errorlevel 1 (
+    if exist "C:\Program Files\nodejs\npm.cmd" (
+        set "PATH=C:\Program Files\nodejs;!PATH!"
+    )
 )
 
 :: Locate Python executable (check virtual environment first)
@@ -38,13 +52,28 @@ if exist "%PROJECT_ROOT%\backend\.venv\Scripts\python.exe" (
 ) else if exist "%PROJECT_ROOT%\backend\.venv\python.exe" (
     set "PYTHON_EXE=%PROJECT_ROOT%\backend\.venv\python.exe"
 ) else (
-    where python >nul 2>&1
-    if not errorlevel 1 (
-        set "PYTHON_EXE=python"
-    ) else (
+    set "SYS_PYTHON="
+    for /d %%D in ("%LOCALAPPDATA%\Programs\Python\Python3*") do (
+        if exist "%%D\python.exe" set "SYS_PYTHON="%%D\python.exe""
+    )
+    if not defined SYS_PYTHON (
         where py >nul 2>&1
         if not errorlevel 1 (
-            set "PYTHON_EXE=py -3"
+            set "SYS_PYTHON=py -3"
+        ) else (
+            where python >nul 2>&1
+            if not errorlevel 1 set "SYS_PYTHON=python"
+        )
+    )
+    if defined SYS_PYTHON (
+        echo Creating Python virtual environment in backend\.venv...
+        !SYS_PYTHON! -m venv "%PROJECT_ROOT%\backend\.venv"
+        if not errorlevel 1 (
+            set "PYTHON_EXE=%PROJECT_ROOT%\backend\.venv\Scripts\python.exe"
+            echo Installing backend Python dependencies...
+            "!PYTHON_EXE!" -m pip install -r "%PROJECT_ROOT%\backend\requirements.txt"
+        ) else (
+            set "PYTHON_EXE=!SYS_PYTHON!"
         )
     )
 )
@@ -53,6 +82,20 @@ if not defined PYTHON_EXE (
     echo [ERROR] Python not found! Please ensure Python 3.12+ is installed or backend\.venv is configured.
     pause
     exit /b 1
+)
+
+:: 0. Install frontend dependencies if missing
+if not exist "%PROJECT_ROOT%\frontend\node_modules" (
+    echo Installing frontend npm dependencies...
+    pushd "%PROJECT_ROOT%\frontend"
+    call npm install
+    if errorlevel 1 (
+        popd
+        echo [ERROR] Failed to install frontend dependencies with npm install.
+        pause
+        exit /b 1
+    )
+    popd
 )
 
 :: 1. Compile SUMO Networks if missing
@@ -76,14 +119,14 @@ if "%REBUILD_NETWORKS%"=="1" (
 
 :: 2. Launch FastAPI Backend
 echo Starting FastAPI Backend on http://127.0.0.1:8000...
-start "Traffis Backend" /D "%PROJECT_ROOT%\backend" "%PYTHON_EXE%" run.py
+start "Traffis Backend" /D "%PROJECT_ROOT%\backend" cmd /k ""%PYTHON_EXE%" run.py"
 
 :: Wait for backend to initialize
 timeout /t 2 /nobreak >nul
 
 :: 3. Launch Vite Frontend
 echo Starting Vite Frontend on http://127.0.0.1:5173...
-start "Traffis Frontend" /D "%PROJECT_ROOT%\frontend" cmd /c "npm run dev -- --host 0.0.0.0 --port 5173"
+start "Traffis Frontend" /D "%PROJECT_ROOT%\frontend" cmd /k "npm run dev -- --host 0.0.0.0 --port 5173"
 
 echo.
 echo Traffis is running!
