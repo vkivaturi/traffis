@@ -9,6 +9,7 @@ from .three_way_intersection import ThreeWayIntersectionScenario
 from .four_way_intersection import FourWayIntersectionScenario
 from .gnt_circle import GntCircleScenario, GntCircleWithTrafficLightsScenario
 from .nallagandla_junction import NallagandlaJunctionScenario
+from .bl_1 import Bl1Scenario
 from ..schemas import ScenarioMetadata, ScenarioGroup
 from ..config import SUMO_CONFIG_DIR, SCENARIO_GROUPS_FILE
 
@@ -131,6 +132,7 @@ def init_registry():
     gnt_circle_cfg = SUMO_CONFIG_DIR / "scenarios" / "gnt_circle" / "gnt_circle.sumocfg"
     gnt_circle_tl_cfg = SUMO_CONFIG_DIR / "scenarios" / "gnt_circle_with_traffic_lights" / "gnt_circle_with_traffic_lights.sumocfg"
     nallagandla_cfg = SUMO_CONFIG_DIR / "scenarios" / "nallagandla_junction" / "nallagandla_junction.sumocfg"
+    bl_1_cfg = SUMO_CONFIG_DIR / "scenarios" / "bl_1" / "bl_1.sumocfg"
 
     registry.register(StraightRoadScenario(sumocfg_file=str(straight_cfg)))
     registry.register(ThreeWayIntersectionScenario(sumocfg_file=str(three_way_cfg)))
@@ -138,5 +140,6 @@ def init_registry():
     registry.register(GntCircleScenario(sumocfg_file=str(gnt_circle_cfg)))
     registry.register(GntCircleWithTrafficLightsScenario(sumocfg_file=str(gnt_circle_tl_cfg)))
     registry.register(NallagandlaJunctionScenario(sumocfg_file=str(nallagandla_cfg)))
+    registry.register(Bl1Scenario(sumocfg_file=str(bl_1_cfg)))
 
 init_registry()

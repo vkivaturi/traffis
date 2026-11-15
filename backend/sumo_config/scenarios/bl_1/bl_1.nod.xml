@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nodes xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/nodes_file.xsd">
+    <!-- External Terminals -->
+    <node id="BIO_in"  x="-110.0" y="-240.0" type="dead_end"/>
+    <node id="BIO_out" x="-75.0"  y="-240.0" type="dead_end"/>
+    <node id="SHL_end" x="-250.0" y="40.0"   type="dead_end"/>
+    <node id="KON_end" x="-250.0" y="160.0"  type="dead_end"/>
+    <node id="HIT_out" x="-40.0"  y="240.0"  type="dead_end"/>
+    <node id="HIT_in"  x="-24.0"  y="240.0"  type="dead_end"/>
+    <node id="MIN_in"  x="75.0"   y="240.0"  type="dead_end"/>
+    <node id="INO_end" x="240.0"  y="135.0"  type="dead_end"/>
+    <node id="THB_end" x="190.0"  y="-24.0"  type="dead_end"/>
+    <node id="MHP_out" x="190.0"  y="-230.0" type="dead_end"/>
+
+    <!-- Internal Priority Junctions (No Traffic Signals) -->
+    <node id="j_bio_20"     x="-110.0" y="-140.0" type="priority"/>
+    <node id="j_16_3"       x="-105.0" y="-35.0"  type="priority"/>
+    <node id="j_15_4"       x="-82.0"  y="-26.0"  type="priority"/>
+    <node id="j_shl"        x="-95.0"  y="40.0"   type="priority"/>
+    <node id="j_kon"        x="-65.0"  y="145.0"  type="priority"/>
+    <node id="j_hit_merge"  x="-52.0"  y="165.0"  type="priority"/>
+    <node id="j_9_10"       x="-42.0"  y="160.0"  type="priority"/>
+    <node id="j_mindspace"  x="55.0"   y="135.0"  type="priority"/>
+    <node id="j_thb"        x="15.0"   y="-24.0"  type="priority"/>
+    <node id="j_park_ne"    x="22.0"   y="-135.0" type="priority"/>
+    <node id="j_park_nw"    x="-75.0"  y="-140.0" type="priority"/>
+    <node id="j_mhp_corner" x="30.0"   y="-230.0" type="priority"/>
+</nodes>
+

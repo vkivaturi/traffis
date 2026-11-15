@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<routes xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/routes_file.xsd">
+    <vType id="car" vClass="passenger" guiShape="passenger" color="#38bdf8" length="4.3" width="1.7" maxSpeed="30.0" accel="2.6" decel="4.5"/>
+    <vType id="van" vClass="delivery" guiShape="delivery" color="#a78bfa" length="5.0" width="1.9" maxSpeed="25.0" accel="2.0" decel="4.2"/>
+</routes>
+

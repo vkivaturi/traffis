@@ -421,9 +421,9 @@ export const renderGeometryNetwork = (
   }
 
   // 9. Feature callouts
-  if (zoom > 2.2) {
-    ctx.font = '700 10px Inter, sans-serif';
-    ctx.fillStyle = 'rgba(244, 114, 182, 0.85)';
+  if (zoom > 0.8) {
+    ctx.font = '700 11px Inter, sans-serif';
+    ctx.fillStyle = 'rgba(244, 114, 182, 0.9)';
     for (const c of geo.callouts ?? []) {
       ctx.textAlign = c.align ?? 'center';
       ctx.fillText(c.text, sx(c.x), sy(c.y));

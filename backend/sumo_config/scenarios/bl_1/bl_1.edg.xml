@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<edges xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/edges_file.xsd">
+    <!-- West spine: BIO -> 1 -> 2 -> 3 -> 6 -> 8 -> HIT -->
+    <edge id="sec_1" from="BIO_in" to="j_bio_20" numLanes="3" speed="13.89" priority="3" width="3.2"/>
+    <edge id="sec_2" from="j_bio_20" to="j_16_3" numLanes="3" speed="13.89" priority="3" width="3.2"/>
+    <edge id="sec_3" from="j_16_3" to="j_shl" numLanes="3" speed="13.89" priority="3" width="3.2"/>
+    <edge id="sec_6" from="j_shl" to="j_kon" numLanes="3" speed="13.89" priority="3" width="3.2"
+          shape="-95.0,40.0 -88.0,78.0 -78.0,112.0 -65.0,145.0"/>
+    <edge id="sec_6_8" from="j_kon" to="j_hit_merge" numLanes="3" speed="13.89" priority="3" width="3.2"/>
+    <edge id="sec_6_10" from="j_kon" to="j_9_10" numLanes="3" speed="13.89" priority="2" width="3.2"
+          shape="-65.0,145.0 -53.0,148.0 -42.0,160.0"/>
+    <edge id="sec_8" from="j_hit_merge" to="HIT_out" numLanes="3" speed="13.89" priority="3" width="3.2"
+          shape="-52.0,165.0 -46.0,202.0 -40.0,240.0"/>
+
+    <!-- Inner northbound bypass: 15 -> 4 (NB) -> 8 -->
+    <edge id="sec_4_nb" from="j_15_4" to="j_hit_merge" numLanes="3" speed="13.89" priority="2" width="3.2"
+          shape="-82.0,-26.0 -82.0,10.0 -75.0,55.0 -63.0,105.0 -52.0,165.0"/>
+
+    <!-- SHL corridor (LHT: 5 EB on north side, 4_shl WB on south side) -->
+    <edge id="sec_5" from="SHL_end" to="j_shl" numLanes="3" speed="13.89" priority="3" width="3.2"
+          shape="-250.0,41.0 -95.0,41.0"/>
+    <edge id="sec_4_shl" from="j_shl" to="SHL_end" numLanes="3" speed="13.89" priority="3" width="3.2"
+          shape="-95.0,39.0 -250.0,39.0"/>
+
+    <!-- KON outbound -->
+    <edge id="sec_7" from="j_kon" to="KON_end" numLanes="3" speed="13.89" priority="3" width="3.2"
+          shape="-65.0,145.0 -140.0,154.0 -250.0,160.0"/>
+
+    <!-- HIT inbound (9) & cross-top (10) -->
+    <edge id="sec_9" from="HIT_in" to="j_9_10" numLanes="3" speed="13.89" priority="3" width="3.2"
+          shape="-24.0,240.0 -33.0,200.0 -42.0,160.0"/>
+    <edge id="sec_10" from="j_9_10" to="j_mindspace" numLanes="3" speed="13.89" priority="3" width="3.2"
+          shape="-42.0,160.0 -10.0,154.0 25.0,145.0 55.0,135.0"/>
+
+    <!-- MIN inbound (11) -->
+    <edge id="sec_11" from="MIN_in" to="j_mindspace" numLanes="3" speed="13.89" priority="3" width="3.2"
+          shape="75.0,240.0 66.0,188.0 55.0,135.0"/>
+
+    <!-- INO corridor (LHT: 12 EB on north side, 13 WB on south side) -->
+    <edge id="sec_12" from="j_mindspace" to="INO_end" numLanes="3" speed="13.89" priority="3" width="3.2"
+          shape="55.0,136.0 240.0,136.0"/>
+    <edge id="sec_13" from="INO_end" to="j_mindspace" numLanes="3" speed="13.89" priority="3" width="3.2"
+          shape="240.0,134.0 55.0,134.0"/>
+
+    <!-- East spine (14) -->
+    <edge id="sec_14" from="j_mindspace" to="j_thb" numLanes="3" speed="13.89" priority="3" width="3.2"
+          shape="55.0,135.0 54.0,95.0 43.0,52.0 28.0,12.0 15.0,-24.0"/>
+
+    <!-- Mid-horizontal corridor (15 WB north side, 16 EB south side) -->
+    <edge id="sec_15" from="j_thb" to="j_15_4" numLanes="3" speed="13.89" priority="3" width="3.2"
+          shape="15.0,-23.0 -35.0,-24.5 -82.0,-26.0"/>
+    <edge id="sec_16" from="j_16_3" to="j_thb" numLanes="3" speed="13.89" priority="2" width="3.2"
+          shape="-105.0,-35.0 -45.0,-30.0 15.0,-25.0"/>
+
+    <!-- THB corridor (LHT: 24 EB on north side, 25 WB on south side) -->
+    <edge id="sec_24" from="j_thb" to="THB_end" numLanes="3" speed="13.89" priority="3" width="3.2"
+          shape="15.0,-23.0 190.0,-23.0"/>
+    <edge id="sec_25" from="THB_end" to="j_thb" numLanes="3" speed="13.89" priority="3" width="3.2"
+          shape="190.0,-25.0 15.0,-25.0"/>
+
+    <!-- Lower loop around MY HOME & PARK -->
+    <edge id="sec_17" from="j_thb" to="j_park_ne" numLanes="3" speed="13.89" priority="3" width="3.2"
+          shape="15.0,-24.0 19.0,-80.0 22.0,-135.0"/>
+    <edge id="sec_18" from="j_park_ne" to="j_park_nw" numLanes="3" speed="13.89" priority="3" width="3.2"
+          shape="22.0,-135.0 -26.0,-137.5 -75.0,-140.0"/>
+    <edge id="sec_19" from="j_park_ne" to="j_mhp_corner" numLanes="3" speed="13.89" priority="3" width="3.2"
+          shape="22.0,-135.0 26.0,-182.0 30.0,-230.0"/>
+    <edge id="sec_20" from="j_park_nw" to="j_bio_20" numLanes="3" speed="13.89" priority="2" width="3.2"/>
+    <edge id="sec_21" from="j_park_nw" to="BIO_out" numLanes="3" speed="13.89" priority="3" width="3.2"/>
+    <edge id="sec_22" from="j_mhp_corner" to="MHP_out" numLanes="3" speed="13.89" priority="3" width="3.2"
+          shape="30.0,-230.0 190.0,-230.0"/>
+</edges>
+

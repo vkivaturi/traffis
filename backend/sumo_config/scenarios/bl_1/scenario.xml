@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<scenario id="bl_1" maxSimTime="300">
+    <demand>
+        <od key="INO_MHP" vehsPerHour="0"/>
+        <od key="INO_BIO" vehsPerHour="0"/>
+        <od key="THB_SHL" vehsPerHour="0"/>
+        <od key="THB_BIO" vehsPerHour="0"/>
+        <od key="THB_MHP" vehsPerHour="0"/>
+        <od key="BIO_HIT" vehsPerHour="0"/>
+        <od key="BIO_KON" vehsPerHour="0"/>
+        <od key="BIO_THB" vehsPerHour="0"/>
+        <od key="BIO_INO" vehsPerHour="0"/>
+        <od key="SHL_HIT" vehsPerHour="0"/>
+        <od key="SHL_THB" vehsPerHour="0"/>
+        <od key="HIT_INO" vehsPerHour="0"/>
+        <od key="HIT_THB" vehsPerHour="0"/>
+        <od key="HIT_BIO" vehsPerHour="0"/>
+        <od key="HIT_MHP" vehsPerHour="0"/>
+        <od key="MIN_INO" vehsPerHour="0"/>
+        <od key="MIN_HIT" vehsPerHour="0"/>
+        <od key="MIN_BIO" vehsPerHour="0"/>
+        <od key="MIN_MHP" vehsPerHour="0"/>
+    </demand>
+
+    <behaviour carFollowModel="Krauss" laneChangeModel="SL2015" lateralResolution="0.8">
+        <param key="minGap" value="1.0"/>
+        <param key="tau" value="0.6"/>
+        <param key="sigma" value="0.6"/>
+        <param key="impatience" value="0.8"/>
+    </behaviour>
+
+    <vehicleMix>
+        <vtype id="car" share="0.85"/>
+        <vtype id="van" share="0.15"/>
+    </vehicleMix>
+</scenario>
+

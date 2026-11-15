@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<connections xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/connections_file.xsd">
+    <connection from="sec_1" to="sec_2"/>
+    <connection from="sec_20" to="sec_2"/>
+    <connection from="sec_2" to="sec_3"/>
+    <connection from="sec_2" to="sec_16"/>
+
+    <connection from="sec_3" to="sec_4_shl"/>
+    <connection from="sec_3" to="sec_6"/>
+    <connection from="sec_5" to="sec_6"/>
+
+    <connection from="sec_6" to="sec_7"/>
+    <connection from="sec_6" to="sec_6_8"/>
+    <connection from="sec_6" to="sec_6_10"/>
+    <connection from="sec_6_8" to="sec_8"/>
+    <connection from="sec_4_nb" to="sec_8"/>
+    <connection from="sec_6_10" to="sec_10"/>
+    <connection from="sec_9" to="sec_10"/>
+
+    <connection from="sec_10" to="sec_12"/>
+    <connection from="sec_10" to="sec_14"/>
+    <connection from="sec_11" to="sec_12"/>
+    <connection from="sec_11" to="sec_14"/>
+    <connection from="sec_13" to="sec_14"/>
+
+    <connection from="sec_14" to="sec_24"/>
+    <connection from="sec_14" to="sec_15"/>
+    <connection from="sec_14" to="sec_17"/>
+    <connection from="sec_15" to="sec_4_nb"/>
+    <connection from="sec_25" to="sec_17"/>
+    <connection from="sec_16" to="sec_24"/>
+    <connection from="sec_16" to="sec_17"/>
+
+    <connection from="sec_17" to="sec_18"/>
+    <connection from="sec_17" to="sec_19"/>
+    <connection from="sec_18" to="sec_20"/>
+    <connection from="sec_18" to="sec_21"/>
+    <connection from="sec_19" to="sec_22"/>
+</connections>
+

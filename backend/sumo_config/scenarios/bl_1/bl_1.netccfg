@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/netconvertConfiguration.xsd">
+    <input>
+        <node-files value="bl_1.nod.xml"/>
+        <edge-files value="bl_1.edg.xml"/>
+        <connection-files value="bl_1.con.xml"/>
+    </input>
+    <output>
+        <output-file value="bl_1.net.xml"/>
+    </output>
+    <processing>
+        <lefthand value="true"/>
+        <no-turnarounds value="true"/>
+        <geometry.avoid-overlap value="true"/>
+        <junctions.corner-detail value="5"/>
+    </processing>
+</configuration>
+
