@@ -34,8 +34,18 @@
     "active": true,
     "targets": "all",
     "icon": [
-      "icons/icon.png"
-    ]
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "resources": {
+      "../backend/run.py": "backend/run.py",
+      "../backend/requirements.txt": "backend/requirements.txt",
+      "../backend/app": "backend/app",
+      "../backend/sumo_config": "backend/sumo_config"
+    }
   }
 }
 

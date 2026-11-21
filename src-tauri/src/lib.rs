@@ -2,12 +2,25 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
+#[cfg(windows)]
+use std::os::windows::process::CommandExt;
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
 use std::sync::Mutex;
 use std::thread;
 use std::time::{Duration, Instant};
 use tauri::{AppHandle, Manager, RunEvent};
+
+#[cfg(windows)]
+const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+
+fn background_command(program: impl AsRef<std::ffi::OsStr>) -> Command {
+    #[allow(unused_mut)]
+    let mut cmd = Command::new(program);
+    #[cfg(windows)]
+    cmd.creation_flags(CREATE_NO_WINDOW);
+    cmd
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct DesktopPaths {
@@ -119,7 +132,7 @@ fn detect_python(backend_dir: Option<&Path>) -> Option<String> {
 
     let which_cmd = if cfg!(windows) { "where" } else { "which" };
     for bin in ["python3", "python"] {
-        if let Ok(output) = Command::new(which_cmd).arg(bin).output() {
+        if let Ok(output) = background_command(which_cmd).arg(bin).output() {
             if output.status.success() {
                 if let Some(first_line) = String::from_utf8_lossy(&output.stdout).lines().next() {
                     let trimmed = first_line.trim();
@@ -163,7 +176,7 @@ fn validate_python(python_path: &str) -> Result<(), String> {
         return Err("Python path is empty.".to_string());
     }
 
-    let ver = Command::new(trimmed)
+    let ver = background_command(trimmed)
         .arg("--version")
         .output()
         .map_err(|e| format!("Could not execute Python at '{trimmed}': {e}"))?;
@@ -171,7 +184,7 @@ fn validate_python(python_path: &str) -> Result<(), String> {
         return Err(format!("Python at '{trimmed}' exited with an error."));
     }
 
-    let deps = Command::new(trimmed)
+    let deps = background_command(trimmed)
         .args(["-c", "import fastapi, uvicorn, traci"])
         .output()
         .map_err(|e| format!("Failed to check Python dependencies: {e}"))?;
@@ -208,7 +221,7 @@ fn validate_sumo_home(sumo_home: &str) -> Result<(), String> {
 
     let found_bin = candidates.iter().any(|p| p.is_file()) || {
         let which_cmd = if cfg!(windows) { "where" } else { "which" };
-        Command::new(which_cmd)
+        background_command(which_cmd)
             .arg("sumo")
             .output()
             .map(|o| o.status.success())
@@ -255,6 +268,13 @@ fn check_health(port: u16) -> bool {
 fn stop_backend_process(state: &BackendState) {
     if let Ok(mut guard) = state.child.lock() {
         if let Some(mut child) = guard.take() {
+            #[cfg(windows)]
+            {
+                let pid = child.id();
+                let _ = background_command("taskkill")
+                    .args(["/F", "/T", "/PID", &pid.to_string()])
+                    .output();
+            }
             let _ = child.kill();
             let _ = child.wait();
         }
@@ -279,7 +299,7 @@ fn start_backend_process(
         .ok_or_else(|| "Could not locate backend/run.py relative to the app.".to_string())?;
     let port = pick_free_port()?;
 
-    let mut child = Command::new(python_path.trim())
+    let mut child = background_command(python_path.trim())
         .arg("run.py")
         .current_dir(&backend_dir)
         .env("TRAFFIS_HOST", "127.0.0.1")
