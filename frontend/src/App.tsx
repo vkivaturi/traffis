@@ -186,7 +186,7 @@ export const App: React.FC = () => {
       if (e.code === 'Space') {
         e.preventDefault();
         if (state.is_running) pause();
-        else play();
+        else if (!state.time_limit_reached) play();
       } else if (e.code === 'KeyR') {
         e.preventDefault();
         handleReset();
@@ -195,7 +195,7 @@ export const App: React.FC = () => {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [currentView, state.is_running, pause, play, handleReset]);
+  }, [currentView, state.is_running, state.time_limit_reached, pause, play, handleReset]);
 
   const handleNavigateCompare = () => {
     setCurrentView('compare');
@@ -343,6 +343,8 @@ export const App: React.FC = () => {
         onStop={handleReset}
         stats={state.stats}
         simTime={state.sim_time}
+        maxSimTime={state.max_sim_time}
+        timeLimitReached={state.time_limit_reached}
         scenario={activeScenario}
         trafficLight={state.traffic_light}
         onUpdateOption={handleUpdateOption}

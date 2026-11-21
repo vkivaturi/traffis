@@ -15,8 +15,9 @@ from xml.sax.saxutils import quoteattr
 import traci
 
 from .base import BaseScenario
+from ..config import settings
 from .net_geometry import NetGeometry, load_net_geometry
-from .settings_loader import ScenarioSettingsError
+from .settings_loader import ScenarioSettingsError, write_text_safe
 from ..schemas import (
     ScenarioMetadata,
     ScenarioOption,
@@ -99,6 +100,15 @@ AGGRESSIVE_TAU = 0.3       # s  - tiny following headway
 FORCE_EDGES = {"TL_free_left", "FL_free_left", "bot_wb_b", "NG_in", "rb_S_W"}
 SPEED_MODE_DEFAULT = 31
 SPEED_MODE_FORCE = 23
+
+# Deadlock-resolution thresholds in simulated seconds (step-rate independent).
+# Values preserve the behaviour tuned at the previous 5 Hz rate (20/40/70 ticks x 0.2 s).
+STUCK_TIER1_S = 4.0    # override junction hesitation
+STUCK_TIER2_S = 8.0    # strong nudge + assertive lane change
+STUCK_TIER3_S = 14.0   # remove (teleport) the gridlocked vehicle
+STUCK_TIER1_TICKS = max(1, round(STUCK_TIER1_S / settings.STEP_LENGTH))
+STUCK_TIER2_TICKS = max(STUCK_TIER1_TICKS + 1, round(STUCK_TIER2_S / settings.STEP_LENGTH))
+STUCK_TIER3_TICKS = max(STUCK_TIER2_TICKS + 1, round(STUCK_TIER3_S / settings.STEP_LENGTH))
 
 EDGE_NAMES = {
     "NG_in": "From Nallagandla", "NG_out_a": "To Nallagandla (ring exit)", "NG_out_b": "To Nallagandla",
@@ -337,9 +347,7 @@ class _BaseGntCircleScenario(BaseScenario):
                 f'vehsPerHour="{vph:g}" departLane="{depart_lane}" departPosLat="{depart_pos_lat}" departSpeed="desired"/>')
         lines.append("</routes>")
 
-        tmp = self.route_file.with_suffix(".xml.tmp")
-        tmp.write_text("\n".join(lines) + "\n", encoding="utf-8")
-        os.replace(tmp, self.route_file)
+        write_text_safe(self.route_file, "\n".join(lines) + "\n")
 
     def extra_sumo_args(self) -> List[str]:
         args = ["-n", str(self.net_file)]
@@ -607,7 +615,7 @@ class _BaseGntCircleScenario(BaseScenario):
                 self.uturn_seen.add(vid)
                 self.uturn_count += 1
         self.teleports += traci.simulation.getStartingTeleportNumber()
-        # Multi-tier proactive deadlock resolution (Unstuck within 1.0 - 2.0s, teleport hard cap at 3.5s)
+        # Multi-tier proactive deadlock resolution (time-based thresholds, see STUCK_TIER*_S)
         active_vids = set(traci.vehicle.getIDList())
         for vid in list(self.stopped_ticks.keys()):
             if vid not in active_vids:
@@ -620,8 +628,8 @@ class _BaseGntCircleScenario(BaseScenario):
                     self.stopped_ticks[vid] = self.stopped_ticks.get(vid, 0) + 1
                     ticks = self.stopped_ticks[vid]
 
-                    # Tier 1: Stuck for >= 1.0s (20 ticks) -> override junction hesitation immediately
-                    if 20 <= ticks < 40:
+                    # Tier 1: Stuck for >= STUCK_TIER1_S -> override junction hesitation immediately
+                    if STUCK_TIER1_TICKS <= ticks < STUCK_TIER2_TICKS:
                         leader = traci.vehicle.getLeader(vid, 12.0)
                         if leader is None:
                             # No car ahead: pure link/junction hesitation -> full override
@@ -632,20 +640,20 @@ class _BaseGntCircleScenario(BaseScenario):
                             traci.vehicle.setSpeedMode(vid, 23)
                             traci.vehicle.setSpeed(vid, 6.0)
 
-                    # Tier 2: Stuck for >= 2.0s (40 ticks) -> strong impulse nudge & enable assertive lane change
-                    elif 40 <= ticks < 70:
+                    # Tier 2: Stuck for >= STUCK_TIER2_S -> strong impulse nudge & enable assertive lane change
+                    elif STUCK_TIER2_TICKS <= ticks < STUCK_TIER3_TICKS:
                         traci.vehicle.setSpeedMode(vid, 0)
                         traci.vehicle.setSpeed(vid, 10.0)
                         traci.vehicle.setLaneChangeMode(vid, 1365)
 
-                    # Tier 3: Stuck for >= 3.5s (70 ticks) -> vaporize gridlock to ensure strictly < 5s limit
-                    elif ticks >= 70:
+                    # Tier 3: Stuck for >= STUCK_TIER3_S -> vaporize gridlock
+                    elif ticks >= STUCK_TIER3_TICKS:
                         del self.stopped_ticks[vid]
                         traci.vehicle.remove(vid, reason=traci.constants.REMOVE_TELEPORT)
                         self.teleports += 1
                 else:
                     if vid in self.stopped_ticks:
-                        if self.stopped_ticks[vid] >= 20:
+                        if self.stopped_ticks[vid] >= STUCK_TIER1_TICKS:
                             traci.vehicle.setSpeed(vid, -1)
                             traci.vehicle.setSpeedMode(vid, 31)
                         del self.stopped_ticks[vid]
@@ -676,7 +684,7 @@ class _BaseGntCircleScenario(BaseScenario):
         self.aggressive_ids.intersection_update(active_ids)
         self.forcing_ids.intersection_update(active_ids)
         for vid in list(self.aggressive_ids):
-            if vid in self.stopped_ticks and self.stopped_ticks[vid] >= 20:
+            if vid in self.stopped_ticks and self.stopped_ticks[vid] >= STUCK_TIER1_TICKS:
                 continue
             try:
                 road = traci.vehicle.getRoadID(vid)

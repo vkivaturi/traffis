@@ -8,7 +8,7 @@ A high-performance microscopic traffic simulation desktop application powered by
 ![Python](https://img.shields.io/badge/Python-3.12+-3776AB?style=flat-square&logo=python)
 ![React](https://img.shields.io/badge/React-19-61DAFB?style=flat-square&logo=react)
 
-> **Note:** Traffis is a local desktop application with no login, no bandwidth limits, and no simulation time caps. The legacy browser-hosted release is archived on the `release/v1-browser` branch.
+> **Note:** Traffis is a local desktop application with no login, no bandwidth limits. Every simulation run is capped at 5 minutes of simulated time (reset to run again). The legacy browser-hosted release is archived on the `release/v1-browser` branch.
 
 ---
 
@@ -22,7 +22,7 @@ graph LR
     end
 
     subgraph Backend["Local Python FastAPI Backend"]
-        SM["SimulationManager @ 5Hz"]
+        SM["SimulationManager @ 10Hz"]
         WS["Localhost WS / REST (127.0.0.1:<port>)"]
     end
 
@@ -37,7 +37,7 @@ graph LR
 ```
 
 - **Tauri Rust shell (`src-tauri/`)** auto-detects your local Python and `SUMO_HOME` installations (or prompts you to browse for them on first launch), starts the Python backend on a free `127.0.0.1` port, and cleanly stops both Python and SUMO when you close the app.
-- **Python + SUMO (`backend/`)** runs SUMO physics and streams compact vehicle telemetry over loopback WebSockets at **5 Hz** (`0.2s` step length).
+- **Python + SUMO (`backend/`)** runs SUMO physics and streams compact vehicle telemetry over loopback WebSockets at **10 Hz** (`0.1s` step length).
 - **React + Canvas (`frontend/`)** renders roads, signals, junction metrics, and 60 FPS interpolated vehicles inside the native OS WebView.
 
 ---
@@ -88,7 +88,7 @@ On startup, Traffis automatically detects `backend/.venv/bin/python` and your `S
 npm --prefix frontend run tauri build
 ```
 
-For full build, verification, and troubleshooting details, see [DEPLOYMENT.md](DEPLOYMENT.md).
+For full build, verification, and troubleshooting details, see [DEPLOYMENT.md](DEPLOYMENT.md). **Windows users:** see [WINDOWS.md](WINDOWS.md) for Windows-specific dependencies (MSVC Build Tools, WebView2), PowerShell setup, and build steps.
 
 ---
 
@@ -96,7 +96,7 @@ For full build, verification, and troubleshooting details, see [DEPLOYMENT.md](D
 
 - **Scenarios**: Switch between straight corridors, 3-way and 4-way signalized intersections, and curved/roundabout networks (such as GNT Circle and Nallagandla Junction).
 - **Transport Controls**:
-  - **Start / Pause** (`Space`): Run or pause real-time SUMO physics with no duration limit.
+  - **Start / Pause** (`Space`): Run or pause real-time SUMO physics; runs auto-stop at the 5-minute (`5:00`) limit.
   - **Reset** (`R`): Clear active vehicles and reset simulation time to `0:00`.
 - **Interactive Viewport**:
   - **Pan**: Click and drag on the canvas.

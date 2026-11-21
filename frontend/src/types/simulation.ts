@@ -68,6 +68,8 @@ export interface SimulationState {
   traffic_light?: TrafficLightData;
   junction_metrics?: JunctionMetrics;
   default_speed_kmh?: number;
+  max_sim_time?: number;        // simulated seconds after which the run auto-stops (300 = 5 min)
+  time_limit_reached?: boolean;
 }
 
 export interface LaneInfo {

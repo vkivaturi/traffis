@@ -10,7 +10,7 @@ Welcome to **Traffis**. This document serves as the primary system map, architec
 - **Desktop Shell**: [Rust + Tauri v2](file:///Users/vijay/Projects/traffis/src-tauri/src/lib.rs) native window manager that auto-detects (or prompts for) local Python and SUMO paths, spawns the local FastAPI backend on an ephemeral loopback port, and cleans up processes on exit.
 - **Simulation Engine**: [Eclipse SUMO (Simulation of Urban MObility)](https://eclipse.dev/sumo/) running in headless daemon mode on the user's machine.
 - **Backend Application**: [Python 3.12+ FastAPI](file:///Users/vijay/Projects/traffis/backend/app/main.py) communicating with SUMO via [TraCI (Traffic Control Interface)](file:///Users/vijay/Projects/traffis/backend/app/simulation.py) over a local TCP socket.
-- **Data Streaming**: Local loopback WebSocket broadcasting vehicle kinematics and network metrics at **5 Hz** (with SUMO physics stepping at **5 Hz / 200ms ticks**). No authentication, rate limiting, bandwidth caps, or simulation time limits.
+- **Data Streaming**: Local loopback WebSocket broadcasting vehicle kinematics and network metrics at **10 Hz** (with SUMO physics stepping at **10 Hz / 100ms ticks**). No authentication, rate limiting, or bandwidth caps. Every run is hard-capped at **5 minutes (300 s) of simulated time** (`settings.MAX_SIM_TIME_S`).
 - **Frontend Dashboard**: [React 19 + TypeScript + Vite](file:///Users/vijay/Projects/traffis/frontend) running inside Tauri's native WebView, rendering an **HTML5 Canvas viewport (60 FPS interpolated)**, telemetry HUD, and simulation controls.
 
 > The legacy browser-hosted release is preserved on the `release/v1-browser` git branch.
@@ -37,9 +37,9 @@ flowchart TD
         PROC_PY["run.py"] --> CONF["app/config.py<br/>Path & rate settings"]
         CONF --> SM["SimulationManager<br/>(app/simulation.py)"]
         PROC <-->|TCP TraCI API| SM
-        LOOP["asyncio Loop @ 5Hz<br/>traci.simulationStep()"] --> SM
+        LOOP["asyncio Loop @ 10Hz<br/>traci.simulationStep()"] --> SM
         SM --> STATE["State Collector<br/>(app/schemas.py)"]
-        STATE --> WS["WebSocket Broadcaster<br/>(/ws @ 5Hz)"]
+        STATE --> WS["WebSocket Broadcaster<br/>(/ws @ 10Hz)"]
         REST["REST API Endpoints<br/>(/api/*)"] --> SM
     end
 
@@ -82,7 +82,7 @@ flowchart TD
 │   │   ├── __init__.py           # Package marker
 │   │   ├── config.py             # Settings, SUMO_HOME resolver, TRAFFIS_HOST/PORT env overrides
 │   │   ├── schemas.py            # Pydantic schemas (VehicleData, Stats, StateMessage, NetworkInfo)
-│   │   ├── simulation.py         # SimulationManager class: TraCI controller & 5Hz async loop
+│   │   ├── simulation.py         # SimulationManager class: TraCI controller & 10Hz async loop
 │   │   ├── main.py               # FastAPI app, lifespan setup, REST endpoints & WebSocket route
 │   │   └── scenarios/            # BaseScenario + one module per scenario (registry.py registers them)
 │   │       ├── gnt_circle.py     # GNT Circle roundabout: O-D flows -> .rou.xml, polyline geometry, junction metrics
@@ -119,7 +119,7 @@ flowchart TD
         │   ├── AboutModal.tsx         # About popup with system specs & architecture
         │   ├── Header.tsx             # Top status bar, scenario selector, Paths button, audio toggle
         │   ├── CanvasView.tsx         # HTML5 Canvas viewport: pan/zoom/follow, traffic gantry & 60fps lerp
-        │   ├── Controls.tsx           # Transport dock: Start / Pause / Reset + uncapped elapsed clock & telemetry
+        │   ├── Controls.tsx           # Transport dock: Start / Pause / Reset + elapsed clock (m:ss / 5:00) & telemetry
         │   ├── StatsPanel.tsx         # Telemetry metrics (active count, speed, lane distribution)
         │   ├── JunctionMetricsPanel.tsx # Junction metrics (per-arm flows, ring occupancy, U-turns, queues)
         │   ├── VehicleInspector.tsx   # Floating inspector card for individual vehicle telemetry
@@ -148,7 +148,7 @@ flowchart TD
 | :--- | :--- | :--- |
 | [`app/config.py`](file:///Users/vijay/Projects/traffis/backend/app/config.py) | Configuration management and path auto-detection. Reads `TRAFFIS_HOST`, `TRAFFIS_PORT`, and `SUMO_HOME` env vars. | `resolve_sumo_home()`, `resolve_sumo_binary()`, `Settings` class (`settings` singleton). |
 | [`app/schemas.py`](file:///Users/vijay/Projects/traffis/backend/app/schemas.py) | Data exchange contracts validated via Pydantic v2. | `VehicleData`, `SimulationStats`, `SimulationStateMessage`, `SpawnRequest`, `NetworkInfo`. |
-| [`app/simulation.py`](file:///Users/vijay/Projects/traffis/backend/app/simulation.py) | **Core orchestrator**. Owns TraCI process lifecycle, runs the 5 Hz simulation loop (uncapped duration), manages auto-spawning, coordinates async locks, and extracts vehicle kinematics. | `SimulationManager`, `start()`, `stop()`, `reset()`, `play()`, `pause()`, `run_benchmark()`, `_simulation_loop()`, `_collect_current_state()`. |
+| [`app/simulation.py`](file:///Users/vijay/Projects/traffis/backend/app/simulation.py) | **Core orchestrator**. Owns TraCI process lifecycle, runs the 10 Hz simulation loop (auto-pauses at the 5-minute cap), manages auto-spawning, coordinates async locks, and extracts vehicle kinematics. | `SimulationManager`, `start()`, `stop()`, `reset()`, `play()`, `pause()`, `run_benchmark()`, `_simulation_loop()`, `_collect_current_state()`. |
 | [`app/main.py`](file:///Users/vijay/Projects/traffis/backend/app/main.py) | FastAPI application with ASGI lifespan handler. Exposes local REST endpoints and bidirectional WebSocket at `/ws` without authentication or bandwidth throttling. | `lifespan(app)`, `websocket_endpoint()`, `/api/health`, `/api/network-info`, `/api/play`, `/api/pause`, `/api/reset`, `/api/scenario/select`. |
 | [`sumo_config/build_network.py`](file:///Users/vijay/Projects/traffis/backend/sumo_config/build_network.py) | Generates SUMO XML files and executes `netconvert` to compile `.net.xml` networks. | `build()`, `find_sumo_binary()`. |
 | [`run.py`](file:///Users/vijay/Projects/traffis/backend/run.py) | Backend entrypoint launched by Tauri (or manually). Verifies network compilation before starting `uvicorn`. | Direct execution: `python run.py`. |
@@ -163,7 +163,7 @@ flowchart TD
 | [`src/hooks/useSimulationSocket.ts`](file:///Users/vijay/Projects/traffis/frontend/src/hooks/useSimulationSocket.ts) | Manages WebSocket lifecycle against the Tauri-managed backend port, auto-reconnect (1.5s), message dispatch, and REST fallbacks. |
 | [`src/App.tsx`](file:///Users/vijay/Projects/traffis/frontend/src/App.tsx) | Root application state: Tauri backend status bootstrapping, camera coordinates, selected vehicle ID, audio preferences, keyboard listeners (`Space` = play/pause, `R` = reset). |
 | [`src/components/CanvasView.tsx`](file:///Users/vijay/Projects/traffis/frontend/src/components/CanvasView.tsx) | HTML5 Canvas renderer with `requestAnimationFrame` loop. Computes world-to-screen transforms, interpolates vehicle positions between ticks, and renders road markings, vehicles, signals, and leader indicators. |
-| [`src/components/Controls.tsx`](file:///Users/vijay/Projects/traffis/frontend/src/components/Controls.tsx) | Bottom dock with Start/Resume, Pause, Reset, uncapped elapsed time clock, scenario config trigger, and Avg Speed / PCE/h telemetry. |
+| [`src/components/Controls.tsx`](file:///Users/vijay/Projects/traffis/frontend/src/components/Controls.tsx) | Bottom dock with Start/Resume, Pause, Reset, elapsed time clock with 5:00 limit, scenario config trigger, and Avg Speed / PCE/h telemetry. |
 | [`src/components/VehicleInspector.tsx`](file:///Users/vijay/Projects/traffis/frontend/src/components/VehicleInspector.tsx) | Floating HUD displayed when clicking a vehicle (speed, acceleration, leader distance, Follow Cam). |
 | [`src/components/Header.tsx`](file:///Users/vijay/Projects/traffis/frontend/src/components/Header.tsx) | Top navbar with scenario dropdown, live WebSocket status badge, audio toggle, **Paths** settings button, Compare button, and About modal trigger. |
 
@@ -231,7 +231,7 @@ Full details: [`SPEC.md` §5.2.5](file:///Users/vijay/Projects/traffis/backend/s
      }
    }
    ```
-2. **State Broadcast** (5 Hz with SUMO physics at 5 Hz):
+2. **State Broadcast** (10 Hz with SUMO physics at 10 Hz):
    ```json
    {
      "type": "state",
@@ -263,7 +263,9 @@ Full details: [`SPEC.md` §5.2.5](file:///Users/vijay/Projects/traffis/backend/s
        "phase_remaining": 11.5,
        "next_state": "yellow"
      },
-     "default_speed_kmh": 50.0
+     "default_speed_kmh": 50.0,
+     "max_sim_time": 300.0,
+     "time_limit_reached": false
    }
    ```
 
@@ -298,9 +300,9 @@ Full details: [`SPEC.md` §5.2.5](file:///Users/vijay/Projects/traffis/backend/s
 - **Pattern**: [`SimulationManager`](file:///Users/vijay/Projects/traffis/backend/app/simulation.py) wraps every TraCI interaction inside `async with self.lock:`.
 - **Broadcast Isolation**: State serialization and WebSocket broadcasting run *outside* the lock.
 
-### 7.2 Decoupled Physics & Rendering (5Hz Physics & Broadcast -> 60FPS Display)
-- **Physics @ 5 Hz**: SUMO steps at $0.2\text{s}$ ($200\text{ms}$) per tick.
-- **State Broadcast @ 5 Hz**: Compact positional tuples (`compact_vehicles`) sent over local loopback WebSocket.
+### 7.2 Decoupled Physics & Rendering (10Hz Physics & Broadcast -> 60FPS Display)
+- **Physics @ 10 Hz**: SUMO steps at $0.1\text{s}$ ($100\text{ms}$) per tick. Rates live in `app/config.py` (`STEP_LENGTH`, `SIMULATION_RATE_HZ`, `BROADCAST_RATE_HZ`); scenario logic must use simulated seconds, not raw tick counts.
+- **State Broadcast @ 10 Hz**: Compact positional tuples (`compact_vehicles`) sent over local loopback WebSocket.
 - **Smooth 60 FPS Viewport**: [`CanvasView.tsx`](file:///Users/vijay/Projects/traffis/frontend/src/components/CanvasView.tsx) interpolates vehicle coordinates via `requestAnimationFrame` lerp.
 
 ---

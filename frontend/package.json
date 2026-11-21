@@ -8,7 +8,7 @@
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview",
-    "tauri": "cd .. && ./frontend/node_modules/.bin/tauri"
+    "tauri": "cd .. && tauri"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.12.5",

@@ -10,6 +10,8 @@ interface ControlsProps {
   onStop: () => void;
   stats: SimulationStats;
   simTime?: number;
+  maxSimTime?: number;
+  timeLimitReached?: boolean;
   scenario?: ScenarioMetadata | null;
   trafficLight?: TrafficLightData;
   onUpdateOption?: (optionId: string, value: boolean) => void;
@@ -41,11 +43,14 @@ export const Controls: React.FC<ControlsProps> = ({
   onStop,
   stats,
   simTime = 0,
+  maxSimTime = 300,
+  timeLimitReached = false,
   scenario,
   trafficLight,
   onUpdateOption,
 }) => {
   const hasStarted = simTime > 0;
+  const limitReached = timeLimitReached || simTime >= maxSimTime;
 
   return (
     <div
@@ -88,20 +93,27 @@ export const Controls: React.FC<ControlsProps> = ({
           <button
             key="btn-start"
             id="btn-start"
+            disabled={limitReached}
             onClick={(e) => {
               (e.currentTarget as HTMLButtonElement).blur();
               onPlay();
             }}
-            title={hasStarted ? 'Resume simulation [Space key]' : 'Start simulation [Space key]'}
+            title={
+              limitReached
+                ? `Time limit of ${fmtTime(maxSimTime)} reached. Reset to run again [R key]`
+                : hasStarted ? 'Resume simulation [Space key]' : 'Start simulation [Space key]'
+            }
             style={{
               ...baseBtn,
               backgroundColor: '#10b981',
               border: '1px solid rgba(0, 0, 0, 0.1)',
               color: '#ffffff',
+              opacity: limitReached ? 0.4 : 1,
+              cursor: limitReached ? 'not-allowed' : 'pointer',
             }}
           >
             <Play size={16} fill="currentColor" />
-            <span>{hasStarted ? 'RESUME' : 'START SIMULATION'}</span>
+            <span>{limitReached ? 'TIME LIMIT REACHED' : hasStarted ? 'RESUME' : 'START SIMULATION'}</span>
           </button>
         )}
 
@@ -171,7 +183,8 @@ export const Controls: React.FC<ControlsProps> = ({
                 lineHeight: 1,
               }}
             >
-              {fmtTime(simTime)}
+              {fmtTime(Math.min(simTime, maxSimTime))}
+              <span style={{ fontSize: '0.72rem', fontWeight: 600, color: '#64748b' }}> / {fmtTime(maxSimTime)}</span>
             </div>
           </div>
         </div>

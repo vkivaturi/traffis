@@ -18,7 +18,7 @@ import traci
 
 from .base import BaseScenario
 from .net_geometry import NetGeometry, load_net_geometry
-from .settings_loader import ScenarioSettingsError
+from .settings_loader import ScenarioSettingsError, write_text_safe
 from ..schemas import (
     ScenarioMetadata,
     ScenarioOption,
@@ -371,9 +371,7 @@ class NallagandlaJunctionScenario(BaseScenario):
                 f'vehsPerHour="{vph:g}" departLane="{depart_lane}" departPosLat="{depart_pos_lat}" departSpeed="desired"/>')
         lines.append("</routes>")
 
-        tmp = self.route_file.with_suffix(".xml.tmp")
-        tmp.write_text("\n".join(lines) + "\n", encoding="utf-8")
-        os.replace(tmp, self.route_file)
+        write_text_safe(self.route_file, "\n".join(lines) + "\n")
 
     def extra_sumo_args(self) -> List[str]:
         args = ["-n", str(self.net_file)]

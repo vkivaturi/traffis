@@ -213,6 +213,15 @@ class SimulationManager:
     def default_speed_kmh(self) -> float:
         return self.scenario.settings.default_speed_kmh
 
+    @property
+    def max_sim_time(self) -> float:
+        """Global 5-minute cap applied to every scenario (overrides any per-scenario maxSimTime)."""
+        return settings.MAX_SIM_TIME_S
+
+    @property
+    def time_limit_reached(self) -> bool:
+        return self.sim_time >= self.max_sim_time - 1e-6
+
     def _get_traffic_light_data(self) -> Optional[TrafficLightState]:
         return self.scenario.get_traffic_light_data()
 
@@ -223,7 +232,7 @@ class SimulationManager:
 
         async with self.lock:
             self.is_running = True
-            target_time = duration_s
+            target_time = min(duration_s, self.max_sim_time)
             step_length = settings.STEP_LENGTH
 
             step_count = 0
@@ -332,7 +341,12 @@ class SimulationManager:
         await self._broadcast_current_state()
 
     async def play(self):
-        """Resume simulation execution."""
+        """Resume simulation execution (refused once the 5-minute limit is reached; reset to run again)."""
+        if self.time_limit_reached:
+            logger.info("Simulation time limit (%.0fs) reached; reset to run again.", self.max_sim_time)
+            self.is_running = False
+            await self._broadcast_current_state()
+            return False
         self.is_running = True
         logger.info("Simulation resumed (PLAY).")
         return True
@@ -547,6 +561,8 @@ class SimulationManager:
             traffic_light=tl_data,
             junction_metrics=junction_metrics,
             default_speed_kmh=self.default_speed_kmh,
+            max_sim_time=self.max_sim_time,
+            time_limit_reached=self.time_limit_reached,
         )
 
     async def _broadcast_current_state(self):
@@ -596,8 +612,9 @@ class SimulationManager:
 
     async def _simulation_loop(self):
         """High-performance simulation loop:
-        Steps SUMO physics and broadcasts WebSocket state at 5 Hz (interval = 0.2s),
-        while CanvasView 60 FPS lerp ensures smooth motion.
+        Steps SUMO physics and broadcasts WebSocket state at 10 Hz (interval = 0.1s),
+        while CanvasView 60 FPS lerp ensures smooth motion. Every run auto-stops at
+        settings.MAX_SIM_TIME_S (5 minutes of simulated time).
         """
         step_interval = 1.0 / settings.SIMULATION_RATE_HZ
         broadcast_step_interval = max(1, int(round(settings.SIMULATION_RATE_HZ / settings.BROADCAST_RATE_HZ)))
@@ -616,11 +633,12 @@ class SimulationManager:
             try:
                 if self.is_running and self.is_initialized:
                     async with self.lock:
+                        limit_hit = False
                         # Check if scenario has time-lapse enabled
                         is_time_lapse = getattr(self.scenario, "time_lapse_enabled", False)
                         if is_time_lapse and time_lapse_streaming_steps <= 0:
                             # 1. Jump forward 50 seconds quickly in the backend (no UI broadcast during jump)
-                            target_sim_time = self.sim_time + JUMP_SIM_SECONDS
+                            target_sim_time = min(self.sim_time + JUMP_SIM_SECONDS, self.max_sim_time)
                             while self.sim_time < target_sim_time:
                                 self._do_step()
                                 step_counter += 1
@@ -643,13 +661,21 @@ class SimulationManager:
                                     auto_req = self.scenario.get_auto_spawn_request()
                                     self._insert_vehicle(auto_req)
 
-                        # Advance SUMO simulation one step
-                        self._do_step()
-                        step_counter += 1
+                        # Advance SUMO simulation one step (unless the 5-minute cap was hit during a jump)
+                        if not self.time_limit_reached:
+                            self._do_step()
+                            step_counter += 1
                         if is_time_lapse and time_lapse_streaming_steps > 0:
                             time_lapse_streaming_steps -= 1
 
-                        should_broadcast = (step_counter % broadcast_step_interval == 0)
+                        # Enforce the global simulation time limit: auto-pause and always push final state
+                        if self.time_limit_reached:
+                            self.is_running = False
+                            limit_hit = True
+                            time_lapse_streaming_steps = 0
+                            logger.info("Simulation reached the %.0fs time limit; auto-paused.", self.max_sim_time)
+
+                        should_broadcast = limit_hit or (step_counter % broadcast_step_interval == 0)
                         if should_broadcast and self.active_websockets:
                             state_msg = self._collect_current_state()
                         else:

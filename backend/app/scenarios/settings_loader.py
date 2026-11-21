@@ -6,6 +6,7 @@ cruising speed, vehicle mix and traffic signal timings. The UI no longer
 exposes any of these knobs — edit the XML and restart / reset the simulation.
 """
 import logging
+import os
 import re
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass, field
@@ -13,6 +14,28 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 logger = logging.getLogger("scenario_settings")
+
+
+def write_text_safe(path: Path, content: str) -> None:
+    """Write text to path, avoiding unnecessary writes and handling Windows os.replace locks."""
+    try:
+        if path.is_file() and path.read_text(encoding="utf-8") == content:
+            return
+    except OSError:
+        pass
+
+    tmp = path.with_suffix(path.suffix + ".tmp")
+    tmp.write_text(content, encoding="utf-8")
+    try:
+        os.replace(tmp, path)
+    except PermissionError:
+        # On Windows, antivirus/indexers can briefly lock the target against MoveFileExW;
+        # fall back to an in-place write and remove the staging file.
+        path.write_text(content, encoding="utf-8")
+        try:
+            tmp.unlink(missing_ok=True)
+        except OSError:
+            pass
 
 
 @dataclass
@@ -153,7 +176,7 @@ def _load_od_scenario(root: ET.Element, path: Path) -> ScenarioSettings:
     Allowed OD keys are scenario-specific and checked by the scenario class.
     """
     s = ScenarioSettings(vehicles_per_hour=0.0)
-    s.max_sim_time = _f(root, "maxSimTime", 600.0)
+    s.max_sim_time = _f(root, "maxSimTime", 300.0)
 
     for od in root.findall("demand/od"):
         key = od.get("key")
