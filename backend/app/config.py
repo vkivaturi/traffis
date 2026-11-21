@@ -49,8 +49,8 @@ def resolve_sumo_binary(binary_name: str = "sumo") -> str:
     return binary_name
 
 class Settings(BaseModel):
-    HOST: str = "0.0.0.0"
-    PORT: int = 8000
+    HOST: str = os.environ.get("TRAFFIS_HOST", "0.0.0.0")
+    PORT: int = int(os.environ.get("TRAFFIS_PORT", "8000"))
     SUMO_HOME: str = resolve_sumo_home()
     SUMO_BINARY: str = resolve_sumo_binary("sumo")
     SUMOCFG_FILE: str = str(SUMO_CONFIG_DIR / "road.sumocfg")
@@ -67,16 +67,10 @@ class Settings(BaseModel):
     DEFAULT_GREEN_DURATION: float = 30.0
     DEFAULT_YELLOW_DURATION: float = 3.0
     DEFAULT_RED_DURATION: float = 33.0
-    MAX_SIM_TIME_S: float = 300.0  # 5 minutes maximum hard limit per simulation run
-    RATE_LIMIT_MB_PER_HOUR: float = float(os.environ.get("RATE_LIMIT_MB_PER_HOUR", "100"))
     
 settings = Settings()
 
 # Ensure SUMO_HOME is set in os.environ for traci / sumo internal resolution
 if settings.SUMO_HOME:
     os.environ["SUMO_HOME"] = settings.SUMO_HOME
-
-# Shared bandwidth limiter instance (in-memory, resets on restart)
-from .bandwidth_limiter import BandwidthLimiter
-bandwidth_limiter = BandwidthLimiter(mb_per_hour=settings.RATE_LIMIT_MB_PER_HOUR)
 

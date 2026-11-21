@@ -1,32 +1,18 @@
-# React + TypeScript + Vite
+# Traffis Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+React 19 + TypeScript + Vite UI for the **Traffis** Tauri v2 desktop application.
 
-Currently, two official plugins are available:
+## Scripts
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+Run from the repository root (`npm --prefix frontend run <script>`) or inside `frontend/`:
 
-## React Compiler
+- `npm run dev` — Start Vite dev server on `http://localhost:5173`
+- `npm run build` — Typecheck (`tsc -b`) and build production bundle to `frontend/dist/`
+- `npm run lint` — Run Oxlint static analysis
+- `npm run tauri dev` — Launch the full Tauri desktop app (Vite + Rust shell + Python/SUMO backend)
+- `npm run tauri build` — Build the native desktop bundle
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Desktop Integration
 
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
-```
-
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+- `src/utils/tauri.ts` wraps Tauri IPC commands (`get_desktop_status`, `save_and_start_backend`, `stop_backend`), native file/folder pickers (`@tauri-apps/plugin-dialog`), and dynamic `127.0.0.1:<port>` API/WebSocket URLs.
+- `src/components/DesktopSetupModal.tsx` prompts for local Python and `SUMO_HOME` paths when needed.

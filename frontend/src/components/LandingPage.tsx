@@ -10,8 +10,6 @@ import {
   Sliders,
   ExternalLink,
   Mail,
-  LogOut,
-  Lock,
   Building2,
   MapPin,
   Clock,
@@ -19,17 +17,11 @@ import {
   Compass,
   TrafficCone,
 } from 'lucide-react';
-import type { User } from '../types/auth';
 import type { ScenarioMetadata } from '../types/simulation';
 import { AboutModal } from './AboutModal';
-import { GoogleSignInModal } from './GoogleSignInModal';
 
 interface LandingPageProps {
-  user: User | null;
-  isAuthenticated: boolean;
   onLaunchSimulator: () => void;
-  onSignInWithGoogle: (user?: Partial<User>) => void;
-  onSignOut: () => void;
   scenarios?: ScenarioMetadata[];
   activeScenarioId?: string;
   onSelectScenarioAndLaunch?: (scenarioId: string) => void;
@@ -37,61 +29,23 @@ interface LandingPageProps {
 }
 
 export const LandingPage: React.FC<LandingPageProps> = ({
-  user,
-  isAuthenticated,
   onLaunchSimulator,
-  onSignInWithGoogle,
-  onSignOut,
   onSelectScenarioAndLaunch,
   onNavigateCompare,
 }) => {
   const [isAboutOpen, setIsAboutOpen] = useState(false);
-  const [isGoogleModalOpen, setIsGoogleModalOpen] = useState(false);
-  const [pendingScenarioId, setPendingScenarioId] = useState<string | null>(null);
-  const [pendingTarget, setPendingTarget] = useState<'simulator' | 'compare'>('simulator');
 
   const handleLaunchClick = (scenarioId?: string) => {
-    if (isAuthenticated) {
-      if (scenarioId && onSelectScenarioAndLaunch) {
-        onSelectScenarioAndLaunch(scenarioId);
-      } else {
-        onLaunchSimulator();
-      }
+    if (scenarioId && onSelectScenarioAndLaunch) {
+      onSelectScenarioAndLaunch(scenarioId);
     } else {
-      setPendingTarget('simulator');
-      if (scenarioId) {
-        setPendingScenarioId(scenarioId);
-      }
-      setIsGoogleModalOpen(true);
+      onLaunchSimulator();
     }
   };
 
   const handleCompareClick = () => {
-    if (isAuthenticated) {
-      if (onNavigateCompare) {
-        onNavigateCompare();
-      }
-    } else {
-      setPendingTarget('compare');
-      setIsGoogleModalOpen(true);
-    }
-  };
-
-  const handleGoogleSuccess = (userData?: Partial<User>) => {
-    onSignInWithGoogle(userData);
-    setIsGoogleModalOpen(false);
-    if (pendingTarget === 'compare') {
-      setPendingTarget('simulator');
-      if (onNavigateCompare) {
-        onNavigateCompare();
-        return;
-      }
-    }
-    if (pendingScenarioId && onSelectScenarioAndLaunch) {
-      onSelectScenarioAndLaunch(pendingScenarioId);
-      setPendingScenarioId(null);
-    } else {
-      onLaunchSimulator();
+    if (onNavigateCompare) {
+      onNavigateCompare();
     }
   };
 
@@ -340,9 +294,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 alignItems: 'center',
                 gap: '6px',
               }}
-              title={isAuthenticated ? 'Compare multiple road scenarios side-by-side' : 'Sign in with Google to compare scenarios'}
+              title="Compare multiple road scenarios side-by-side"
             >
-              {!isAuthenticated && <Lock size={12} color="#8a5323" />}
               <GitFork size={14} color="#4a2c11" />
               <span>Compare Simulations</span>
             </button>
@@ -363,103 +316,15 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             <span>About</span>
           </button>
 
-          {/* User state / Launch CTA */}
-          {isAuthenticated && user ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <button
-                onClick={() => handleLaunchClick()}
-                className="btn-primary"
-                style={{ padding: '7px 16px', fontSize: '0.85rem' }}
-              >
-                <Play size={14} fill="#ffffff" />
-                Open Simulator
-              </button>
-
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  backgroundColor: '#f8fafc',
-                  padding: '4px 10px 4px 6px',
-                  borderRadius: '24px',
-                  border: '1px solid #e2e8f0',
-                }}
-              >
-                <img
-                  src={user.avatar}
-                  alt={user.name}
-                  style={{ width: '26px', height: '26px', borderRadius: '50%', objectFit: 'cover' }}
-                />
-                <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#0f172a' }}>
-                  {user.name}
-                </span>
-                <button
-                  onClick={onSignOut}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    color: '#64748b',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    padding: '2px',
-                    marginLeft: '2px',
-                  }}
-                  title="Sign out"
-                >
-                  <LogOut size={13} />
-                </button>
-              </div>
-            </div>
-          ) : (
-            <button
-              onClick={() => setIsGoogleModalOpen(true)}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '8px',
-                backgroundColor: '#ffffff',
-                color: '#1e293b',
-                padding: '7px 16px',
-                borderRadius: '8px',
-                fontSize: '0.84rem',
-                fontWeight: 600,
-                border: '1px solid #e2e8f0',
-                cursor: 'pointer',
-                boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
-                transition: 'all 0.15s ease',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = '#f8fafc';
-                e.currentTarget.style.borderColor = '#cbd5e1';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = '#ffffff';
-                e.currentTarget.style.borderColor = '#e2e8f0';
-              }}
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24">
-                <path
-                  fill="#4285F4"
-                  d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"
-                />
-                <path
-                  fill="#34A853"
-                  d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.35 24 12 24z"
-                />
-                <path
-                  fill="#FBBC05"
-                  d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 9.99 0 12s.45 3.82 1.25 5.42l4.03-3.15z"
-                />
-                <path
-                  fill="#EA4335"
-                  d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.35 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"
-                />
-              </svg>
-              <span>Sign In</span>
-            </button>
-          )}
+          {/* Launch CTA */}
+          <button
+            onClick={() => handleLaunchClick()}
+            className="btn-primary"
+            style={{ padding: '7px 16px', fontSize: '0.85rem' }}
+          >
+            <Play size={14} fill="#ffffff" />
+            Open Simulator
+          </button>
         </div>
       </nav>
 
@@ -538,17 +403,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               borderRadius: '8px',
             }}
           >
-            {isAuthenticated ? (
-              <>
-                <Play size={16} fill="#ffffff" />
-                <span>Launch Simulation Studio</span>
-              </>
-            ) : (
-              <>
-                <Lock size={16} />
-                <span>Sign In to Open Simulator</span>
-              </>
-            )}
+            <Play size={16} fill="#ffffff" />
+            <span>Launch Simulation Studio</span>
             <ChevronRight size={16} />
           </button>
 
@@ -593,9 +449,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 e.currentTarget.style.backgroundColor = '#f7f1ea';
                 e.currentTarget.style.borderColor = '#dfd2c4';
               }}
-              title={isAuthenticated ? 'Compare multiple road scenarios side-by-side' : 'Sign in with Google to compare scenarios'}
+              title="Compare multiple road scenarios side-by-side"
             >
-              {!isAuthenticated && <Lock size={15} color="#8a5323" />}
               <GitFork size={16} color="#4a2c11" />
               <span>Compare Simulations</span>
             </button>
@@ -776,9 +631,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   e.currentTarget.style.borderColor = '#dfd2c4';
                   e.currentTarget.style.backgroundColor = '#ffffff';
                 }}
-                title={isAuthenticated ? 'Compare multiple road scenarios side-by-side' : 'Sign in with Google to compare scenarios'}
+                title="Compare multiple road scenarios side-by-side"
               >
-                {!isAuthenticated && <Lock size={14} color="#8a5323" />}
                 <GitFork size={16} color="#4a2c11" />
                 <span>Compare Scenarios Side-by-Side</span>
                 <ChevronRight size={15} color="#4a2c11" />
@@ -1100,12 +954,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
       {/* MODALS */}
       <AboutModal isOpen={isAboutOpen} onClose={() => setIsAboutOpen(false)} />
-
-      <GoogleSignInModal
-        isOpen={isGoogleModalOpen}
-        onClose={() => setIsGoogleModalOpen(false)}
-        onSignIn={handleGoogleSuccess}
-      />
     </div>
   );
 };

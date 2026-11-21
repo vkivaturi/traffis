@@ -1,5 +1,5 @@
 import React from 'react';
-import { Play, Pause, RotateCcw, Gauge, Activity, Clock, AlertCircle, ArrowDownUp } from 'lucide-react';
+import { Play, Pause, RotateCcw, Gauge, Activity, Clock } from 'lucide-react';
 import type { SimulationStats, ScenarioMetadata, TrafficLightData } from '../types/simulation';
 import { ScenarioConfigPanel } from './ScenarioConfigPanel';
 
@@ -10,12 +10,9 @@ interface ControlsProps {
   onStop: () => void;
   stats: SimulationStats;
   simTime?: number;
-  maxSimTime?: number;
-  timeLimitReached?: boolean;
   scenario?: ScenarioMetadata | null;
   trafficLight?: TrafficLightData;
   onUpdateOption?: (optionId: string, value: boolean) => void;
-  dataExchangedMB?: number;
 }
 
 const baseBtn: React.CSSProperties = {
@@ -44,16 +41,11 @@ export const Controls: React.FC<ControlsProps> = ({
   onStop,
   stats,
   simTime = 0,
-  maxSimTime = 300,
-  timeLimitReached = false,
   scenario,
   trafficLight,
   onUpdateOption,
-  dataExchangedMB,
 }) => {
-  const isLimitReached = !!timeLimitReached || simTime >= maxSimTime;
   const hasStarted = simTime > 0;
-  const progress = Math.min(100, (simTime / Math.max(1, maxSimTime)) * 100);
 
   return (
     <div
@@ -100,25 +92,16 @@ export const Controls: React.FC<ControlsProps> = ({
               (e.currentTarget as HTMLButtonElement).blur();
               onPlay();
             }}
-            disabled={isLimitReached}
-            title={
-              isLimitReached
-                ? 'Test duration reached — press Reset to restart'
-                : hasStarted
-                ? 'Resume simulation [Space key]'
-                : 'Start simulation [Space key]'
-            }
+            title={hasStarted ? 'Resume simulation [Space key]' : 'Start simulation [Space key]'}
             style={{
               ...baseBtn,
               backgroundColor: '#10b981',
               border: '1px solid rgba(0, 0, 0, 0.1)',
               color: '#ffffff',
-              opacity: isLimitReached ? 0.45 : 1,
-              cursor: isLimitReached ? 'not-allowed' : 'pointer',
             }}
           >
             <Play size={16} fill="currentColor" />
-            <span>{hasStarted && !isLimitReached ? 'RESUME' : 'START SIMULATION'}</span>
+            <span>{hasStarted ? 'RESUME' : 'START SIMULATION'}</span>
           </button>
         )}
 
@@ -150,55 +133,10 @@ export const Controls: React.FC<ControlsProps> = ({
         )}
       </div>
 
-      {/* Center Group: Simulation elapsed clock + Network Bytes Transferred */}
+      {/* Center Group: Simulation elapsed clock */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flex: '0 1 auto', flexWrap: 'wrap' }}>
         <div
           id="metric-sim-time"
-          style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: '220px', width: '260px' }}
-        >
-          {isLimitReached ? <AlertCircle size={18} color="#dc2626" /> : <Clock size={18} color="#64748b" />}
-          <div style={{ flex: 1 }}>
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                fontSize: '0.72rem',
-                color: '#64748b',
-                fontWeight: 700,
-                textTransform: 'uppercase',
-                letterSpacing: '0.04em',
-              }}
-            >
-              <span>{isLimitReached ? 'Run Complete' : 'Elapsed Time'}</span>
-              <span style={{ fontFamily: 'var(--font-mono)', color: '#0f172a' }}>
-                {fmtTime(simTime)} / {fmtTime(maxSimTime)}
-              </span>
-            </div>
-            <div
-              style={{
-                height: '4px',
-                borderRadius: '2px',
-                backgroundColor: '#e2e8f0',
-                marginTop: '5px',
-                overflow: 'hidden',
-              }}
-            >
-              <div
-                style={{
-                  width: `${progress}%`,
-                  height: '100%',
-                  backgroundColor: isLimitReached ? '#dc2626' : '#4a2c11',
-                  transition: 'width 0.2s linear',
-                }}
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Network bytes transferred widget */}
-        <div
-          id="metric-network-data"
-          title="Overall network bytes transferred as part of this simulation run"
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -209,7 +147,7 @@ export const Controls: React.FC<ControlsProps> = ({
             border: '1px solid #e2e8f0',
           }}
         >
-          <ArrowDownUp size={16} color="#635bff" />
+          <Clock size={17} color="#64748b" />
           <div>
             <div
               style={{
@@ -221,7 +159,7 @@ export const Controls: React.FC<ControlsProps> = ({
                 lineHeight: 1,
               }}
             >
-              Network Data
+              Elapsed Time
             </div>
             <div
               style={{
@@ -233,11 +171,7 @@ export const Controls: React.FC<ControlsProps> = ({
                 lineHeight: 1,
               }}
             >
-              {dataExchangedMB != null
-                ? dataExchangedMB >= 1
-                  ? `${dataExchangedMB.toFixed(2)} MB`
-                  : `${Math.round(dataExchangedMB * 1024)} KB`
-                : '0 KB'}
+              {fmtTime(simTime)}
             </div>
           </div>
         </div>

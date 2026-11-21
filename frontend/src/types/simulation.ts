@@ -68,8 +68,6 @@ export interface SimulationState {
   traffic_light?: TrafficLightData;
   junction_metrics?: JunctionMetrics;
   default_speed_kmh?: number;
-  max_sim_time?: number;
-  time_limit_reached?: boolean;
 }
 
 export interface LaneInfo {

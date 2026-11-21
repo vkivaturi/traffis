@@ -9,7 +9,7 @@ import traci
 import traci.main
 from fastapi import WebSocket
 
-from .config import settings, bandwidth_limiter
+from .config import settings
 from .schemas import (
     SimulationStats,
     SimulationStateMessage,
@@ -77,9 +77,6 @@ class SimulationManager:
         
         # Active scenario (extensible)
         self.scenario: BaseScenario = registry.get_or_default("straight_road")
-
-        # Simulation limit (from scenario.xml)
-        self.time_limit_reached: bool = False
 
         # Demand generation accumulator (rate comes from scenario.xml)
         self.auto_spawn_accumulator = 0.0
@@ -155,7 +152,6 @@ class SimulationManager:
         traci.start(cmd, stdout=subprocess.DEVNULL)
         self.step_count = 0
         self.sim_time = 0.0
-        self.time_limit_reached = False
         self.total_spawned = 0
         self.total_arrived = 0
         self.vehicle_counter = 0
@@ -217,10 +213,6 @@ class SimulationManager:
     def default_speed_kmh(self) -> float:
         return self.scenario.settings.default_speed_kmh
 
-    @property
-    def max_sim_time(self) -> float:
-        return self.scenario.settings.max_sim_time
-
     def _get_traffic_light_data(self) -> Optional[TrafficLightState]:
         return self.scenario.get_traffic_light_data()
 
@@ -231,12 +223,11 @@ class SimulationManager:
 
         async with self.lock:
             self.is_running = True
-            self.time_limit_reached = False
-            target_time = min(duration_s, self.scenario.settings.max_sim_time)
+            target_time = duration_s
             step_length = settings.STEP_LENGTH
 
             step_count = 0
-            while self.sim_time < target_time and not self.time_limit_reached:
+            while self.sim_time < target_time:
                 vph = self.scenario.settings.vehicles_per_hour
                 if vph > 0:
                     rate_per_sec = vph / 3600.0
@@ -342,12 +333,6 @@ class SimulationManager:
 
     async def play(self):
         """Resume simulation execution."""
-        if self.sim_time >= self.max_sim_time or self.time_limit_reached:
-            self.is_running = False
-            self.time_limit_reached = True
-            logger.warning("Cannot resume simulation: time limit (%.1fs) reached. Reset required.", self.max_sim_time)
-            await self._broadcast_current_state()
-            return False
         self.is_running = True
         logger.info("Simulation resumed (PLAY).")
         return True
@@ -452,13 +437,6 @@ class SimulationManager:
         self.total_arrived += len(arrived)
         for arr_id in arrived:
             self.vehicle_colors.pop(arr_id, None)
-
-        # Enforce maximum simulation time configured in scenario.xml
-        if self.sim_time >= self.max_sim_time:
-            self.sim_time = self.max_sim_time
-            self.is_running = False
-            self.time_limit_reached = True
-            logger.info("Simulation time limit reached (%.1fs). Pausing simulation.", self.sim_time)
 
     def _collect_current_state(self) -> SimulationStateMessage:
         """Extract all current vehicle coordinates and metrics in compact format for network efficiency."""
@@ -569,8 +547,6 @@ class SimulationManager:
             traffic_light=tl_data,
             junction_metrics=junction_metrics,
             default_speed_kmh=self.default_speed_kmh,
-            max_sim_time=self.max_sim_time,
-            time_limit_reached=self.time_limit_reached or (self.sim_time >= self.max_sim_time)
         )
 
     async def _broadcast_current_state(self):
@@ -608,28 +584,6 @@ class SimulationManager:
         await self._send_to_all(payload)
 
     async def _send_to_all(self, message: str):
-        msg_bytes = len(message.encode("utf-8"))
-        total_bytes = msg_bytes * len(self.active_websockets)
-
-        # Check bandwidth budget before sending
-        if not bandwidth_limiter.try_record(total_bytes):
-            # Budget exhausted — send a throttle notification instead (once)
-            # to inform clients, then skip the actual payload
-            throttle_msg = json.dumps({
-                "type": "throttled",
-                "reason": "bandwidth_limit",
-                "usage": bandwidth_limiter.get_usage()
-            })
-            dead_sockets = set()
-            for ws in self.active_websockets:
-                try:
-                    await ws.send_text(throttle_msg)
-                except Exception:
-                    dead_sockets.add(ws)
-            for ws in dead_sockets:
-                self.active_websockets.discard(ws)
-            return
-
         dead_sockets = set()
         for ws in self.active_websockets:
             try:
@@ -667,9 +621,8 @@ class SimulationManager:
                         is_time_lapse = getattr(self.scenario, "time_lapse_enabled", False)
                         if is_time_lapse and time_lapse_streaming_steps <= 0:
                             # 1. Jump forward 50 seconds quickly in the backend (no UI broadcast during jump)
-                            steps_to_jump = int(round(JUMP_SIM_SECONDS / settings.STEP_LENGTH))
-                            target_sim_time = min(self.sim_time + JUMP_SIM_SECONDS, self.max_sim_time)
-                            while self.sim_time < target_sim_time and not self.time_limit_reached:
+                            target_sim_time = self.sim_time + JUMP_SIM_SECONDS
+                            while self.sim_time < target_sim_time:
                                 self._do_step()
                                 step_counter += 1
                                 # Yield control briefly every 200 steps so we don't starve event loop
@@ -692,13 +645,12 @@ class SimulationManager:
                                     self._insert_vehicle(auto_req)
 
                         # Advance SUMO simulation one step
-                        if not self.time_limit_reached:
-                            self._do_step()
-                            step_counter += 1
-                            if is_time_lapse and time_lapse_streaming_steps > 0:
-                                time_lapse_streaming_steps -= 1
+                        self._do_step()
+                        step_counter += 1
+                        if is_time_lapse and time_lapse_streaming_steps > 0:
+                            time_lapse_streaming_steps -= 1
 
-                        should_broadcast = (step_counter % broadcast_step_interval == 0) or self.time_limit_reached
+                        should_broadcast = (step_counter % broadcast_step_interval == 0)
                         if should_broadcast and self.active_websockets:
                             state_msg = self._collect_current_state()
                         else:
@@ -726,14 +678,12 @@ class SimulationManager:
             "type": "network_info",
             "data": net_info.model_dump()
         })
-        bandwidth_limiter.record(len(net_info_payload.encode("utf-8")))
         await ws.send_text(net_info_payload)
         async with self.lock:
             if self.is_initialized:
                 try:
                     state_msg = self._collect_current_state()
                     state_payload = state_msg.model_dump_json(exclude_none=True)
-                    bandwidth_limiter.record(len(state_payload.encode("utf-8")))
                     await ws.send_text(state_payload)
                 except Exception as ex:
                     logger.warning("Could not send initial state to ws: %s", ex)

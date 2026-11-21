@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { ExternalLink, Info } from 'lucide-react';
 import { useSimulationSocket } from './hooks/useSimulationSocket';
-import { useAuth } from './hooks/useAuth';
 import { Header } from './components/Header';
 import { CanvasView } from './components/CanvasView';
 import { Controls } from './components/Controls';
@@ -10,26 +9,47 @@ import { LandingPage } from './components/LandingPage';
 import { CompareSimulationsPage } from './components/CompareSimulationsPage';
 import { AboutModal } from './components/AboutModal';
 import { JunctionMetricsPanel } from './components/JunctionMetricsPanel';
-import { SessionExpiredModal } from './components/SessionExpiredModal';
+import { DesktopSetupModal } from './components/DesktopSetupModal';
+import {
+  isTauri,
+  getDesktopStatus,
+  setBackendPort as setGlobalBackendPort,
+  type DesktopStatus,
+} from './utils/tauri';
 import type { CameraState } from './types/simulation';
-import type { User } from './types/auth';
 import { soundSystem } from './utils/audio';
 
 export const App: React.FC = () => {
-  const {
-    user,
-    isAuthenticated,
-    signInWithGoogle,
-    signOut,
-  } = useAuth();
-
   // View state: 'landing' | 'simulator' | 'compare'
-  const [currentView, setCurrentView] = useState<'landing' | 'simulator' | 'compare'>('landing');
+  const [currentView, setCurrentView] = useState<'landing' | 'simulator' | 'compare'>(() =>
+    isTauri() ? 'simulator' : 'landing'
+  );
   const [isAboutOpen, setIsAboutOpen] = useState(false);
+
+  const [desktopStatus, setDesktopStatus] = useState<DesktopStatus | null>(null);
+  const [isDesktopSetupOpen, setIsDesktopSetupOpen] = useState(false);
+  const [backendPort, setBackendPort] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!isTauri()) return;
+    getDesktopStatus()
+      .then((status) => {
+        setDesktopStatus(status);
+        if (status.backend_running && status.backend_port) {
+          setGlobalBackendPort(status.backend_port);
+          setBackendPort(status.backend_port);
+        } else {
+          setIsDesktopSetupOpen(true);
+        }
+      })
+      .catch((err) => {
+        console.error('Failed to query desktop status:', err);
+        setIsDesktopSetupOpen(true);
+      });
+  }, []);
 
   const {
     state,
-    authExpired,
     networkInfo,
     scenarios,
     scenarioGroups,
@@ -38,11 +58,10 @@ export const App: React.FC = () => {
     updateScenarioOptions,
     connected,
     updateRateHz,
-    dataExchangedMB,
     play,
     pause,
     reset,
-  } = useSimulationSocket(user?.token);
+  } = useSimulationSocket(backendPort);
 
   const currentScenarioId = activeScenario?.id || state.scenario_id || 'straight_road';
   const isIntersection = activeScenario?.type === 'intersection';
@@ -77,13 +96,13 @@ export const App: React.FC = () => {
   // Sound effect when traffic signal changes
   const prevSignalStateRef = useRef<string | undefined>(undefined);
   useEffect(() => {
-    if (state.traffic_light && soundEnabled && isAuthenticated && currentView === 'simulator') {
+    if (state.traffic_light && soundEnabled && currentView === 'simulator') {
       if (prevSignalStateRef.current && prevSignalStateRef.current !== state.traffic_light.state) {
         soundSystem.playSignalChangeSound(state.traffic_light.state);
       }
       prevSignalStateRef.current = state.traffic_light.state;
     }
-  }, [state.traffic_light, soundEnabled, isAuthenticated, currentView]);
+  }, [state.traffic_light, soundEnabled, currentView]);
 
   const handleToggleSound = () => {
     const nextVal = !soundEnabled;
@@ -155,28 +174,19 @@ export const App: React.FC = () => {
     setCurrentView('landing');
   }, [state.is_running, pause]);
 
-  const handleSignOut = useCallback(() => {
-    if (state.is_running) {
-      pause();
-    }
-    signOut();
-  }, [state.is_running, pause, signOut]);
-
   // Keyboard Shortcuts (only active in simulator view)
   useEffect(() => {
-    if (!isAuthenticated || currentView !== 'simulator') return;
+    if (currentView !== 'simulator') return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (['INPUT', 'SELECT', 'TEXTAREA'].includes((e.target as HTMLElement).tagName)) {
         return;
       }
 
-      const isLimitReached = !!state.time_limit_reached || state.sim_time >= (state.max_sim_time ?? 300);
-
       if (e.code === 'Space') {
         e.preventDefault();
         if (state.is_running) pause();
-        else if (!isLimitReached) play();
+        else play();
       } else if (e.code === 'KeyR') {
         e.preventDefault();
         handleReset();
@@ -185,13 +195,7 @@ export const App: React.FC = () => {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isAuthenticated, currentView, state.is_running, state.sim_time, state.max_sim_time, state.time_limit_reached, pause, play, handleReset]);
-
-  // After the user signs in again, return to the landing page (per requirement)
-  const handleReauthenticated = (userData?: Partial<User>) => {
-    signInWithGoogle(userData);
-    setCurrentView('landing');
-  };
+  }, [currentView, state.is_running, pause, play, handleReset]);
 
   const handleNavigateCompare = () => {
     setCurrentView('compare');
@@ -201,65 +205,61 @@ export const App: React.FC = () => {
     if (scenarioId) {
       handleSelectScenario(scenarioId);
     }
-    if (isAuthenticated) {
-      setCurrentView('simulator');
-    } else {
-      signInWithGoogle();
-      setCurrentView('simulator');
-    }
+    setCurrentView('simulator');
   };
 
-  const sessionExpiredPrompt = authExpired ? <SessionExpiredModal onSignIn={handleReauthenticated} /> : null;
+  const desktopSetupModal = (
+    <DesktopSetupModal
+      key={`${desktopStatus?.python_path ?? ''}-${desktopStatus?.sumo_home ?? ''}-${isDesktopSetupOpen}`}
+      isOpen={isDesktopSetupOpen}
+      status={desktopStatus}
+      onSuccess={(updated) => {
+        setDesktopStatus(updated);
+        if (updated.backend_port) {
+          setGlobalBackendPort(updated.backend_port);
+          setBackendPort(updated.backend_port);
+        }
+        setIsDesktopSetupOpen(false);
+      }}
+      onClose={desktopStatus?.backend_running ? () => setIsDesktopSetupOpen(false) : undefined}
+    />
+  );
 
-  // 1. If user is on landing page or not authenticated, display Landing Page
-  if (!isAuthenticated || currentView === 'landing') {
+  // 1. Landing Page View
+  if (currentView === 'landing') {
     return (
       <>
         <LandingPage
-          user={user}
-          isAuthenticated={isAuthenticated}
-          onLaunchSimulator={() => {
-            if (isAuthenticated) {
-              setCurrentView('simulator');
-            }
-          }}
-          onSignInWithGoogle={signInWithGoogle}
-          onSignOut={handleSignOut}
+          onLaunchSimulator={() => setCurrentView('simulator')}
           scenarios={scenarios}
           activeScenarioId={currentScenarioId}
           onNavigateCompare={handleNavigateCompare}
           onSelectScenarioAndLaunch={(scenarioId: string) => {
             handleSelectScenario(scenarioId);
-            if (isAuthenticated) {
-              setCurrentView('simulator');
-            }
+            setCurrentView('simulator');
           }}
         />
-        {sessionExpiredPrompt}
+        {desktopSetupModal}
       </>
     );
   }
 
-  // 2. Authenticated Compare Simulations View
+  // 2. Compare Simulations View
   if (currentView === 'compare') {
     return (
       <>
         <CompareSimulationsPage
-          user={user}
-          isAuthenticated={isAuthenticated}
           onNavigateHome={handleNavigateHome}
           onLaunchSimulator={handleLaunchSimulatorFromCompare}
-          onSignInWithGoogle={signInWithGoogle}
-          onSignOut={handleSignOut}
           scenarioGroups={scenarioGroups}
           scenarios={scenarios}
         />
-        {sessionExpiredPrompt}
+        {desktopSetupModal}
       </>
     );
   }
 
-  // 3. Authenticated Simulator View
+  // 3. Simulator View
   return (
     <div
       id="app-root"
@@ -277,18 +277,16 @@ export const App: React.FC = () => {
         state={state}
         connected={connected}
         updateRateHz={updateRateHz}
-        dataExchangedMB={dataExchangedMB}
         soundEnabled={soundEnabled}
         onToggleSound={handleToggleSound}
         scenarios={scenarios}
         scenarioGroups={scenarioGroups}
         activeScenarioId={currentScenarioId}
         onSelectScenario={handleSelectScenario}
-        user={user}
         onNavigateHome={handleNavigateHome}
         onNavigateCompare={handleNavigateCompare}
         onOpenAbout={() => setIsAboutOpen(true)}
-        onSignOut={handleSignOut}
+        onOpenDesktopSettings={isTauri() ? () => setIsDesktopSetupOpen(true) : undefined}
       />
 
 
@@ -345,12 +343,9 @@ export const App: React.FC = () => {
         onStop={handleReset}
         stats={state.stats}
         simTime={state.sim_time}
-        maxSimTime={state.max_sim_time ?? 300}
-        timeLimitReached={state.time_limit_reached}
         scenario={activeScenario}
         trafficLight={state.traffic_light}
         onUpdateOption={handleUpdateOption}
-        dataExchangedMB={dataExchangedMB}
       />
 
       {/* 4. Open-Source Attribution Credits Footer */}
@@ -412,7 +407,7 @@ export const App: React.FC = () => {
       {/* Global About Modal */}
       <AboutModal isOpen={isAboutOpen} onClose={() => setIsAboutOpen(false)} />
 
-      {sessionExpiredPrompt}
+      {desktopSetupModal}
     </div>
   );
 };

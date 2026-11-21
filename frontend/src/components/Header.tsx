@@ -9,27 +9,24 @@ import {
   ChevronDown,
   Home,
   Info,
-  LogOut,
+  Settings,
 } from 'lucide-react';
 import type { SimulationState, ScenarioMetadata, ScenarioGroup } from '../types/simulation';
-import type { User } from '../types/auth';
 
 interface HeaderProps {
   state: SimulationState;
   connected: boolean;
   updateRateHz: number;
-  dataExchangedMB?: number;
   soundEnabled: boolean;
   onToggleSound: () => void;
   scenarios: ScenarioMetadata[];
   scenarioGroups?: ScenarioGroup[];
   activeScenarioId: string;
   onSelectScenario: (scenarioId: string) => void;
-  user?: User | null;
   onNavigateHome?: () => void;
   onNavigateCompare?: () => void;
   onOpenAbout?: () => void;
-  onSignOut?: () => void;
+  onOpenDesktopSettings?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -40,11 +37,10 @@ export const Header: React.FC<HeaderProps> = ({
   scenarioGroups,
   activeScenarioId,
   onSelectScenario,
-  user,
   onNavigateHome,
   onNavigateCompare,
   onOpenAbout,
-  onSignOut,
+  onOpenDesktopSettings,
 }) => {
   const currentScenario = scenarios.find((s) => s.id === activeScenarioId) || scenarios[0];
   const isIntersection = currentScenario?.type === 'intersection' || activeScenarioId.includes('intersection');
@@ -376,6 +372,19 @@ export const Header: React.FC<HeaderProps> = ({
           {soundEnabled ? <Volume2 size={15} color="#4a2c11" /> : <VolumeX size={15} />}
         </button>
 
+        {/* Desktop Paths button */}
+        {onOpenDesktopSettings && (
+          <button
+            onClick={onOpenDesktopSettings}
+            className="btn-secondary"
+            style={{ padding: '6px 12px', fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '5px' }}
+            title="Configure Python & SUMO installation paths"
+          >
+            <Settings size={14} color="#64748b" />
+            <span>Paths</span>
+          </button>
+        )}
+
         {/* About Modal button */}
         {onOpenAbout && (
           <button
@@ -387,47 +396,6 @@ export const Header: React.FC<HeaderProps> = ({
             <Info size={14} color="#64748b" />
             <span>About</span>
           </button>
-        )}
-
-        {/* Signed-in User badge */}
-        {user && (
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              backgroundColor: '#f8fafc',
-              padding: '3px 8px 3px 4px',
-              borderRadius: '20px',
-              border: '1px solid #e2e8f0',
-            }}
-          >
-            <img
-              src={user.avatar}
-              alt={user.name}
-              style={{ width: '24px', height: '24px', borderRadius: '50%', objectFit: 'cover' }}
-            />
-            <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#0f172a', maxWidth: '100px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {user.name.split(' ')[0]}
-            </span>
-            {onSignOut && (
-              <button
-                onClick={onSignOut}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: '#64748b',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  padding: '2px',
-                }}
-                title="Sign out"
-              >
-                <LogOut size={13} />
-              </button>
-            )}
-          </div>
         )}
       </div>
     </header>

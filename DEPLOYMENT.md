@@ -1,377 +1,129 @@
-# Traffis Deployment & Execution Guide
+# Traffis Desktop Development & Build Guide
 
-Traffis is a microscopic traffic simulation and visualization platform integrating **Eclipse SUMO**, **Python 3.12 FastAPI** (broadcasting telemetry at 20 Hz / 10 Hz), and a **React 19 + TypeScript HTML5 Canvas** client (60 FPS interpolated rendering).
+Traffis is a **Rust + Tauri v2** desktop application that runs a local **Python 3.12 FastAPI + Eclipse SUMO** backend and renders a **React 19 + TypeScript HTML5 Canvas** interface in the OS native WebView.
 
-This guide provides step-by-step instructions for running Traffis in three supported deployment modes:
-
-1. [Mode 1: Local Development with `start.sh`](#mode-1-local-development-with-startsh) (macOS / Linux native)
-2. [Mode 2: Local Container with Docker](#mode-2-local-container-with-docker) (Docker Desktop / CLI)
-3. [Mode 3: Production on AWS EC2 as a Docker Container](#mode-3-production-on-aws-ec2-as-a-docker-container)
+> The previous browser/Docker/AWS EC2 deployment model is archived on the `release/v1-browser` branch.
 
 ---
 
-## Architecture & Port Summary
+## Architecture Summary
 
-| Component | Local Dev (`start.sh`) | Containerized (Docker / EC2) |
-| :--- | :--- | :--- |
-| **Frontend UI** | Port `5173` (Vite dev server with HMR) | Port `8000` (FastAPI serves built SPA assets at `/`) |
-| **REST API** | Port `8000` (`http://127.0.0.1:8000/api/*`) | Port `8000` (`http://<host>:8000/api/*`) |
-| **WebSocket** | Port `8000` (`ws://127.0.0.1:8000/ws`) | Port `8000` (`ws://<host>:8000/ws`) |
-| **SUMO Engine** | Headless daemon process spawned by TraCI | Headless daemon process spawned by TraCI |
+| Component | Runtime Role |
+| :--- | :--- |
+| **Tauri Shell (`src-tauri/`)** | Native desktop window, settings persistence (`settings.json`), native file/folder pickers, and Python backend process lifecycle management. |
+| **Python Backend (`backend/`)** | Spawned by Tauri on an ephemeral loopback port (`127.0.0.1:<port>`). Runs FastAPI REST (`/api/*`), WebSocket (`/ws`), and TraCI. |
+| **Eclipse SUMO** | Local `sumo` and `netconvert` binaries managed by the Python backend via `SUMO_HOME`. |
+| **Frontend UI (`frontend/`)** | Vite + React 19 + TypeScript SPA loaded inside Tauri's WebView (WKWebView on macOS, WebView2 on Windows, WebKitGTK on Linux). |
 
 ---
 
-## Mode 1: Local Development with `start.sh`
+## Prerequisites
 
-Best for active feature development, frontend hot module reloading (HMR), and modifying SUMO network geometries.
+1. **Eclipse SUMO 1.20+**
+   - **macOS (Official Framework)**: Installs to `/Library/Frameworks/EclipseSUMO.framework/Versions/Current/EclipseSUMO/share/sumo`
+   - **macOS (Homebrew)**: `brew install sumo` → `/opt/homebrew/share/sumo`
+   - **Linux (Ubuntu/Debian)**: `sudo apt-get install -y sumo sumo-tools` → `/usr/share/sumo`
+   - **Windows**: Install from [eclipse.dev/sumo](https://eclipse.dev/sumo/) → `C:\Program Files (x86)\Eclipse\Sumo`
+2. **Python 3.12+**
+3. **Node.js 20+** and **npm**
+4. **Rust & Cargo** (`rustc`, `cargo`) plus platform WebView build tools:
+   - **macOS**: Xcode Command Line Tools (`xcode-select --install`)
+   - **Windows**: Microsoft C++ Build Tools & WebView2
+   - **Linux**: `libwebkit2gtk-4.1-dev`, `libgtk-3-dev`, `libayatana-appindicator3-dev`, `librsvg2-dev`
 
-### 1. Prerequisites
+---
 
-- **macOS** (Apple Silicon or Intel) or **Linux** (Ubuntu / Debian / Fedora)
-- **Python 3.12+**
-- **Node.js 18+** & **npm**
-- **Eclipse SUMO 1.20+** installed locally:
-  - **macOS (via Homebrew)**:
-    ```bash
-    brew install sumo
-    export SUMO_HOME="$(brew --prefix sumo)/share/sumo"
-    export PATH="$(brew --prefix sumo)/bin:$PATH"
-    ```
-  - **macOS (via Official Framework Package)**:
-    ```bash
-    export SUMO_HOME="/Library/Frameworks/EclipseSUMO.framework/Versions/Current/EclipseSUMO/share/sumo"
-    export PATH="/Library/Frameworks/EclipseSUMO.framework/Versions/Current/EclipseSUMO/bin:$PATH"
-    ```
-  - **Ubuntu / Debian**:
-    ```bash
-    sudo apt-get update
-    sudo apt-get install -y sumo sumo-tools
-    export SUMO_HOME="/usr/share/sumo"
-    export PATH="/usr/share/sumo/bin:$PATH"
-    ```
-
-### 2. Initial Setup
+## Initial Setup
 
 1. **Clone the repository**:
    ```bash
-   git clone <repo-url> traffis
+   git clone https://github.com/vkivaturi/traffis.git
    cd traffis
    ```
 
-2. **Set up the Backend virtual environment**:
+2. **Create the Python virtual environment and install dependencies**:
    ```bash
    cd backend
    python3 -m venv .venv
-   source .venv/bin/activate
+   source .venv/bin/activate   # Windows: .venv\Scripts\activate
    pip install --upgrade pip
    pip install -r requirements.txt
    cd ..
    ```
 
-3. **Install Frontend dependencies**:
+3. **Install Frontend & Tauri CLI packages**:
    ```bash
    cd frontend
    npm install
    cd ..
    ```
 
-### 3. Launching Traffis
+---
 
-Run the master bootstrap script from the repository root:
+## Running in Development Mode
 
-- **macOS / Linux**:
-  ```bash
-  chmod +x start.sh
-  ./start.sh
-  ```
+From the repository root (`/Users/vijay/Projects/traffis`):
 
-- **Windows (Command Prompt / PowerShell)**:
-  ```cmd
-  start.bat
-  ```
+```bash
+npm --prefix frontend run tauri dev
+```
 
-The script automatically:
-1. Validates `SUMO_HOME` and SUMO CLI binaries (`netconvert`, `sumo`).
-2. Compiles scenario `.net.xml` road networks if missing.
-3. Launches the FastAPI backend daemon on `http://127.0.0.1:8000`.
-4. Launches the Vite development server on `http://localhost:5173`.
-
-### 4. Stopping the Application
-
-Press `CTRL + C` in the terminal. The trap handler automatically shuts down the FastAPI process, Vite server, and any running headless SUMO instances.
+What happens automatically:
+1. Tauri starts the Vite dev server in `frontend/` on `http://localhost:5173`.
+2. Tauri compiles and launches the native desktop window.
+3. On startup, Rust checks saved settings (or auto-detects `backend/.venv/bin/python` and `SUMO_HOME`), validates `fastapi`/`uvicorn`/`traci` and the `sumo` binary, picks a free port on `127.0.0.1`, and spawns `backend/run.py`.
+4. If Python or `SUMO_HOME` cannot be auto-detected, the **Desktop Environment Setup** modal opens so you can enter or browse for the paths.
+5. Closing the app window automatically terminates the Python backend and SUMO processes.
 
 ---
 
-## Mode 2: Local Container with Docker
+## Building a Native Desktop Bundle
 
-Best for running the entire application in a clean, self-contained environment without needing to install SUMO, Python, or Node.js on your host machine.
+To build an optimized desktop executable/installer for your current OS:
 
-### 1. Prerequisites
-
-- [Docker Desktop](https://www.docker.com/products/docker-desktop/) (macOS / Windows) or Docker Engine (Linux).
-- Docker daemon must be running.
-
-### 2. Google OAuth Client ID Configuration
-
-> [!IMPORTANT]
-> **Build-Time vs. Runtime Behavior**:
-> Because the frontend SPA is compiled with Vite (`npm run build`), `VITE_GOOGLE_CLIENT_ID` is inlined directly into the static JavaScript bundle **at image build time**, not container runtime. Setting `-e VITE_GOOGLE_CLIENT_ID=...` or runtime `environment:` in Docker will have no effect on the compiled UI bundle.
-
-- **Will it work normally itself?**
-  - **Yes, when building on your local developer machine**: If `frontend/.env` is already present on your workstation, Docker automatically includes it in the build context (`COPY frontend/ ./`), and Vite bakes your client ID into the production bundle.
-  - **No, on fresh git clones or servers (e.g. AWS EC2, CI/CD)**: Because `.gitignore` excludes `.env` files, a fresh `git clone` will not have `frontend/.env`. You must provide it via either **Option A** (recommended) or **Option B** before running `docker build` or `docker compose up --build`.
-
-#### Option A: Create `frontend/.env` before building (Recommended)
 ```bash
-cp frontend/.env.example frontend/.env
-# Edit frontend/.env with your authorized Google OAuth Client ID:
-# VITE_GOOGLE_CLIENT_ID=your_id.apps.googleusercontent.com
+npm --prefix frontend run tauri build
 ```
 
-#### Option B: Pass as a Docker Build Argument
-You can inject the client ID during build without committing or creating `.env`:
-- **With Docker Compose**:
-  ```bash
-  VITE_GOOGLE_CLIENT_ID="your_id.apps.googleusercontent.com" docker compose up -d --build
-  ```
-- **With Docker CLI**:
-  ```bash
-  docker build --build-arg VITE_GOOGLE_CLIENT_ID="your_id.apps.googleusercontent.com" -t traffis:latest .
-  ```
+This runs `npm run build` in `frontend/` (`tsc -b && vite build`) and bundles the compiled assets with the Rust binary into `src-tauri/target/release/bundle/`.
 
-### 3. Method A: Using Docker Compose (Recommended)
-
-1. **Build and start the container in the background**:
-   ```bash
-   docker compose up -d --build
-   ```
-
-2. **View live simulation logs**:
-   ```bash
-   docker compose logs -f
-   ```
-
-3. **Access the application**:
-   Open **[http://localhost:8000](http://localhost:8000)** in your browser.
-
-4. **Stop the container**:
-   ```bash
-   docker compose down
-   ```
-
-### 4. Method B: Using Standard Docker CLI
-
-1. **Build the Docker image**:
-   ```bash
-   docker build -t traffis:latest .
-   ```
-
-2. **Run the container**:
-   ```bash
-   docker run -d \
-     --name traffis \
-     -p 8000:8000 \
-     --restart unless-stopped \
-     traffis:latest
-   ```
-
-3. **Monitor logs and health**:
-   ```bash
-   docker logs -f traffis
-   docker inspect --format='{{json .State.Health}}' traffis
-   ```
-
-4. **Stop and remove container**:
-   ```bash
-   docker stop traffis
-   docker rm traffis
-   ```
+> **Current assumption:** End users are expected to have Python (with `backend/requirements.txt`) and Eclipse SUMO installed locally. The app prompts for and saves their installation paths on first run.
 
 ---
 
-## Mode 3: Production on AWS EC2 as a Docker Container
+## Configuration & Environment Variables
 
-Best for hosting Traffis publicly for team access, stakeholders, or high-throughput benchmarks.
-
-### 1. Recommended EC2 Instance Specifications
-
-SUMO runs micro-simulation physics in real-time while FastAPI streams 20 Hz state updates over WebSockets:
-
-| Workload | Recommended Instance | vCPUs | RAM | Architecture |
-| :--- | :--- | :--- | :--- | :--- |
-| **Standard Testing (1–5 concurrent users)** | `t3.medium` or `t4g.medium` | 2 | 4 GB | x86_64 or ARM64 (Graviton) |
-| **High Density / Multi-User Production** | `c6i.large` or `c7g.large` | 2 | 4 GB | Compute Optimized |
-
-> **Storage**: 20 GB gp3 root volume is recommended to accommodate Docker images and system packages.
-
-### 2. EC2 Security Group Configuration
-
-Configure your instance's Security Group with the following inbound rules:
-
-| Type | Port | Protocol | Source | Purpose |
-| :--- | :--- | :--- | :--- | :--- |
-| **SSH** | `22` | TCP | `Your-IP/32` | Administrative SSH access |
-| **Custom TCP** | `8000` | TCP | `0.0.0.0/0` | Direct Traffis Web & WebSocket port (HTTP/WS) |
-| **HTTP** *(Optional)* | `80` | TCP | `0.0.0.0/0` | If running reverse proxy (Nginx / Caddy) |
-| **HTTPS** *(Optional)* | `443` | TCP | `0.0.0.0/0` | If SSL certificate is attached (Let's Encrypt) |
-
----
-
-### 3. Step-by-Step EC2 Setup
-
-#### Step 3.1: Connect to your EC2 Instance
-```bash
-ssh -i /path/to/your-key.pem ubuntu@<EC2-PUBLIC-IP>
+### Saved Desktop Settings (`settings.json`)
+Stored automatically in the OS app config directory by Tauri (`app_config_dir()/settings.json`):
+```json
+{
+  "python_path": "/path/to/backend/.venv/bin/python",
+  "sumo_home": "/Library/Frameworks/EclipseSUMO.framework/Versions/Current/EclipseSUMO/share/sumo"
+}
 ```
+You can update these anytime from the **Paths** button in the top navigation bar.
 
-#### Step 3.2: Install Docker & Docker Compose
-On Ubuntu 24.04 / 22.04 LTS:
-```bash
-# Update repositories
-sudo apt-get update && sudo apt-get install -y ca-certificates curl gnupg
-
-# Add Docker GPG key
-sudo install -m 0755 -d /etc/apt/keyrings
-curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-sudo chmod a+r /etc/apt/keyrings/docker.gpg
-
-# Add Docker repository
-echo \
-  "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
-  $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
-  sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-
-# Install Docker engine and compose plugin
-sudo apt-get update
-sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin git
-
-# Allow your user to run docker without sudo
-sudo usermod -aG docker $USER
-newgrp docker
-```
-
-#### Step 3.3: Clone the Repository and Deploy
-```bash
-git clone https://github.com/vkivaturi/traffis.git
-cd traffis
-
-# Configure Google OAuth Client ID (git clone does not include .env files)
-cp frontend/.env.example frontend/.env
-# Edit frontend/.env with your authorized Google Web Client ID:
-nano frontend/.env
-
-# Launch with Docker Compose
-docker compose up -d --build
-```
-
-#### Step 3.4: Verify Container Status & Health Check
-```bash
-docker ps
-docker logs -f traffis
-```
-
-You can test the backend health endpoint from the instance:
-```bash
-curl http://localhost:8000/api/health
-# Response: {"status":"healthy","uptime_seconds":...,"active_websockets":0}
-```
-
-Now open **`http://<EC2-PUBLIC-IP>:8000`** in any web browser!
-
----
-
-### 4. Production Hardening on EC2 (Optional but Recommended)
-
-#### 4.1 Running on Standard HTTP Port 80
-To expose Traffis directly on port 80 instead of 8000, simply adjust the port mapping in `docker-compose.yml`:
-```yaml
-ports:
-  - "80:8000"
-```
-Then restart the service:
-```bash
-docker compose up -d
-```
-
-#### 4.2 Auto-Starting on System Boot (systemd service)
-Ensure Docker starts automatically on EC2 reboot:
-```bash
-sudo systemctl enable docker
-sudo systemctl enable containerd
-```
-Because `restart: unless-stopped` is specified in `docker-compose.yml`, the Traffis container will automatically start whenever the EC2 instance powers on.
-
-#### 4.3 Setting Up SSL / HTTPS (Let's Encrypt with Caddy)
-For domain names (e.g., `traffis.yourdomain.com`), a Caddy reverse proxy automatically provisions and renews SSL certificates:
-
-1. Install Caddy:
-   ```bash
-   sudo apt install -y debian-keyring debian-archive-keyring apt-transport-https curl
-   curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | sudo gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
-   curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | sudo tee /etc/apt/sources.list.d/caddy-stable.list
-   sudo apt update && sudo apt install caddy
-   ```
-
-2. Configure `/etc/caddy/Caddyfile`:
-   ```caddy
-   traffis.yourdomain.com {
-       reverse_proxy 127.0.0.1:8000
-   }
-   ```
-
-3. Reload Caddy:
-   ```bash
-   sudo systemctl reload caddy
-   ```
-
----
-
-## Environment Variables & Configuration
-
-The application distinguishes between **build-time variables** (baked into the frontend bundle) and **runtime variables** (passed to the Python/SUMO container process):
-
-### 1. Frontend Build-Time Variables (Docker Build Stage)
-
-Must be supplied before or during `docker build` / `docker compose up --build`:
-
-| Variable | Default | Purpose & Usage |
-| :--- | :--- | :--- |
-| `VITE_GOOGLE_CLIENT_ID` | `""` (empty) | Google OAuth 2.0 Web Client ID. Baked into frontend static bundle via `frontend/.env` or `--build-arg VITE_GOOGLE_CLIENT_ID=...`. |
-
-### 2. Backend Runtime Variables (Container Process)
-
-Can be passed directly via `docker run -e VAR=val` or configured under `environment:` in `docker-compose.yml`:
+### Backend Process Environment Variables
+Set automatically by Tauri when spawning `backend/run.py`:
 
 | Variable | Default | Purpose |
 | :--- | :--- | :--- |
-| `HOST` | `0.0.0.0` | IP interface binding |
-| `PORT` | `8000` | Port for FastAPI + WebSocket + UI static assets |
-| `SUMO_HOME` | `/usr/share/sumo` | Path to Eclipse SUMO directory |
-| `RATE_LIMIT_MB_PER_HOUR` | `250` | Maximum egress bandwidth budget per client hour |
-| `DEFAULT_SPEED_KMH` | `50.0` | Default vehicle speed limit across road corridors |
+| `TRAFFIS_HOST` | `127.0.0.1` | Loopback interface binding |
+| `TRAFFIS_PORT` | Ephemeral free port | Dynamic TCP port assigned by Tauri |
+| `SUMO_HOME` | Configured `sumo_home` | Path to Eclipse SUMO `share/sumo` directory |
 
 ---
 
-## Troubleshooting Guide
+## Verification Commands
 
-### 1. `netconvert binary could not be found`
-- **Cause**: SUMO binaries are missing or `SUMO_HOME` is not on your `PATH`.
-- **Fix**: Check `which netconvert`. Ensure `SUMO_HOME` points to your SUMO installation (`/usr/share/sumo` on Linux, `/opt/homebrew/share/sumo` on Homebrew macOS).
+```bash
+# Frontend lint (Oxlint) & production build
+npm --prefix frontend run lint
+npm --prefix frontend run build
 
-### 2. WebSocket connection error (`ws://.../ws`) in browser
-- **Cause**: Security Group or firewall blocking port `8000`.
-- **Fix**: Verify port `8000` is open in EC2 Security Group Inbound Rules. If using an HTTPS domain, ensure the WebSocket uses `wss://` (handled automatically by the React client when on HTTPS).
+# Rust / Tauri compilation check
+cargo check --manifest-path src-tauri/Cargo.toml
 
-### 3. Docker build error: `npm ci` fails
-- **Cause**: Out of sync `package-lock.json`.
-- **Fix**: Run `cd frontend && npm install` locally to update `package-lock.json`, then re-run `docker build`.
-
-### 4. Out of memory on EC2 during `npm run build`
-- **Cause**: EC2 instance has less than 2 GB RAM (e.g. `t2.micro` or `t3.nano`).
-- **Fix**: Either upgrade to `t3.medium` (recommended) or create a temporary 2 GB swap file:
-  ```bash
-  sudo fallocate -l 2G /swapfile
-  sudo chmod 600 /swapfile
-  sudo mkswap /swapfile
-  sudo swapon /swapfile
-  ```
+# Backend smoke import check
+backend/.venv/bin/python -c "import sys; sys.path.insert(0, 'backend'); from app.main import app; print(app.title)"
+```

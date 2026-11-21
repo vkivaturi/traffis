@@ -5,6 +5,7 @@ import type {
   ScenarioMetadata,
   ScenarioGroup,
 } from '../types/simulation';
+import { apiUrl, wsUrl, isTauri } from '../utils/tauri';
 
 const INITIAL_STATE: SimulationState = {
   sim_time: 0,
@@ -32,30 +33,10 @@ const INITIAL_STATE: SimulationState = {
     phase_remaining: 15,
     next_state: 'yellow',
   },
-  max_sim_time: 300,
-  time_limit_reached: false,
 };
 
-// Matches the backend's 5-minute clock-skew tolerance for Google ID tokens (auth.py)
-const TOKEN_CLOCK_SKEW_MS = 5 * 60 * 1000;
-
-/** True when a Google ID token (JWT) is past its expiry. Non-JWT tokens are never treated as expired here. */
-export function isTokenExpired(token: string): boolean {
-  const parts = token.split('.');
-  if (parts.length !== 3) return false;
-  try {
-    const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/').padEnd(Math.ceil(parts[1].length / 4) * 4, '=');
-    const payload = JSON.parse(atob(base64));
-    return typeof payload.exp === 'number' && payload.exp * 1000 < Date.now() - TOKEN_CLOCK_SKEW_MS;
-  } catch {
-    return false;
-  }
-}
-
-export function useSimulationSocket(authToken?: string) {
+export function useSimulationSocket(backendPort?: number | null) {
   const [state, setState] = useState<SimulationState>(INITIAL_STATE);
-  // Token the server rejected or that is already expired. Derived below, so it clears when the user signs in again.
-  const [expiredToken, setExpiredToken] = useState<string | null>(null);
   const [networkInfo, setNetworkInfo] = useState<NetworkInfo | null>(null);
   const [scenarioGroups, setScenarioGroups] = useState<ScenarioGroup[]>([]);
   const [scenarios, setScenarios] = useState<ScenarioMetadata[]>([]);
@@ -63,50 +44,28 @@ export function useSimulationSocket(authToken?: string) {
   const [connected, setConnected] = useState<boolean>(false);
   const [latencyMs, setLatencyMs] = useState<number>(0);
   const [updateRateHz, setUpdateRateHz] = useState<number>(0);
-  const [dataExchangedMB, setDataExchangedMB] = useState<number>(0);
 
   const socketRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<number | null>(null);
   const lastMsgTimeRef = useRef<number>(0);
   const msgCountRef = useRef<number>(0);
-  const totalBytesRef = useRef<number>(0);
   const rateCalcIntervalRef = useRef<number | null>(null);
   const connectRef = useRef<() => void>(() => {});
 
-  const getToken = useCallback((): string => {
-    if (authToken) return authToken;
-    try {
-      const saved = localStorage.getItem('traffis_auth_user');
-      return saved ? JSON.parse(saved)?.token || '' : '';
-    } catch {
-      return '';
-    }
-  }, [authToken]);
-
   const connect = useCallback(() => {
+    if (isTauri() && !backendPort) return;
     if (socketRef.current?.readyState === WebSocket.OPEN) return;
 
-    const isSecure = window.location.protocol === 'https:';
-    const wsProto = isSecure ? 'wss:' : 'ws:';
-    const token = getToken();
-    // An already-expired token is caught by `authExpired` below, so there is no point connecting with it
-    if (token && isTokenExpired(token)) return;
-    const targetUrl = `${wsProto}//${window.location.host}/ws${token ? `?token=${encodeURIComponent(token)}` : ''}`;
-
+    const targetUrl = wsUrl(backendPort);
     const ws = new WebSocket(targetUrl);
     socketRef.current = ws;
-    let opened = false;
 
     ws.onopen = () => {
-      opened = true;
       setConnected(true);
       console.log('WebSocket connected to SUMO simulation:', targetUrl);
     };
 
     ws.onmessage = (event) => {
-      const rawLen = typeof event.data === 'string' ? event.data.length : (event.data?.byteLength || 0);
-      totalBytesRef.current += rawLen;
-
       const now = performance.now();
       if (lastMsgTimeRef.current > 0) {
         const delta = now - lastMsgTimeRef.current;
@@ -121,8 +80,6 @@ export function useSimulationSocket(authToken?: string) {
         const data = JSON.parse(event.data);
         if (data.type === 'state') {
           if (data.compact_vehicles && Array.isArray(data.compact_vehicles)) {
-            // Unpack compact tuple format:
-            // [0:id, 1:x, 2:y, 3:speed, 4:accel, 5:angle, 6:lane_idx, 7:type, 8:color, 9:len, 10:wid, 11:leader_id, 12:leader_dist, 13:direction]
             data.vehicles = data.compact_vehicles.map((c: (string | number | null)[]) => ({
               id: c[0] as string,
               x: c[1] as number,
@@ -138,15 +95,23 @@ export function useSimulationSocket(authToken?: string) {
               width: (c[10] as number) || 1.8,
               leader_id: (c[11] as string | null) ?? null,
               leader_dist: (c[12] as number | null) ?? null,
-              direction: (c[13] as string) || ((c[5] as number) > 225 && (c[5] as number) < 315 ? 'west' : (c[5] as number) > 135 && (c[5] as number) <= 225 ? 'south' : 'east'),
+              direction:
+                (c[13] as string) ||
+                ((c[5] as number) > 225 && (c[5] as number) < 315
+                  ? 'west'
+                  : (c[5] as number) > 135 && (c[5] as number) <= 225
+                  ? 'south'
+                  : 'east'),
               lane_id: `lane_${c[6]}`,
             }));
           } else if (!data.vehicles) {
             data.vehicles = [];
           }
-          // junction_metrics is sent at 1 Hz; carry the last value across intermediate ticks
           setState((prev) =>
-            !data.junction_metrics && prev.junction_metrics && prev.scenario_id === data.scenario_id && data.step > 0
+            !data.junction_metrics &&
+            prev.junction_metrics &&
+            prev.scenario_id === data.scenario_id &&
+            data.step > 0
               ? { ...data, junction_metrics: prev.junction_metrics }
               : data
           );
@@ -165,16 +130,10 @@ export function useSimulationSocket(authToken?: string) {
       }
     };
 
-    ws.onclose = (event) => {
-      // Ignore sockets already replaced or torn down by the effect cleanup
+    ws.onclose = () => {
       if (socketRef.current !== ws) return;
       setConnected(false);
       socketRef.current = null;
-      // 1008 = server rejected the credentials (or the token expired before connecting). Retrying cannot succeed.
-      if (event.code === 1008 || (!opened && token && isTokenExpired(token))) {
-        setExpiredToken(token || null);
-        return;
-      }
       reconnectTimeoutRef.current = window.setTimeout(() => {
         connectRef.current();
       }, 1500);
@@ -184,16 +143,16 @@ export function useSimulationSocket(authToken?: string) {
       console.warn('WebSocket connection error, will retry...', err);
       ws.close();
     };
-  }, [getToken]);
+  }, [backendPort]);
 
   useEffect(() => {
     connectRef.current = connect;
   }, [connect]);
 
-  // Load available scenarios and grouping information
   useEffect(() => {
+    if (isTauri() && !backendPort) return;
     let active = true;
-    fetch('/api/scenarios/groups')
+    fetch(apiUrl('/api/scenarios/groups', backendPort))
       .then((res) => (res.ok ? res.json() : Promise.reject(new Error('Failed to load groups'))))
       .then((groups: ScenarioGroup[]) => {
         if (active && Array.isArray(groups) && groups.length > 0) {
@@ -204,7 +163,7 @@ export function useSimulationSocket(authToken?: string) {
       })
       .catch((e) => {
         console.warn('Could not load scenario groups, falling back to /api/scenarios:', e);
-        fetch('/api/scenarios')
+        fetch(apiUrl('/api/scenarios', backendPort))
           .then((res) => (res.ok ? res.json() : []))
           .then((data: ScenarioMetadata[]) => {
             if (active && data.length > 0) {
@@ -216,7 +175,7 @@ export function useSimulationSocket(authToken?: string) {
     return () => {
       active = false;
     };
-  }, []);
+  }, [backendPort]);
 
   useEffect(() => {
     connect();
@@ -224,8 +183,6 @@ export function useSimulationSocket(authToken?: string) {
     rateCalcIntervalRef.current = window.setInterval(() => {
       setUpdateRateHz(msgCountRef.current);
       msgCountRef.current = 0;
-      // Calculate cumulative MB exchanged
-      setDataExchangedMB(Number((totalBytesRef.current / (1024 * 1024)).toFixed(2)));
     }, 1000);
 
     return () => {
@@ -238,102 +195,83 @@ export function useSimulationSocket(authToken?: string) {
     };
   }, [connect]);
 
-  const send = useCallback((action: string, payload: Record<string, unknown> = {}) => {
-    const raw = JSON.stringify({ action, payload });
-    totalBytesRef.current += raw.length;
-    if (socketRef.current?.readyState === WebSocket.OPEN) {
-      socketRef.current.send(raw);
-    } else {
-      const token = getToken();
-      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
+  const send = useCallback(
+    (action: string, payload: Record<string, unknown> = {}) => {
+      const raw = JSON.stringify({ action, payload });
+      if (socketRef.current?.readyState === WebSocket.OPEN) {
+        socketRef.current.send(raw);
+      } else {
+        fetch(apiUrl(`/api/${action}`, backendPort), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: raw,
+        }).catch((e) => console.warn('REST fallback failed:', e));
       }
-      fetch(`/api/${action}`, {
-        method: 'POST',
-        headers,
-        body: raw,
-      }).catch((e) => console.warn('REST fallback failed:', e));
-    }
-  }, [getToken]);
+    },
+    [backendPort]
+  );
 
-  const selectScenario = useCallback((scenarioId: string) => {
-    const found = scenarios.find((s) => s.id === scenarioId);
-    if (found) {
-      setActiveScenario(found);
-    }
-
-    const raw = JSON.stringify({
-      action: 'select_scenario',
-      payload: { scenario_id: scenarioId },
-    });
-    totalBytesRef.current += raw.length;
-    if (socketRef.current?.readyState === WebSocket.OPEN) {
-      socketRef.current.send(raw);
-    } else {
-      const token = getToken();
-      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
+  const selectScenario = useCallback(
+    (scenarioId: string) => {
+      const found = scenarios.find((s) => s.id === scenarioId);
+      if (found) {
+        setActiveScenario(found);
       }
-      fetch('/api/scenario/select', {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({ scenario_id: scenarioId }),
-      })
-        .then((res) => (res.ok ? res.json() : null))
-        .then((data) => {
-          if (data?.scenario) {
-            setActiveScenario(data.scenario);
-            fetch('/api/network-info', { headers })
-              .then((r) => (r.ok ? r.json() : null))
-              .then((net) => {
-                if (net) setNetworkInfo(net);
-              });
-          }
+
+      const raw = JSON.stringify({
+        action: 'select_scenario',
+        payload: { scenario_id: scenarioId },
+      });
+      if (socketRef.current?.readyState === WebSocket.OPEN) {
+        socketRef.current.send(raw);
+      } else {
+        fetch(apiUrl('/api/scenario/select', backendPort), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ scenario_id: scenarioId }),
         })
-        .catch((e) => console.warn('Failed to switch scenario via REST:', e));
-    }
-  }, [getToken, scenarios]);
+          .then((res) => (res.ok ? res.json() : null))
+          .then((data) => {
+            if (data?.scenario) {
+              setActiveScenario(data.scenario);
+              fetch(apiUrl('/api/network-info', backendPort))
+                .then((r) => (r.ok ? r.json() : null))
+                .then((net) => {
+                  if (net) setNetworkInfo(net);
+                });
+            }
+          })
+          .catch((e) => console.warn('Failed to switch scenario via REST:', e));
+      }
+    },
+    [scenarios, backendPort]
+  );
 
-  const play = useCallback(() => {
-    if (state.time_limit_reached || state.sim_time >= (state.max_sim_time ?? 300)) {
-      console.warn('Simulation time limit (5 minutes) reached. Reset required.');
-      return;
-    }
-    send('play');
-  }, [send, state.time_limit_reached, state.sim_time, state.max_sim_time]);
-
+  const play = useCallback(() => send('play'), [send]);
   const pause = useCallback(() => send('pause'), [send]);
   const reset = useCallback(() => send('reset'), [send]);
 
-  const updateScenarioOptions = useCallback((options: Record<string, unknown>) => {
-    const raw = JSON.stringify({
-      action: 'update_scenario_options',
-      payload: { options },
-    });
-    totalBytesRef.current += raw.length;
-    if (socketRef.current?.readyState === WebSocket.OPEN) {
-      socketRef.current.send(raw);
-    } else {
-      const token = getToken();
-      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
+  const updateScenarioOptions = useCallback(
+    (options: Record<string, unknown>) => {
+      const raw = JSON.stringify({
+        action: 'update_scenario_options',
+        payload: { options },
+      });
+      if (socketRef.current?.readyState === WebSocket.OPEN) {
+        socketRef.current.send(raw);
+      } else {
+        fetch(apiUrl('/api/scenario/options', backendPort), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ options }),
+        }).catch((e) => console.warn('Failed to update scenario options via REST:', e));
       }
-      fetch('/api/scenario/options', {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({ options }),
-      }).catch((e) => console.warn('Failed to update scenario options via REST:', e));
-    }
-  }, [getToken]);
-
-  const authExpired = !!authToken && (expiredToken === authToken || isTokenExpired(authToken));
+    },
+    [backendPort]
+  );
 
   return {
     state,
-    authExpired,
     networkInfo,
     scenarios,
     scenarioGroups,
@@ -343,7 +281,6 @@ export function useSimulationSocket(authToken?: string) {
     connected,
     latencyMs,
     updateRateHz,
-    dataExchangedMB,
     play,
     pause,
     reset,
