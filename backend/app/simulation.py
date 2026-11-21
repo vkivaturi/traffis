@@ -596,7 +596,7 @@ class SimulationManager:
 
     async def _simulation_loop(self):
         """High-performance simulation loop:
-        Steps SUMO physics and broadcasts WebSocket state at 10 Hz (interval = 0.1s),
+        Steps SUMO physics and broadcasts WebSocket state at 5 Hz (interval = 0.2s),
         while CanvasView 60 FPS lerp ensures smooth motion.
         """
         step_interval = 1.0 / settings.SIMULATION_RATE_HZ

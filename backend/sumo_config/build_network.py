@@ -50,7 +50,7 @@ STRAIGHT_SUMOCFG = """<?xml version="1.0" encoding="UTF-8"?>
     <time>
         <begin value="0"/>
         <end value="100000"/>
-        <step-length value="0.1"/>
+        <step-length value="0.2"/>
     </time>
     <processing>
         <collision.action value="none"/>
@@ -115,7 +115,7 @@ THREE_WAY_SUMOCFG = """<?xml version="1.0" encoding="UTF-8"?>
     <time>
         <begin value="0"/>
         <end value="100000"/>
-        <step-length value="0.1"/>
+        <step-length value="0.2"/>
     </time>
     <processing>
         <collision.action value="none"/>
@@ -194,7 +194,7 @@ FOUR_WAY_SUMOCFG = """<?xml version="1.0" encoding="UTF-8"?>
     <time>
         <begin value="0"/>
         <end value="100000"/>
-        <step-length value="0.1"/>
+        <step-length value="0.2"/>
     </time>
     <processing>
         <collision.action value="none"/>

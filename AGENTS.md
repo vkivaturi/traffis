@@ -10,7 +10,7 @@ Welcome to **Traffis**. This document serves as the primary system map, architec
 - **Desktop Shell**: [Rust + Tauri v2](file:///Users/vijay/Projects/traffis/src-tauri/src/lib.rs) native window manager that auto-detects (or prompts for) local Python and SUMO paths, spawns the local FastAPI backend on an ephemeral loopback port, and cleans up processes on exit.
 - **Simulation Engine**: [Eclipse SUMO (Simulation of Urban MObility)](https://eclipse.dev/sumo/) running in headless daemon mode on the user's machine.
 - **Backend Application**: [Python 3.12+ FastAPI](file:///Users/vijay/Projects/traffis/backend/app/main.py) communicating with SUMO via [TraCI (Traffic Control Interface)](file:///Users/vijay/Projects/traffis/backend/app/simulation.py) over a local TCP socket.
-- **Data Streaming**: Local loopback WebSocket broadcasting vehicle kinematics and network metrics at **10 Hz** (with SUMO physics stepping at **10 Hz / 100ms ticks**). No authentication, rate limiting, bandwidth caps, or simulation time limits.
+- **Data Streaming**: Local loopback WebSocket broadcasting vehicle kinematics and network metrics at **5 Hz** (with SUMO physics stepping at **5 Hz / 200ms ticks**). No authentication, rate limiting, bandwidth caps, or simulation time limits.
 - **Frontend Dashboard**: [React 19 + TypeScript + Vite](file:///Users/vijay/Projects/traffis/frontend) running inside Tauri's native WebView, rendering an **HTML5 Canvas viewport (60 FPS interpolated)**, telemetry HUD, and simulation controls.
 
 > The legacy browser-hosted release is preserved on the `release/v1-browser` git branch.
@@ -37,9 +37,9 @@ flowchart TD
         PROC_PY["run.py"] --> CONF["app/config.py<br/>Path & rate settings"]
         CONF --> SM["SimulationManager<br/>(app/simulation.py)"]
         PROC <-->|TCP TraCI API| SM
-        LOOP["asyncio Loop @ 10Hz<br/>traci.simulationStep()"] --> SM
+        LOOP["asyncio Loop @ 5Hz<br/>traci.simulationStep()"] --> SM
         SM --> STATE["State Collector<br/>(app/schemas.py)"]
-        STATE --> WS["WebSocket Broadcaster<br/>(/ws @ 10Hz)"]
+        STATE --> WS["WebSocket Broadcaster<br/>(/ws @ 5Hz)"]
         REST["REST API Endpoints<br/>(/api/*)"] --> SM
     end
 
@@ -82,7 +82,7 @@ flowchart TD
 │   │   ├── __init__.py           # Package marker
 │   │   ├── config.py             # Settings, SUMO_HOME resolver, TRAFFIS_HOST/PORT env overrides
 │   │   ├── schemas.py            # Pydantic schemas (VehicleData, Stats, StateMessage, NetworkInfo)
-│   │   ├── simulation.py         # SimulationManager class: TraCI controller & 10Hz async loop
+│   │   ├── simulation.py         # SimulationManager class: TraCI controller & 5Hz async loop
 │   │   ├── main.py               # FastAPI app, lifespan setup, REST endpoints & WebSocket route
 │   │   └── scenarios/            # BaseScenario + one module per scenario (registry.py registers them)
 │   │       ├── gnt_circle.py     # GNT Circle roundabout: O-D flows -> .rou.xml, polyline geometry, junction metrics
@@ -148,7 +148,7 @@ flowchart TD
 | :--- | :--- | :--- |
 | [`app/config.py`](file:///Users/vijay/Projects/traffis/backend/app/config.py) | Configuration management and path auto-detection. Reads `TRAFFIS_HOST`, `TRAFFIS_PORT`, and `SUMO_HOME` env vars. | `resolve_sumo_home()`, `resolve_sumo_binary()`, `Settings` class (`settings` singleton). |
 | [`app/schemas.py`](file:///Users/vijay/Projects/traffis/backend/app/schemas.py) | Data exchange contracts validated via Pydantic v2. | `VehicleData`, `SimulationStats`, `SimulationStateMessage`, `SpawnRequest`, `NetworkInfo`. |
-| [`app/simulation.py`](file:///Users/vijay/Projects/traffis/backend/app/simulation.py) | **Core orchestrator**. Owns TraCI process lifecycle, runs the 10 Hz simulation loop (uncapped duration), manages auto-spawning, coordinates async locks, and extracts vehicle kinematics. | `SimulationManager`, `start()`, `stop()`, `reset()`, `play()`, `pause()`, `run_benchmark()`, `_simulation_loop()`, `_collect_current_state()`. |
+| [`app/simulation.py`](file:///Users/vijay/Projects/traffis/backend/app/simulation.py) | **Core orchestrator**. Owns TraCI process lifecycle, runs the 5 Hz simulation loop (uncapped duration), manages auto-spawning, coordinates async locks, and extracts vehicle kinematics. | `SimulationManager`, `start()`, `stop()`, `reset()`, `play()`, `pause()`, `run_benchmark()`, `_simulation_loop()`, `_collect_current_state()`. |
 | [`app/main.py`](file:///Users/vijay/Projects/traffis/backend/app/main.py) | FastAPI application with ASGI lifespan handler. Exposes local REST endpoints and bidirectional WebSocket at `/ws` without authentication or bandwidth throttling. | `lifespan(app)`, `websocket_endpoint()`, `/api/health`, `/api/network-info`, `/api/play`, `/api/pause`, `/api/reset`, `/api/scenario/select`. |
 | [`sumo_config/build_network.py`](file:///Users/vijay/Projects/traffis/backend/sumo_config/build_network.py) | Generates SUMO XML files and executes `netconvert` to compile `.net.xml` networks. | `build()`, `find_sumo_binary()`. |
 | [`run.py`](file:///Users/vijay/Projects/traffis/backend/run.py) | Backend entrypoint launched by Tauri (or manually). Verifies network compilation before starting `uvicorn`. | Direct execution: `python run.py`. |
@@ -231,7 +231,7 @@ Full details: [`SPEC.md` §5.2.5](file:///Users/vijay/Projects/traffis/backend/s
      }
    }
    ```
-2. **State Broadcast** (10 Hz with SUMO physics at 10 Hz):
+2. **State Broadcast** (5 Hz with SUMO physics at 5 Hz):
    ```json
    {
      "type": "state",
@@ -298,9 +298,9 @@ Full details: [`SPEC.md` §5.2.5](file:///Users/vijay/Projects/traffis/backend/s
 - **Pattern**: [`SimulationManager`](file:///Users/vijay/Projects/traffis/backend/app/simulation.py) wraps every TraCI interaction inside `async with self.lock:`.
 - **Broadcast Isolation**: State serialization and WebSocket broadcasting run *outside* the lock.
 
-### 7.2 Decoupled Physics & Rendering (10Hz Physics & Broadcast -> 60FPS Display)
-- **Physics @ 10 Hz**: SUMO steps at $0.1\text{s}$ ($100\text{ms}$) per tick.
-- **State Broadcast @ 10 Hz**: Compact positional tuples (`compact_vehicles`) sent over local loopback WebSocket.
+### 7.2 Decoupled Physics & Rendering (5Hz Physics & Broadcast -> 60FPS Display)
+- **Physics @ 5 Hz**: SUMO steps at $0.2\text{s}$ ($200\text{ms}$) per tick.
+- **State Broadcast @ 5 Hz**: Compact positional tuples (`compact_vehicles`) sent over local loopback WebSocket.
 - **Smooth 60 FPS Viewport**: [`CanvasView.tsx`](file:///Users/vijay/Projects/traffis/frontend/src/components/CanvasView.tsx) interpolates vehicle coordinates via `requestAnimationFrame` lerp.
 
 ---
