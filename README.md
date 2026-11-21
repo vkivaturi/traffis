@@ -22,7 +22,7 @@ graph LR
     end
 
     subgraph Backend["Local Python FastAPI Backend"]
-        SM["SimulationManager @ 20Hz"]
+        SM["SimulationManager @ 10Hz"]
         WS["Localhost WS / REST (127.0.0.1:<port>)"]
     end
 
@@ -37,7 +37,7 @@ graph LR
 ```
 
 - **Tauri Rust shell (`src-tauri/`)** auto-detects your local Python and `SUMO_HOME` installations (or prompts you to browse for them on first launch), starts the Python backend on a free `127.0.0.1` port, and cleanly stops both Python and SUMO when you close the app.
-- **Python + SUMO (`backend/`)** runs SUMO physics at **20 Hz** and streams compact vehicle telemetry over loopback WebSockets at **10 Hz**.
+- **Python + SUMO (`backend/`)** runs SUMO physics and streams compact vehicle telemetry over loopback WebSockets at **10 Hz** (`0.1s` step length).
 - **React + Canvas (`frontend/`)** renders roads, signals, junction metrics, and 60 FPS interpolated vehicles inside the native OS WebView.
 
 ---

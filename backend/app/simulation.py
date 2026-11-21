@@ -596,9 +596,8 @@ class SimulationManager:
 
     async def _simulation_loop(self):
         """High-performance simulation loop:
-        Steps SUMO physics at 20 Hz (interval = 0.05s) for Krauss car-following accuracy.
-        Broadcasts WebSocket state at 10 Hz (every 2nd step) to cut network traffic by 50%
-        while CanvasView 60 FPS lerp ensures silky smooth motion.
+        Steps SUMO physics and broadcasts WebSocket state at 10 Hz (interval = 0.1s),
+        while CanvasView 60 FPS lerp ensures smooth motion.
         """
         step_interval = 1.0 / settings.SIMULATION_RATE_HZ
         broadcast_step_interval = max(1, int(round(settings.SIMULATION_RATE_HZ / settings.BROADCAST_RATE_HZ)))

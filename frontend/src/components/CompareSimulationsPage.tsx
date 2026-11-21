@@ -706,7 +706,7 @@ export const CompareSimulationsPage: React.FC<CompareSimulationsPageProps> = ({
               </h1>
               <p style={{ color: '#475569', fontSize: '0.94rem', maxWidth: '780px', lineHeight: 1.55 }}>
                 Select two or more scenarios from a corridor group. Traffis executes each simulation in sequence
-                under identical calibrated demand, measures kinematics at 20 Hz, and compiles the comparative results into a structured table.
+                under identical calibrated demand, measures kinematics at 10 Hz, and compiles the comparative results into a structured table.
               </p>
             </div>
 

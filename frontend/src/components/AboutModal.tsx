@@ -220,7 +220,7 @@ export const AboutModal: React.FC<AboutModalProps> = ({ isOpen, onClose }) => {
                 </span>
               </div>
               <p style={{ fontSize: '0.78rem', color: '#64748b', lineHeight: '1.45' }}>
-                Underpinned by Eclipse SUMO daemon running at 20 Hz, calculating real-world car-following kinematics, braking gaps, and queue back-ups.
+                Underpinned by Eclipse SUMO daemon running at 10 Hz, calculating real-world car-following kinematics, braking gaps, and queue back-ups.
               </p>
             </div>
 
