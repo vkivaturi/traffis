@@ -146,17 +146,17 @@ flowchart LR
 
 **Exit criteria:** `demo_corridor` appears under *My Networks*, runs in the desktop app with signals cycling, vehicles routing W↔E and via side roads, queues forming behind the blockage; invalid files produce readable errors from `/api/networks/validate`.
 
-### Phase 2 — Canvas editor (MVP)
-| # | Task |
-| :--- | :--- |
-| 2.1 | Editor route/view in the app (`NetworkEditorPage.tsx`) reusing canvas pan/zoom/world transforms |
-| 2.2 | Tools: select, add junction, draw road (click junction → junction), add shape point, delete |
-| 2.3 | Snapping (grid, existing junctions), live length readout, scale bar |
-| 2.4 | Property inspector: junction type/label; road lanes/lanes_back/speed/name |
-| 2.5 | Undo/redo (command stack), dirty-state tracking, keyboard shortcuts |
-| 2.6 | Save/Open/New via `/api/networks` + native file dialogs (import/export `network.json`) |
-| 2.7 | "Validate" and "Run" buttons → compile, show errors pinned to elements, then switch to the scenario |
-| 2.8 | Render compiled geometry preview (netconvert output) as an overlay toggle |
+### Phase 2 — Canvas editor (MVP) ☑ *(completed)*
+| # | Task | Status |
+| :--- | :--- | :--- |
+| 2.1 | Editor route/view in the app (`NetworkEditorPage.tsx`) reusing canvas pan/zoom/world transforms | ☑ |
+| 2.2 | Tools: select, add junction, draw road (click junction → junction), add shape point, delete | ☑ |
+| 2.3 | Snapping (grid, existing junctions), live length readout, scale bar | ☑ |
+| 2.4 | Property inspector: junction type/label; road lanes/lanes_back/speed/name | ☑ |
+| 2.5 | Undo/redo (command stack), dirty-state tracking, keyboard shortcuts | ☑ |
+| 2.6 | Save/Open/New via `/api/networks` + import/export `network.json` | ☑ |
+| 2.7 | "Validate" and "Save & Run" buttons → compile, show errors pinned to elements, then switch to the scenario | ☑ |
+| 2.8 | Render compiled geometry preview (netconvert output) as an overlay toggle (`/api/networks/preview`) | ☑ |
 
 ### Phase 3 — Signals, demand & obstacles UI
 | # | Task |

@@ -10,6 +10,7 @@ import {
   Home,
   Info,
   Settings,
+  PencilRuler,
 } from 'lucide-react';
 import type { SimulationState, ScenarioMetadata, ScenarioGroup } from '../types/simulation';
 
@@ -25,6 +26,7 @@ interface HeaderProps {
   onSelectScenario: (scenarioId: string) => void;
   onNavigateHome?: () => void;
   onNavigateCompare?: () => void;
+  onNavigateEditor?: () => void;
   onOpenAbout?: () => void;
   onOpenDesktopSettings?: () => void;
 }
@@ -39,6 +41,7 @@ export const Header: React.FC<HeaderProps> = ({
   onSelectScenario,
   onNavigateHome,
   onNavigateCompare,
+  onNavigateEditor,
   onOpenAbout,
   onOpenDesktopSettings,
 }) => {
@@ -371,6 +374,19 @@ export const Header: React.FC<HeaderProps> = ({
         >
           {soundEnabled ? <Volume2 size={15} color="#4a2c11" /> : <VolumeX size={15} />}
         </button>
+
+        {/* Network Editor button */}
+        {onNavigateEditor && (
+          <button
+            onClick={onNavigateEditor}
+            className="btn-secondary"
+            style={{ padding: '6px 12px', fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '5px' }}
+            title="Build or edit custom road networks"
+          >
+            <PencilRuler size={14} color="#0284c7" />
+            <span>Network Editor</span>
+          </button>
+        )}
 
         {/* Desktop Paths button */}
         {onOpenDesktopSettings && (

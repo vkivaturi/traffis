@@ -7,6 +7,7 @@ import { Controls } from './components/Controls';
 import { VehicleInspector } from './components/VehicleInspector';
 import { LandingPage } from './components/LandingPage';
 import { CompareSimulationsPage } from './components/CompareSimulationsPage';
+import { NetworkEditorPage } from './components/NetworkEditorPage';
 import { AboutModal } from './components/AboutModal';
 import { JunctionMetricsPanel } from './components/JunctionMetricsPanel';
 import { DesktopSetupModal } from './components/DesktopSetupModal';
@@ -20,8 +21,8 @@ import type { CameraState } from './types/simulation';
 import { soundSystem } from './utils/audio';
 
 export const App: React.FC = () => {
-  // View state: 'landing' | 'simulator' | 'compare'
-  const [currentView, setCurrentView] = useState<'landing' | 'simulator' | 'compare'>(() =>
+  // View state: 'landing' | 'simulator' | 'compare' | 'editor'
+  const [currentView, setCurrentView] = useState<'landing' | 'simulator' | 'compare' | 'editor'>(() =>
     isTauri() ? 'simulator' : 'landing'
   );
   const [isAboutOpen, setIsAboutOpen] = useState(false);
@@ -54,6 +55,7 @@ export const App: React.FC = () => {
     scenarios,
     scenarioGroups,
     activeScenario,
+    refreshScenarios,
     selectScenario,
     updateScenarioOptions,
     connected,
@@ -201,6 +203,16 @@ export const App: React.FC = () => {
     setCurrentView('compare');
   };
 
+  const handleNavigateEditor = () => {
+    setCurrentView('editor');
+  };
+
+  const handleRunFromEditor = async (scenarioId: string) => {
+    await refreshScenarios();
+    handleSelectScenario(scenarioId);
+    setCurrentView('simulator');
+  };
+
   const handleLaunchSimulatorFromCompare = (scenarioId?: string) => {
     if (scenarioId) {
       handleSelectScenario(scenarioId);
@@ -259,6 +271,19 @@ export const App: React.FC = () => {
     );
   }
 
+  // 2b. Self-Serve Network Editor View
+  if (currentView === 'editor') {
+    return (
+      <>
+        <NetworkEditorPage
+          onBackToSimulator={() => setCurrentView('simulator')}
+          onRunScenario={handleRunFromEditor}
+        />
+        {desktopSetupModal}
+      </>
+    );
+  }
+
   // 3. Simulator View
   return (
     <div
@@ -285,6 +310,7 @@ export const App: React.FC = () => {
         onSelectScenario={handleSelectScenario}
         onNavigateHome={handleNavigateHome}
         onNavigateCompare={handleNavigateCompare}
+        onNavigateEditor={handleNavigateEditor}
         onOpenAbout={() => setIsAboutOpen(true)}
         onOpenDesktopSettings={isTauri() ? () => setIsDesktopSetupOpen(true) : undefined}
       />

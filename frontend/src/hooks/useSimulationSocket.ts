@@ -149,33 +149,32 @@ export function useSimulationSocket(backendPort?: number | null) {
     connectRef.current = connect;
   }, [connect]);
 
-  useEffect(() => {
+  const refreshScenarios = useCallback(async () => {
     if (isTauri() && !backendPort) return;
-    let active = true;
-    fetch(apiUrl('/api/scenarios/groups', backendPort))
-      .then((res) => (res.ok ? res.json() : Promise.reject(new Error('Failed to load groups'))))
-      .then((groups: ScenarioGroup[]) => {
-        if (active && Array.isArray(groups) && groups.length > 0) {
-          setScenarioGroups(groups);
-          const allScenarios = groups.flatMap((g) => g.scenarios);
-          setScenarios(allScenarios);
-        }
-      })
-      .catch((e) => {
-        console.warn('Could not load scenario groups, falling back to /api/scenarios:', e);
-        fetch(apiUrl('/api/scenarios', backendPort))
-          .then((res) => (res.ok ? res.json() : []))
-          .then((data: ScenarioMetadata[]) => {
-            if (active && data.length > 0) {
-              setScenarios(data);
-            }
-          })
-          .catch((err) => console.warn('Failed to load scenarios:', err));
-      });
-    return () => {
-      active = false;
-    };
+    try {
+      const res = await fetch(apiUrl('/api/scenarios/groups', backendPort));
+      if (!res.ok) throw new Error('Failed to load groups');
+      const groups: ScenarioGroup[] = await res.json();
+      if (Array.isArray(groups) && groups.length > 0) {
+        setScenarioGroups(groups);
+        setScenarios(groups.flatMap((g) => g.scenarios));
+      }
+    } catch (e) {
+      console.warn('Could not load scenario groups, falling back to /api/scenarios:', e);
+      try {
+        const res = await fetch(apiUrl('/api/scenarios', backendPort));
+        const data: ScenarioMetadata[] = res.ok ? await res.json() : [];
+        if (data.length > 0) setScenarios(data);
+      } catch (err) {
+        console.warn('Failed to load scenarios:', err);
+      }
+    }
   }, [backendPort]);
+
+  useEffect(() => {
+    // oxlint-disable-next-line react/set-state-in-effect
+    void refreshScenarios();
+  }, [refreshScenarios]);
 
   useEffect(() => {
     connect();
@@ -276,6 +275,7 @@ export function useSimulationSocket(backendPort?: number | null) {
     scenarios,
     scenarioGroups,
     activeScenario,
+    refreshScenarios,
     selectScenario,
     updateScenarioOptions,
     connected,

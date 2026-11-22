@@ -150,6 +150,61 @@ async def validate_network_endpoint(req: dict, compile: bool = True):
     return network_store.validate_payload(req, run_netconvert=compile)
 
 
+@app.post("/api/networks/preview")
+async def preview_network_endpoint(req: dict):
+    """Compile a draft network.json into a temporary build dir and return its NetworkGeometry."""
+    import tempfile
+    from pathlib import Path
+    from .network_builder.compiler import CompileError, compile_network
+    from .network_builder.schema import NetworkProject, ValidationIssue, validate_network
+    from .scenarios.net_geometry import load_net_geometry
+    from .schemas import NetworkGeometry
+
+    try:
+        project = NetworkProject.model_validate(req)
+    except Exception as e:
+        return {
+            "valid": False,
+            "errors": [ValidationIssue(severity="error", code="schema_error", message=str(e)).model_dump()],
+            "warnings": [],
+            "geometry": None,
+        }
+
+    issues = validate_network(project)
+    errors = [i for i in issues if i.severity == "error"]
+    if errors:
+        return {
+            "valid": False,
+            "errors": [e.model_dump() for e in errors],
+            "warnings": [],
+            "geometry": None,
+        }
+
+    try:
+        with tempfile.TemporaryDirectory(prefix="traffis_preview_") as tmp:
+            res = compile_network(project, Path(tmp), force=True)
+            geo = load_net_geometry(res.net_file)
+            net_geo = NetworkGeometry(
+                lanes=geo.lanes,
+                connectors=geo.connectors,
+                junctions=geo.junctions,
+                bounds=geo.bounds(margin=20.0),
+            )
+            return {
+                "valid": True,
+                "errors": [],
+                "warnings": res.warnings,
+                "geometry": net_geo.model_dump(),
+            }
+    except CompileError as ce:
+        return {
+            "valid": False,
+            "errors": [i.model_dump() for i in ce.issues],
+            "warnings": [],
+            "geometry": None,
+        }
+
+
 @app.get("/api/networks/{network_id}")
 async def get_network(network_id: str):
     from .network_builder.store import network_store
