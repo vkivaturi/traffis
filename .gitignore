@@ -32,3 +32,6 @@ client_secret*.json
 # Tauri / Rust
 src-tauri/target/
 src-tauri/gen/
+
+# Compiled user/example network builds
+backend/app/network_builder/examples/*/build/

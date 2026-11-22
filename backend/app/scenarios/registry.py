@@ -18,16 +18,40 @@ logger = logging.getLogger(__name__)
 class ScenarioRegistry:
     def __init__(self):
         self._scenarios: Dict[str, BaseScenario] = {}
+        self._user_scenario_ids: set[str] = set()
+        self._user_networks_loaded: bool = False
         self.default_id: str = "straight_road"
         self._groups_file: Path = SCENARIO_GROUPS_FILE
 
-    def register(self, scenario: BaseScenario) -> None:
+    def _ensure_user_networks_loaded(self) -> None:
+        if self._user_networks_loaded:
+            return
+        self._user_networks_loaded = True
+        try:
+            from ..network_builder.store import network_store
+            network_store.sync_registry(self)
+        except Exception as e:
+            logger.warning("Failed to load user networks into registry: %s", e)
+
+    def register(self, scenario: BaseScenario, is_user_network: bool = False) -> None:
         self._scenarios[scenario.id] = scenario
+        if is_user_network:
+            self._user_scenario_ids.add(scenario.id)
+
+    def unregister(self, scenario_id: str) -> None:
+        self._scenarios.pop(scenario_id, None)
+        self._user_scenario_ids.discard(scenario_id)
+
+    def list_user_scenario_ids(self) -> List[str]:
+        self._ensure_user_networks_loaded()
+        return sorted(self._user_scenario_ids)
 
     def get(self, scenario_id: str) -> Optional[BaseScenario]:
+        self._ensure_user_networks_loaded()
         return self._scenarios.get(scenario_id)
 
     def get_or_default(self, scenario_id: Optional[str]) -> BaseScenario:
+        self._ensure_user_networks_loaded()
         if scenario_id and scenario_id in self._scenarios:
             return self._scenarios[scenario_id]
         return self._scenarios[self.default_id]
@@ -58,6 +82,7 @@ class ScenarioRegistry:
         ]
 
     def list_groups(self) -> List[ScenarioGroup]:
+        self._ensure_user_networks_loaded()
         raw_groups = self._load_groups_config()
         assigned_ids = set()
         result_groups: List[ScenarioGroup] = []
@@ -88,6 +113,23 @@ class ScenarioRegistry:
                 )
             )
 
+        # User-authored / example networks under "My Networks"
+        user_sids = [sid for sid in sorted(self._user_scenario_ids) if sid in self._scenarios and sid not in assigned_ids]
+        if user_sids:
+            my_nets = ScenarioGroup(
+                id="my_networks",
+                name="My Networks",
+                description="Custom road networks compiled from network.json.",
+                scenarios=[],
+            )
+            for sid in user_sids:
+                meta = self._scenarios[sid].get_metadata()
+                meta.group = my_nets.name
+                meta.group_id = my_nets.id
+                my_nets.scenarios.append(meta)
+                assigned_ids.add(sid)
+            result_groups.append(my_nets)
+
         # Catch-all for any unassigned scenarios: put into "Other scenarios" group
         unassigned_ids = [sid for sid in self._scenarios if sid not in assigned_ids]
         if unassigned_ids:
@@ -117,6 +159,7 @@ class ScenarioRegistry:
         return all_metas
 
     def contains(self, scenario_id: str) -> bool:
+        self._ensure_user_networks_loaded()
         return scenario_id in self._scenarios
 
 registry = ScenarioRegistry()

@@ -1,0 +1,88 @@
+{
+  "schema_version": 1,
+  "id": "demo_corridor",
+  "name": "Demo Corridor",
+  "description": "Two signalised junctions along a 2+2 arterial with side streets, a lane blockage on the west approach, and a lane closure on the eastbound exit.",
+  "settings": {
+    "drive_side": "left",
+    "default_speed_kmh": 50,
+    "lane_width_m": 3.2
+  },
+  "junctions": [
+    { "id": "W", "x": -300, "y": 0, "type": "priority", "label": "West Gate" },
+    { "id": "J1", "x": -100, "y": 0, "type": "traffic_light", "label": "Junction 1" },
+    { "id": "J2", "x": 100, "y": 0, "type": "traffic_light", "label": "Junction 2" },
+    { "id": "E", "x": 300, "y": 0, "type": "priority", "label": "East Gate" },
+    { "id": "N1", "x": -100, "y": 140, "type": "priority", "label": "North 1" },
+    { "id": "S1", "x": -100, "y": -140, "type": "priority", "label": "South 1" },
+    { "id": "N2", "x": 100, "y": 140, "type": "priority", "label": "North 2" },
+    { "id": "S2", "x": 100, "y": -140, "type": "priority", "label": "South 2" }
+  ],
+  "roads": [
+    { "id": "W_J1", "from": "W", "to": "J1", "lanes": 2, "lanes_back": 2, "speed_kmh": 50, "name": "West Arterial" },
+    { "id": "J1_J2", "from": "J1", "to": "J2", "lanes": 2, "lanes_back": 2, "speed_kmh": 50, "name": "Central Arterial" },
+    { "id": "J2_E", "from": "J2", "to": "E", "lanes": 2, "lanes_back": 2, "speed_kmh": 50, "name": "East Arterial" },
+    { "id": "N1_J1", "from": "N1", "to": "J1", "lanes": 1, "lanes_back": 1, "speed_kmh": 40, "name": "North 1 St" },
+    { "id": "S1_J1", "from": "S1", "to": "J1", "lanes": 1, "lanes_back": 1, "speed_kmh": 40, "name": "South 1 St" },
+    { "id": "N2_J2", "from": "N2", "to": "J2", "lanes": 1, "lanes_back": 1, "speed_kmh": 40, "name": "North 2 St" },
+    { "id": "S2_J2", "from": "S2", "to": "J2", "lanes": 1, "lanes_back": 1, "speed_kmh": 40, "name": "South 2 St" }
+  ],
+  "signals": [
+    {
+      "junction": "J1",
+      "amber_s": 3,
+      "all_red_s": 2,
+      "offset_s": 0,
+      "phases": [
+        { "name": "East-West Arterial", "approaches": ["W_J1", "J1_J2"], "green_s": 30 },
+        { "name": "North-South Cross", "approaches": ["N1_J1", "S1_J1"], "green_s": 20 }
+      ]
+    },
+    {
+      "junction": "J2",
+      "amber_s": 3,
+      "all_red_s": 2,
+      "offset_s": 10,
+      "phases": [
+        { "name": "East-West Arterial", "approaches": ["J1_J2", "J2_E"], "green_s": 30 },
+        { "name": "North-South Cross", "approaches": ["N2_J2", "S2_J2"], "green_s": 20 }
+      ]
+    }
+  ],
+  "demand": {
+    "vehicle_mix": {
+      "car": 0.65,
+      "motorcycle": 0.2,
+      "van": 0.1,
+      "truck": 0.05
+    },
+    "flows": [
+      { "id": "W_to_E", "from": "W", "to": "E", "vehs_per_hour": 550 },
+      { "id": "E_to_W", "from": "E", "to": "W", "vehs_per_hour": 500 },
+      { "id": "N1_to_S1", "from": "N1", "to": "S1", "vehs_per_hour": 220 },
+      { "id": "S1_to_E", "from": "S1", "to": "E", "vehs_per_hour": 180 },
+      { "id": "N2_to_W", "from": "N2", "to": "W", "vehs_per_hour": 180 },
+      { "id": "S2_to_N2", "from": "S2", "to": "N2", "vehs_per_hour": 200 }
+    ]
+  },
+  "obstacles": [
+    {
+      "id": "breakdown_west",
+      "kind": "blockage",
+      "road": "W_J1",
+      "direction": "forward",
+      "lane": 0,
+      "position_m": 80,
+      "length_m": 8,
+      "label": "Stalled Vehicle"
+    },
+    {
+      "id": "roadworks_east",
+      "kind": "lane_closure",
+      "road": "J2_E",
+      "direction": "forward",
+      "lane": 0,
+      "label": "Roadworks Closure"
+    }
+  ]
+}

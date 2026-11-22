@@ -334,13 +334,27 @@ cargo check --manifest-path src-tauri/Cargo.toml
 # 3. Verify Backend Imports
 backend/.venv/bin/python -c "import sys; sys.path.insert(0, 'backend'); from app.main import app; print(app.title)"
 
-# 4. Run WebSocket + TraCI End-to-End Test (with backend running on port 8000)
+# 4. Run Network Builder Unit & Headless SUMO Smoke Tests
+backend/.venv/bin/python -m unittest discover -s backend/tests -v
+
+# 5. Run WebSocket + TraCI End-to-End Test (with backend running on port 8000)
 cd backend && ./.venv/bin/python test_ws.py
 ```
 
 ---
 
-## 9. Common Recipes for AI Agents Extending Traffis
+## 9. Self-Serve Network Builder (`backend/app/network_builder/`)
+
+Users can define road networks in `network.json` (schema v1 documented in [`docs/network-builder/SCHEMA.md`](file:///Users/vijay/Projects/traffis/docs/network-builder/SCHEMA.md); phased roadmap in [`docs/network-builder/PLAN.md`](file:///Users/vijay/Projects/traffis/docs/network-builder/PLAN.md)):
+- **`schema.py`**: Pydantic v2 models (`NetworkProject`) and semantic validation (`validate_network`).
+- **`compiler.py`**: Two-stage compiler (`compile_network`) generating `.nod.xml`/`.edg.xml`, invoking `netconvert`, deriving link-index `<tlLogic>` from compiled junction response matrices, checking flow reachability, emitting `.rou.xml`/`.sumocfg`, and caching builds by content hash.
+- **`scenario.py`**: `UserNetworkScenario(BaseScenario)` rendering compiled geometry, live multi-TLS signal heads, and O-D metrics without special-casing `simulation.py`.
+- **`store.py`**: Discovers bundled examples (`examples/<id>/network.json`) and user networks (`$TRAFFIS_NETWORKS_DIR` or `~/Traffis/networks`), registering them in `ScenarioRegistry` under **My Networks** (`net_<id>`).
+- **REST API**: `GET /api/networks`, `GET/PUT/DELETE /api/networks/{id}`, `POST /api/networks/validate`.
+
+---
+
+## 10. Common Recipes for AI Agents Extending Traffis
 
 ### Recipe 1: Adding a New Vehicle Type
 1. Edit [`backend/sumo_config/road.rou.xml`](file:///Users/vijay/Projects/traffis/backend/sumo_config/road.rou.xml) (and [`backend/sumo_config/build_network.py`](file:///Users/vijay/Projects/traffis/backend/sumo_config/build_network.py)).

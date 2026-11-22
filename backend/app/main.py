@@ -124,6 +124,88 @@ async def compare_run_endpoint(req: CompareRunRequest):
         logger.error("Compare run failed for %s: %s", req.scenario_id, e, exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
+
+# -------------------------------------------------------------------------
+# Self-Serve Network Builder API (/api/networks)
+# -------------------------------------------------------------------------
+@app.get("/api/networks")
+async def list_networks():
+    from .network_builder.store import network_store
+    records = network_store.list_records()
+    return [
+        {
+            "id": r.id,
+            "scenario_id": r.scenario_id,
+            "name": r.name,
+            "description": r.description,
+            "read_only": r.read_only,
+        }
+        for r in records
+    ]
+
+
+@app.post("/api/networks/validate")
+async def validate_network_endpoint(req: dict, compile: bool = True):
+    from .network_builder.store import network_store
+    return network_store.validate_payload(req, run_netconvert=compile)
+
+
+@app.get("/api/networks/{network_id}")
+async def get_network(network_id: str):
+    from .network_builder.store import network_store
+    project = network_store.get_project(network_id)
+    if project is None:
+        raise HTTPException(status_code=404, detail=f"Network '{network_id}' not found")
+    return project.model_dump(by_alias=True)
+
+
+@app.put("/api/networks/{network_id}")
+async def save_network(network_id: str, req: dict):
+    from .network_builder.compiler import CompileError
+    from .network_builder.store import network_store
+    from .scenarios.registry import registry
+
+    try:
+        saved = network_store.save_and_compile(network_id, req)
+        registry.register(saved.scenario, is_user_network=True)
+        return {
+            "status": "ok",
+            "id": saved.project.id,
+            "scenario_id": saved.scenario.id,
+            "from_cache": saved.compile_result.from_cache,
+            "warnings": saved.compile_result.warnings,
+            "project": saved.project.model_dump(by_alias=True),
+        }
+    except CompileError as ce:
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "message": str(ce),
+                "errors": [i.model_dump() for i in ce.issues],
+            },
+        )
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.delete("/api/networks/{network_id}")
+async def delete_network(network_id: str):
+    from .network_builder.store import network_store
+    from .scenarios.registry import registry
+
+    scenario_id = f"net_{network_id}"
+    if sim_manager.scenario.id == scenario_id:
+        raise HTTPException(
+            status_code=409,
+            detail="Cannot delete the currently active scenario. Switch to another scenario first.",
+        )
+    deleted = network_store.delete_network(network_id)
+    if not deleted:
+        raise HTTPException(status_code=404, detail=f"User network '{network_id}' not found (bundled examples are read-only)")
+    registry.unregister(scenario_id)
+    network_store.sync_registry(registry)
+    return {"status": "ok", "deleted": network_id}
+
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     await sim_manager.register_websocket(websocket)
